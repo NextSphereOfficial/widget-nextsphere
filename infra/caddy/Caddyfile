@@ -1,0 +1,3 @@
+:80 {
+  respond "Caddy in esecuzione. Configura domini e reverse proxy qui." 200
+}

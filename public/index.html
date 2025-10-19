@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NextSphere — Apartment A1</title>
+    <style>
+      :root { --card-bg: #ffffff; --txt: #111827; --muted:#6b7280; --ring: #e5e7eb; }
+      body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; background:#f8fafc; color:var(--txt); }
+      .container { max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+      .brand { display:flex; align-items:center; gap:10px; margin-bottom:16px; color:#111827; text-decoration:none; }
+      .brand .mark { font-weight:700; letter-spacing:.3px; }
+      .card { background:var(--card-bg); border:1px solid var(--ring); border-radius:16px; padding:20px; box-shadow: 0 10px 20px rgba(0,0,0,.03); }
+      .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:16px; }
+      .actions button { border-radius:12px; border:1px solid var(--ring); background:white; padding:12px 14px; cursor:pointer; font-size:16px; }
+      .actions button:active { transform: translateY(1px); }
+      .muted { color:var(--muted); font-size:14px; }
+      footer { margin-top:24px; text-align:center; font-size:12px; color:var(--muted); }
+    </style>
+    <script>
+      function resolveLang(param){
+        const supported = ['it','en'];
+        if (supported.includes((param||'').toLowerCase())) return param.toLowerCase();
+        const nav = (navigator.language || '').toLowerCase();
+        return nav.startsWith('it') ? 'it' : 'en';
+      }
+      (function boot(){
+        const params = new URLSearchParams(location.search);
+        const ctx = {
+          hotel: params.get('hotel') || 'ns-apartment',
+          room: params.get('room') || 'A1',
+          lang: resolveLang(params.get('lang')),
+          source: params.get('source') || 'qr'
+        };
+        window.NS_CONCIERGE_BOOT = ctx;
+        // basic open event (console for MVP; later POST to /api/events)
+        console.log('qr_open', {hotel:ctx.hotel, room:ctx.room, lang:ctx.lang, source:ctx.source});
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <a class="brand" href="#">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#111827"/><circle cx="12" cy="12" r="5" fill="#111827"/></svg>
+        <span class="mark">NextSphere</span>
+      </a>
+
+      <div id="ns-concierge" class="card">
+        <!-- widget will render here -->
+        <p class="muted">Loading…</p>
+      </div>
+
+      <footer>
+        ns-apartment • room A1 • <span id="lang-label"></span>
+      </footer>
+    </div>
+
+    <!-- CORREZIONE: path assoluto dalla root di public -->
+    <script defer src="/widget.js"></script>
+
+    <script>
+      // tiny helper to reflect the resolved language in the footer
+      document.addEventListener('DOMContentLoaded', () => {
+        const lang = (window.NS_CONCIERGE_BOOT && window.NS_CONCIERGE_BOOT.lang) || 'en';
+        document.getElementById('lang-label').textContent = lang.toUpperCase();
+      });
+    </script>
+  </body>
+</html>

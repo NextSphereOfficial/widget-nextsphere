@@ -1,0 +1,14 @@
+{
+  "name": "apps",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:api": "npm --prefix ./api run dev",
+    "dev:widget": "npm --prefix ./widget run dev",
+    "dev": "concurrently -k -n API,WIDGET -c blue,green \"npm:dev:api\" \"npm:dev:widget\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
+
