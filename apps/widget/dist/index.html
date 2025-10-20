@@ -22,21 +22,18 @@
   <!-- URL API temporaneo via ngrok -->
   <script>window.VITE_API_URL = "https://jaimie-patristic-askew.ngrok-free.dev";</script>
 
-    <script>
-  // Crea al volo un div se il bundle cerca un id noto e non esiste
-  (function() {
-    const wanted = ['root','app','ns-widget','ns_concierge','ns-concierge-widget','ns-concierge-root','ns-concierge-widget-root'];
-    const origGet = document.getElementById.bind(document);
-    document.getElementById = function(id) {
-      const found = origGet(id);
-      if (found) return found;
-      if (wanted.includes(id)) {
-        const d = document.createElement('div');
-        d.id = id;
-        document.body.appendChild(d);
-        return d;
-      }
-      return null;
+    
+<script>
+  (function () {
+    const gei = document.getElementById.bind(document);
+    document.getElementById = function (id) {
+      console.log("[GEI]", id);
+      return gei(id);
+    };
+    const qs = document.querySelector.bind(document);
+    document.querySelector = function (sel) {
+      console.log("[QS]", sel);
+      return qs(sel);
     };
   })();
 </script>
