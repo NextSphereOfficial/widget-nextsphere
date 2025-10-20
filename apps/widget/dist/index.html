@@ -12,6 +12,13 @@
     <!-- URL API temporaneo via ngrok -->
     <script>window.VITE_API_URL = "https://jaimie-patristic-askew.ngrok-free.dev";</script>
 
+    <script>window.process = { env: {} };</script>
+    <script>window.global = window;</script>
+    <script>
+     window.VITE_API_URL = "https://jaimie-patristic-askew.ngrok-free.dev";
+    </script>
+    <script src="/ns-concierge-widget.js"></script>
+
     <!-- bundle del widget -->
     <script src="/ns-concierge-widget.js"></script>
   </body>
