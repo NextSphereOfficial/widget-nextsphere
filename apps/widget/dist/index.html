@@ -6,20 +6,24 @@
     <title>SV Apartments – Widget (test) !-- build: v1.0.3 --</title>
     <link rel="stylesheet" href="/style.css" />
   </head>
-  <body>
-    <h1 style="font: 16px/1.4 system-ui; padding:16px">SV Apartments – Widget (test)</h1>
+<body>
+  <!-- Marker build -->
+  <!-- build: v1.0.4 -->
 
-    <!-- URL API temporaneo via ngrok -->
-    <script>window.VITE_API_URL = "https://jaimie-patristic-askew.ngrok-free.dev";</script>
+  <h1 style="font: 16px/1.4 system-ui; padding:16px">SV Apartments – Widget (test)</h1>
 
-    <script>window.process = { env: {} };</script>
-    <script>window.global = window;</script>
-    <script>
-     window.VITE_API_URL = "https://jaimie-patristic-askew.ngrok-free.dev";
-    </script>
-    <script src="/ns-concierge-widget.js"></script>
+  <!-- Contenitore su cui il bundle si monta (molti widget usano #root di default) -->
+  <div id="root"></div>
 
-    <!-- bundle del widget -->
-    <script src="/ns-concierge-widget.js"></script>
-  </body>
+  <!-- Shims necessari prima del bundle -->
+  <script>window.process = { env: {} };</script>
+  <script>window.global = window;</script>
+
+  <!-- URL API temporaneo via ngrok -->
+  <script>window.VITE_API_URL = "https://jaimie-patristic-askew.ngrok-free.dev";</script>
+
+  <!-- Assicurati che il bundle sia incluso UNA SOLA VOLTA -->
+  <script src="/ns-concierge-widget.js"></script>
+</body>
+
 </html>
