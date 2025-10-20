@@ -3,24 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SV Apartments – Widget</title>
+    <title>SV Apartments – Widget (test)</title>
     <link rel="stylesheet" href="/style.css" />
-    <style>
-      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 24px; }
-      .card { max-width: 720px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 16px; padding: 24px; }
-      h1 { font-size: 1.25rem; margin: 0 0 8px; }
-      p { margin: 0 0 16px; color: #4b5563; }
-      .hint { font-size: .875rem; color: #6b7280; }
-    </style>
   </head>
   <body>
-    <div class="card">
-      <h1>SV Apartments – Widget</h1>
-      <p>Se vedi questa pagina, il deploy statico è attivo. Sotto carichiamo lo script del widget.</p>
-      <p class="hint">Se il widget non appare, è solo perché il bundle non si auto-inizializza: funziona comunque per l’embedding via &lt;script&gt; nel sito.</p>
-    </div>
+    <h1 style="font: 16px/1.4 system-ui; padding:16px">SV Apartments – Widget (test)</h1>
 
-    <!-- Carica il bundle prodotto da Vite -->
+    <!-- URL API temporaneo via ngrok -->
+    <script>window.VITE_API_URL = "https://jaimie-patristic-askew.ngrok-free.dev";</script>
+
+    <!-- bundle del widget -->
     <script src="/ns-concierge-widget.js"></script>
   </body>
 </html>
