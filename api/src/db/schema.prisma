@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Hotel {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  apiKey    String   @unique
+  rooms     Room[]
+  createdAt DateTime @default(now())
+}
+
+model Room {
+  id        String   @id @default(cuid())
+  hotelId   String
+  code      String
+  createdAt DateTime @default(now())
+  Hotel     Hotel    @relation(fields: [hotelId], references: [id])
+  Sessions  Session[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  roomId    String
+  lang      String   @default("it")
+  createdAt DateTime @default(now())
+  messages  Message[]
+  Room      Room     @relation(fields: [roomId], references: [id])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  sessionId  String
+  role       String
+  content    String
+  createdAt  DateTime @default(now())
+  Session    Session  @relation(fields: [sessionId], references: [id])
+}
