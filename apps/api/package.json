@@ -1,28 +1,23 @@
 {
   "name": "@ns/api",
   "version": "0.0.1",
-  "private": true,
   "type": "module",
   "scripts": {
     "dev": "cross-env API_PORT=8081 API_HOST=0.0.0.0 tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js",
-    "prisma:gen": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "start": "node dist/server.js"
   },
   "dependencies": {
-    "@fastify/cors": "^10.1.0",
-    "@fastify/rate-limit": "^10.3.0",
-    "@prisma/client": "^5.19.0",
-    "fastify": "^5.6.1",
+    "fastify": "^4.28.1",
+    "@fastify/cors": "^9.0.0",
+    "@fastify/rate-limit": "^8.0.0",
     "pino": "^9.0.0"
   },
   "devDependencies": {
-    "@types/node": "^24.8.1",
-    "cross-env": "^10.1.0",
-    "prisma": "^5.19.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.4.0"
-  }
-  
+    "typescript": "^5.4.0",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "cross-env": "^7.0.3"
+  },
+  "engines": { "node": ">=18" }
 }
