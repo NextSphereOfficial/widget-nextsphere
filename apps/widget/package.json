@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+ "dev": "vite",
+    "prebuild": "node -e \"console.log(process.cwd()); require('fs').readdirSync('.').forEach(f=>console.log(f)); console.log('--- vite.config.ts ---'); console.log(require('fs').readFileSync('vite.config.ts','utf8'))\"",
     "build": "vite build --emptyOutDir",
     "preview": "vite preview --port 4173"
   },
