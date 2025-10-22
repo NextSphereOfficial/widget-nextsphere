@@ -1,27 +1,30 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
+  root: ".",                 // usa index.html nella root di apps/widget
+  publicDir: "public",
   server: {
     port: 5173,
     strictPort: true,
     host: true,
     proxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true
-      }
+      "/api": { target: "http://localhost:8081", changeOrigin: true }
     }
   },
   build: {
-    lib: {
-      entry: 'src/main.tsx',
-      name: 'NextSphereWidget',
-      formats: ['es']
-    },
+    // ❗ forza modalità "app", NON library
+    lib: false as any,
+    outDir: "dist",
+    emptyOutDir: true,
     rollupOptions: {
-      external: [],
-    }
-  }
-})
+      // ❗ indica esplicitamente l'entry html
+      input: {
+        main: resolve(__dirname, "index.html"),
+      },
+    },
+  },
+});
+
