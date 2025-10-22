@@ -7,12 +7,14 @@ const app = Fastify({ logger: true });
 const log = app.log as any;
 await app.register(cors, {
   origin: [
-    'https://widget-nextsphere-widget-test.vercel.app',
-    'http://localhost:5173'
+    'https://widget-nextsphere-widget-test.vercel.app', // attuale
+    'https://widget.svapartments.it',                   // definitivo
+    'http://localhost:5173'                             
   ],
   methods: ['GET','POST','OPTIONS'],
   allowedHeaders: ['Content-Type','Authorization'],
 });
+
 await app.register(rateLimit, { max: 60, timeWindow: '1 minute' });
 
 app.register(chatRoutes, { prefix: '/api' });
