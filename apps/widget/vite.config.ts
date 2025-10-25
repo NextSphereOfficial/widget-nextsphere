@@ -14,6 +14,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    sourcemap: true,
     rollupOptions: {
       // punta direttamente all’HTML (niente path/__dirname)
       input: "index.html"
