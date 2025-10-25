@@ -13,13 +13,14 @@ export async function sendMessage(message: string, ctx?: Ctx) {
   const BASE = getBase();
   const ENDPOINT = `${BASE}/api/chat`;
 
-  // 👇 log a runtime, in produzione
-  console.log('[chatClient] BASE =', BASE, 'ENDPOINT =', `${BASE}/api/chat`);
-
   const res = await fetch(ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message, ...ctx }),
+    body: JSON.stringify({
+      message,          // compat vecchia
+      text: message,    // <- aggiungi questo
+      ...ctx
+    }),
   });
 
   if (!res.ok) {
