@@ -14,7 +14,7 @@ export async function sendMessage(message: string, ctx?: Ctx) {
   const ENDPOINT = `${BASE}/api/chat`;
 
   // 👇 log a runtime, in produzione
-  console.log("[chatClient] BASE =", BASE, "ENDPOINT =", ENDPOINT);
+  console.log('[chatClient] BASE =', BASE, 'ENDPOINT =', `${BASE}/api/chat`);
 
   const res = await fetch(ENDPOINT, {
     method: "POST",
