@@ -5,7 +5,7 @@ type ConversationCtx = {
   locale?: string | null;
 };
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8081';
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://api.svapartments.it/';
 
 export async function sendMessage(
   message: string,
