@@ -57,6 +57,24 @@ app.setErrorHandler((err, req, reply) => {
   });
 });
 
+// --- Canonical host redirect ---
+const ENABLE_CANONICAL_REDIRECT = (process.env.ENABLE_CANONICAL_REDIRECT ?? 'true') === 'true';
+const CANONICAL_HOST = process.env.CANONICAL_HOST || 'api.svapartments.it';
+
+if (ENABLE_CANONICAL_REDIRECT) {
+  app.addHook('onRequest', (req, reply, done) => {
+    // ✅ NON toccare i preflight: i browser non seguono redirect su OPTIONS
+    if (req.method === 'OPTIONS') return done();
+
+    const host = req.headers.host || '';
+    if (host && host !== CANONICAL_HOST) {
+      const location = `https://${CANONICAL_HOST}${req.url}`;
+      reply.redirect(308, location);
+      return;
+    }
+    done();
+  });
+}
 
 
 // Cattura tutti gli errori runtime
