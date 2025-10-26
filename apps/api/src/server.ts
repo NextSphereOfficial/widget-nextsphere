@@ -174,6 +174,18 @@ await app.register(import('@fastify/rate-limit'), {
   },
 });
 
+// --- Friendly root route ---
+app.get('/', async () => ({
+  ok: true,
+  name: 'NextSphere API',
+  description: 'Backend for NextSphere Concierge AI',
+  endpoints: {
+    health: '/health',
+    version: '/version',
+    chat: '/chat'
+  }
+}));
+
 
 // Endpoint per i report CSP
 app.post('/csp-report', {
