@@ -118,13 +118,15 @@ await app.register(cors, {
 const ENABLE_SECURITY_HEADERS = (process.env.ENABLE_SECURITY_HEADERS ?? 'true') === 'true';
 if (ENABLE_SECURITY_HEADERS) {
   await app.register(helmet, {
-    contentSecurityPolicy: false,       // la CSP la gestiamo noi in report-only
-    crossOriginEmbedderPolicy: false,   // compatibilità ampia (widget, ecc.)
-    // Opzionali (puoi scommentare se desideri forzarli):
-    // referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    // hidePoweredBy: true,
-    // xFrameOptions: 'SAMEORIGIN',
-  } as any);
+  contentSecurityPolicy: false,      // CSP la gestiamo noi in report-only
+  crossOriginEmbedderPolicy: false,  // compatibilità
+  hsts: {
+    maxAge: 31536000,                // 🔒 12 mesi
+    includeSubDomains: true,
+    preload: true,                   // opzionale ma consigliato
+  },
+} as any);
+
 }
 
 import rateLimit, { RateLimitOptions } from '@fastify/rate-limit';
