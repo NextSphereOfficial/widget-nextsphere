@@ -99,23 +99,30 @@ if (ENABLE_RATE_LIMIT) {
 // ---------- Security headers (helmet, flag) ----------
 const ENABLE_SECURITY_HEADERS =
   (process.env.ENABLE_SECURITY_HEADERS ?? 'true') === 'true';
-
 if (ENABLE_SECURITY_HEADERS) {
   await app.register(helmet, {
-    // CSP la gestiamo in report-only via header custom
     contentSecurityPolicy: false,
-    // Evita problemi con COEP in ambienti eterogenei
     crossOriginEmbedderPolicy: false,
-    // Opzionali: header utili con default sicuri
-    // hidePoweredBy: true,
-    // referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-    // xFrameOptions: 'SAMEORIGIN',
   } as any);
 }
 
 // ---------- CSP report-only (flag) ----------
 const ENABLE_CSP_REPORT_ONLY = (process.env.ENABLE_CSP_REPORT_ONLY || 'true') === 'true'
 const CSP_REPORT_URI = process.env.CSP_REPORT_URI || '/csp-report'
+
+const API_CSP_REPORT_ONLY = [
+  "default-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+  "object-src 'none'",
+  "img-src 'none'",
+  "script-src 'none'",
+  "style-src 'none'",
+  "connect-src 'self'",
+  "report-uri /csp-report",
+].join('; ');
+
 if (ENABLE_CSP_REPORT_ONLY) {
   app.addHook('onRequest', async (req, reply) => {
     const csp = [
