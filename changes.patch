@@ -1,0 +1,369 @@
+--- .env.example (new)
+
++++ .env.example
+
+@@ -0,0 +1,22 @@
+
++# API
++API_PORT=8081
++API_HOST=0.0.0.0
++
++# Observability / Build metadata (set in CI/CD)
++APP_VERSION=0.0.0
++APP_COMMIT=unknown
++APP_BUILD_TIME=1970-01-01T00:00:00Z
++
++# Security
++ENABLE_SECURITY_HEADERS=true
++ENABLE_CSP_REPORT_ONLY=true
++ENABLE_RATE_LIMIT=true
++RATE_LIMIT_MAX=60
++RATE_LIMIT_WINDOW=1 minute
++# CORS: comma-separated origins
++ALLOWED_ORIGINS=http://localhost:5173,https://widget.svapartments.it,https://admin.svapartments.it
++CSP_REPORT_URI=/csp-report
++
++# Sentry (optional)
++SENTRY_DSN=
++SENTRY_TRACES_SAMPLE_RATE=0.0
+--- .github/workflows/ci.yml (new)
+
++++ .github/workflows/ci.yml
+
+@@ -0,0 +1,29 @@
+
++name: CI
++
++on:
++  push:
++    branches: [ main, staging ]
++    tags: ['v*.*.*']
++  pull_request:
++    branches: [ main, staging ]
++
++jobs:
++  build:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v4
++      - uses: pnpm/action-setup@v4
++        with:
++          version: 9
++      - uses: actions/setup-node@v4
++        with:
++          node-version: '20'
++          cache: 'pnpm'
++      - run: pnpm install --frozen-lockfile=false
++      - name: Set build env
++        run: |
++          echo "APP_VERSION=${ github.ref_name }" >> $GITHUB_ENV
++          echo "APP_COMMIT=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
++          echo "APP_BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_ENV
++      - name: Build API
++        run: pnpm --filter @ns/api build
+--- .vscode/tasks.json (new)
+
++++ .vscode/tasks.json
+
+@@ -0,0 +1,24 @@
+
++{
++  "version": "2.0.0",
++  "tasks": [
++    {
++      "label": "Dev API",
++      "type": "shell",
++      "command": "pnpm --filter @ns/api dev",
++      "group": "build",
++      "problemMatcher": []
++    },
++    {
++      "label": "Test /health",
++      "type": "shell",
++      "command": "node scripts/test-health.js",
++      "problemMatcher": []
++    },
++    {
++      "label": "Test /version",
++      "type": "shell",
++      "command": "node scripts/test-version.js",
++      "problemMatcher": []
++    }
++  ]
++}
+--- CHANGELOG.md (new)
+
++++ CHANGELOG.md
+
+@@ -0,0 +1,7 @@
+
++# Changelog
++
++## 2025-10-26
++- Added system plugin with `/health` and `/version`.
++- Env-driven CORS, rate limit flag, security headers (helmet), CSP report-only + `/csp-report` endpoint.
++- Optional Sentry init and error handler.
++- `.env.example` updated, VSCode tasks, test scripts, and GitHub Actions CI to inject build metadata.
+--- README.md
+
++++ README.md
+
+@@ -10,3 +10,20 @@
+
+ node tools/generate-one-qr-local.js
+ ```
+ 3) The QR will be created at `qr/ns-apartment-A1-local.png`.
++
++## System Endpoints
++
++- `GET /health` → stato runtime (ok/degraded/down), uptime, timestamp.
++- `GET /version` → metadata build (version, commit, buildTime, env).
++
++### Test rapidi (VSCode / Terminale integrato)
++
++```bash
++pnpm --filter @ns/api dev
++node scripts/test-health.js
++node scripts/test-version.js
++```
++
++### Env principali
++
++Vedi `.env.example` per le variabili: `ALLOWED_ORIGINS`, `ENABLE_SECURITY_HEADERS`, `ENABLE_CSP_REPORT_ONLY`, `ENABLE_RATE_LIMIT`, `SENTRY_DSN`, ecc.
+--- apps/api/package.json
+
++++ apps/api/package.json
+
+@@ -11,7 +11,9 @@
+
+     "@fastify/cors": "^9.0.0",
+     "@fastify/rate-limit": "^8.0.0",
+     "fastify": "^4.28.1",
+-    "pino": "^9.14.0"
++    "pino": "^9.14.0",
++    "@fastify/helmet": "^12.0.0",
++    "@sentry/node": "^8.25.0"
+   },
+   "devDependencies": {
+     "@types/node": "^20.11.0",
+--- apps/api/src/plugins/system.ts
+
++++ apps/api/src/plugins/system.ts
+
+@@ -1,44 +1,37 @@
+
+ import fp from 'fastify-plugin'
+ import { FastifyInstance, FastifyPluginAsync } from 'fastify'
+ 
+-type HealthStatus = 'ok' | 'degraded' | 'down'
+-
+ const systemPlugin: FastifyPluginAsync = fp(async (app: FastifyInstance) => {
+-  // Build metadata da env (settate in CI/CD)
+   const VERSION = process.env.APP_VERSION ?? '0.0.0'
+   const COMMIT_SHA = process.env.APP_COMMIT ?? 'unknown'
+   const BUILD_TIME = process.env.APP_BUILD_TIME ?? 'unknown'
+   const ENV = process.env.NODE_ENV ?? 'development'
+ 
+-  // Helper: standard cache headers per endpoint “sempre freschi”
+   const noCache = { 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate' }
+ 
+-  // /health: lightweight e costante O(1). Niente chiamate a servizi esterni qui.
+   app.get('/health', {
+     schema: {
+       response: {
+         200: {
+           type: 'object',
+           properties: {
+-            status: { type: 'string', enum: ['ok', 'degraded', 'down'] },
++            status: { type: 'string', enum: ['ok','degraded','down'] },
+             uptimeSec: { type: 'number' },
+-            timestamp: { type: 'string' },
++            timestamp: { type: 'string' }
+           },
+-          required: ['status', 'uptimeSec', 'timestamp']
++          required: ['status','uptimeSec','timestamp']
+         }
+-      },
+-      hide: false
++      }
+     }
+   }, async (_req, reply) => {
+-    const payload: { status: HealthStatus; uptimeSec: number; timestamp: string } = {
+-      status: 'ok',
++    const payload = {
++      status: 'ok' as const,
+       uptimeSec: process.uptime(),
+-      timestamp: new Date().toISOString(),
++      timestamp: new Date().toISOString()
+     }
+     return reply.headers(noCache).send(payload)
+   })
+ 
+-  // /version: info di build per diagnosi rapida
+   app.get('/version', {
+     schema: {
+       response: {
+@@ -50,20 +43,19 @@
+
+             buildTime: { type: 'string' },
+             env: { type: 'string' }
+           },
+-          required: ['version', 'commit', 'buildTime', 'env']
++          required: ['version','commit','buildTime','env']
+         }
+-      },
+-      hide: false
++      }
+     }
+   }, async (_req, reply) => {
+-  const payload = {
+-    version: process.env.APP_VERSION ?? '0.0.0',
+-    commit: process.env.APP_COMMIT ?? 'unknown',
+-    buildTime: process.env.APP_BUILD_TIME ?? 'unknown',
+-    env: process.env.NODE_ENV ?? 'development'
+-  }
+-  return reply.headers({ 'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate' }).send(payload)
+-})
++    const payload = {
++      version: VERSION,
++      commit: COMMIT_SHA,
++      buildTime: BUILD_TIME,
++      env: ENV
++    }
++    return reply.headers(noCache).send(payload)
++  })
+ })
+ 
+ export default systemPlugin
+--- apps/api/src/server.ts
+
++++ apps/api/src/server.ts
+
+@@ -2,11 +2,16 @@
+
+ import cors from '@fastify/cors';
+ import rateLimit from '@fastify/rate-limit';
+ import { chatRoutes } from './routes/chat.js';
++import helmet from '@fastify/helmet';
++
+ import systemPlugin from './plugins/system.js'
++import * as Sentry from '@sentry/node';
++
+ 
+ const app = Fastify({ logger: true });
+ const log = app.log as any;
+-await app.register(cors, {
++// replaced by env-driven CORS
++// await app.register(cors, {
+   origin: [
+     'https://widget-nextsphere-widget-test.vercel.app', // attuale
+     'https://widget.svapartments.it',                   // definitivo
+@@ -16,7 +21,8 @@
+
+   allowedHeaders: ['Content-Type','Authorization'],
+ });
+ 
+-await app.register(rateLimit, { max: 60, timeWindow: '1 minute' });
++// replaced by flag
++// await app.register(rateLimit, { max: 60, timeWindow: '1 minute' });
+ 
+ app.register(chatRoutes, { prefix: '/api' });
+ app.register(systemPlugin)
+@@ -40,3 +46,74 @@
+
+   log.error(err);
+   process.exit(1);
+ }
++
++// CORS (env-driven)
++const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean)
++await app.register(cors, {
++  origin: (origin, cb) => {
++    if (!origin) return cb(null, true) // allow server-to-server / curl
++    if (ALLOWED_ORIGINS.length === 0) return cb(null, true)
++    const ok = ALLOWED_ORIGINS.includes(origin)
++    cb(ok ? null : new Error('CORS blocked'), ok)
++  },
++  methods: ['GET','POST','OPTIONS'],
++  allowedHeaders: ['Content-Type','Authorization']
++})
++
++// Rate limit (flag ENABLE_RATE_LIMIT=true)
++const ENABLE_RATE_LIMIT = (process.env.ENABLE_RATE_LIMIT || 'true') === 'true'
++if (ENABLE_RATE_LIMIT) {
++  await app.register(rateLimit, { max: Number(process.env.RATE_LIMIT_MAX || 60), timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute' })
++}
++
++// Security headers (helmet) - opt-in via ENABLE_SECURITY_HEADERS
++const ENABLE_SECURITY_HEADERS = (process.env.ENABLE_SECURITY_HEADERS || 'true') === 'true'
++if (ENABLE_SECURITY_HEADERS) {
++  await app.register(helmet, {
++    contentSecurityPolicy: false // We'll set a report-only CSP header manually below
++  })
++}
++
++// Content Security Policy (report-only)
++const ENABLE_CSP_REPORT_ONLY = (process.env.ENABLE_CSP_REPORT_ONLY || 'true') === 'true'
++const CSP_REPORT_URI = process.env.CSP_REPORT_URI || '/csp-report'
++if (ENABLE_CSP_REPORT_ONLY) {
++  app.addHook('onRequest', async (req, reply) => {
++    const csp = [
++      "default-src 'self'",
++      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
++      "style-src 'self' 'unsafe-inline'",
++      "img-src 'self' data: https:",
++      "connect-src 'self' https: http:",
++      "frame-ancestors 'none'",
++      "base-uri 'self'",
++      `report-uri ${CSP_REPORT_URI}`
++    ].join('; ')
++    reply.header('Content-Security-Policy-Report-Only', csp)
++  })
++
++  app.post(CSP_REPORT_URI, async (req, _reply) => {
++    try {
++      // Accept both application/csp-report and application/json
++      const body: any = req.body
++      app.log.warn({ cspReport: body }, 'CSP Report')
++      return { ok: true }
++    } catch {
++      return { ok: false }
++    }
++  })
++}
++
++// Sentry (opt-in via SENTRY_DSN)
++if (process.env.SENTRY_DSN) {
++  Sentry.init({
++    dsn: process.env.SENTRY_DSN,
++    environment: process.env.NODE_ENV || 'development',
++    tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE || 0.0),
++  })
++  app.setErrorHandler((err, req, reply) => {
++    Sentry.captureException(err, { tags: { route: req.routerPath || req.url } })
++    req.log.error(err)
++    reply.status(err.statusCode || 500).send({ ok: false, error: 'Internal error' })
++  })
++}
+--- scripts/test-health.js (new)
+
++++ scripts/test-health.js
+
+@@ -0,0 +1,5 @@
+
++const http = require('node:http');
++http.get('http://localhost:8081/health', res => {
++  let chunk=''; res.on('data', d=> chunk+=d);
++  res.on('end', ()=> { try{ console.log(JSON.stringify(JSON.parse(chunk), null, 2)); } catch { console.log(chunk) } });
++}).on('error', e => console.error(e));
+--- scripts/test-version.js (new)
+
++++ scripts/test-version.js
+
+@@ -0,0 +1,5 @@
+
++const http = require('node:http');
++http.get('http://localhost:8081/version', res => {
++  let chunk=''; res.on('data', d=> chunk+=d);
++  res.on('end', ()=> { try{ console.log(JSON.stringify(JSON.parse(chunk), null, 2)); } catch { console.log(chunk) } });
++}).on('error', e => console.error(e));
