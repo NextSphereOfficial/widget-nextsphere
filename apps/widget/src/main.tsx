@@ -2,6 +2,26 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles/index.css";
+import * as Sentry from '@sentry/react'
+
+Sentry.init({
+  dsn: "https://18cbe4e05e88269f8bd08f0818316488@o4510256421863424.ingest.de.sentry.io/4510256444473424",
+  // Setting this option to true will send default PII data to Sentry.
+  // For example, automatic IP address collection on events
+  sendDefaultPii: true
+});
+// Add this button component to your app to test Sentry's error tracking
+function ErrorButton() {
+  return (
+    <button
+      onClick={() => {
+        throw new Error('This is your first error!');
+      }}
+    >
+      Break the world
+    </button>
+  );
+}
 
 // Legge l'API URL dalla finestra o dall'ambiente di Vite
 const API_URL =
