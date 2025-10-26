@@ -37,6 +37,12 @@ app.addHook('onError', (req, reply, err, done) => {
 app.get('/boom', () => {
   throw new Error('Sentry test: backend boom');
 });
+app.get('/sentry-test', async () => {
+  Sentry.captureMessage('Sentry connectivity test');
+  await Sentry.flush(2000); // aspetta fino a 2s l’invio
+  return { sent: true };
+});
+
 
 
 // ---------- CORS (env-driven) ----------
