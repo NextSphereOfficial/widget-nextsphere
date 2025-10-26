@@ -97,12 +97,20 @@ if (ENABLE_RATE_LIMIT) {
 }
 
 // ---------- Security headers (helmet, flag) ----------
-const ENABLE_SECURITY_HEADERS = (process.env.ENABLE_SECURITY_HEADERS || 'true') === 'true'
+const ENABLE_SECURITY_HEADERS =
+  (process.env.ENABLE_SECURITY_HEADERS ?? 'true') === 'true';
+
 if (ENABLE_SECURITY_HEADERS) {
   await app.register(helmet, {
-    // CSP la gestiamo in report-only sotto, via header custom
-    contentSecurityPolicy: false
-  })
+    // CSP la gestiamo in report-only via header custom
+    contentSecurityPolicy: false,
+    // Evita problemi con COEP in ambienti eterogenei
+    crossOriginEmbedderPolicy: false,
+    // Opzionali: header utili con default sicuri
+    // hidePoweredBy: true,
+    // referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    // xFrameOptions: 'SAMEORIGIN',
+  } as any);
 }
 
 // ---------- CSP report-only (flag) ----------
