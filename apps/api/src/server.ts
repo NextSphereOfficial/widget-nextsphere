@@ -7,8 +7,30 @@ import * as Sentry from '@sentry/node'
 import { chatRoutes } from './routes/chat.js'
 import systemPlugin from './plugins/system.js'
 
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV ?? 'production',
+  release: process.env.COMMIT_SHA ?? 'local',
+  tracesSampleRate: 0.0,
+});
+
+
 const app = Fastify({ logger: true })
 const log = app.log as any
+
+// Cattura tutti gli errori runtime
+app.addHook('onError', (req, reply, err, done) => {
+  Sentry.captureException(err, {
+    extra: { url: req.url, method: req.method, requestId: (req as any).id },
+  });
+  done();
+});
+
+// Route di test
+app.get('/boom', () => {
+  throw new Error('Sentry test: backend boom');
+});
+
 
 // ---------- CORS (env-driven) ----------
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
