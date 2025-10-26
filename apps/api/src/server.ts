@@ -8,10 +8,11 @@ import { chatRoutes } from './routes/chat.js'
 import systemPlugin from './plugins/system.js'
 
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
+  dsn: "https://80884f7caf09e54b1f67953d37457791@o4510256421863424.ingest.de.sentry.io/4510256449454160",
   environment: process.env.NODE_ENV ?? 'production',
   release: process.env.COMMIT_SHA ?? 'local',
   tracesSampleRate: 0.0,
+  sendDefaultPii: true,
 });
 
 
