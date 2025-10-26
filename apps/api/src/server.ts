@@ -6,6 +6,8 @@ import * as Sentry from '@sentry/node'
 
 import { chatRoutes } from './routes/chat.js'
 import systemPlugin from './plugins/system.js'
+const app = Fastify({ logger: true })
+const log = app.log as any
 
 Sentry.init({
   dsn: "https://80884f7caf09e54b1f67953d37457791@o4510256421863424.ingest.de.sentry.io/4510256449454160",
@@ -14,16 +16,15 @@ Sentry.init({
   tracesSampleRate: 0.0,
   sendDefaultPii: true,
 });
-if (process.env.SENTRY_DSN) {
-  const masked = process.env.SENTRY_DSN.replace(/.{30}(?=.{10})/,'***');
-  console.log('[SENTRY] DSN presente:', masked);
-} else {
-  console.error('[SENTRY] DSN MANCANTE!');
-}
+// subito dopo Sentry.init(...)
+app.get('/sentry-sdk-test', async () => {
+  Sentry.captureMessage('Sentry connectivity test');
+  await Sentry.flush(2000); // aspetta fino a 2s l’invio
+  return { sent: true };
+});
 
 
-const app = Fastify({ logger: true })
-const log = app.log as any
+
 
 // Cattura tutti gli errori runtime
 app.addHook('onError', (req, reply, err, done) => {
