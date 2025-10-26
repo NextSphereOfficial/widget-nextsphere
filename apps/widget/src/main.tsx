@@ -10,11 +10,7 @@ Sentry.init({
   // For example, automatic IP address collection on events
   sendDefaultPii: true
 });
-const hasSentryTest = new URLSearchParams(window.location.search).has('sentryTest');
-if (hasSentryTest) {
-  Sentry.captureMessage('FE connectivity test');
-  setTimeout(() => { throw new Error('Sentry FE test'); }, 0);
-}
+
 
 
 // Legge l'API URL dalla finestra o dall'ambiente di Vite
