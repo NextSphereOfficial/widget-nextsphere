@@ -74,11 +74,7 @@ if (ENABLE_SECURITY_HEADERS) {
 await app.register(systemPlugin);
 await app.register(chatRoutes);
 
-// Health & Version (se non già presenti in systemPlugin)
-app.get('/health', async () => ({ status: 'ok' }));
-app.get('/version', async () => ({
-  version: process.env.COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
-}));
+
 
 // Endpoint per i report CSP
 app.post('/csp-report', {
