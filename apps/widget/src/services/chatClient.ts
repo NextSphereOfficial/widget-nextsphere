@@ -1,5 +1,10 @@
 type Ctx = { hotel?: string; room?: string; locale?: string };
 
+// in alto al file
+const API_URL = import.meta.env.VITE_API_URL ?? 'https://api.svapartments.it';
+export const ENDPOINT = `${API_URL}/chat`;
+
+
 function getBase() {
   const base =
     (window as any).VITE_API_URL ??
