@@ -17,9 +17,13 @@ Sentry.init({
   sendDefaultPii: true,
 });
 // subito dopo Sentry.init(...)
-app.get('/sentry-sdk-test', async () => {
-  Sentry.captureMessage('Sentry connectivity test');
-  await Sentry.flush(2000); // aspetta fino a 2s l’invio
+app.get('/sentry-error-test', async () => {
+  try {
+    (globalThis as any).foo(); // funzione inesistente: ReferenceError
+  } catch (e) {
+    Sentry.captureException(e as any);
+    await Sentry.flush(2000);
+  }
   return { sent: true };
 });
 
