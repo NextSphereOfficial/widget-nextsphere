@@ -8,7 +8,10 @@ import { chatRoutes } from './routes/chat.js';
 import systemPlugin from './plugins/system.js';
 
 // -------------------- App --------------------
-const app = Fastify({ logger: true });
+const app = Fastify({
+  logger: true,
+  trustProxy: true, // usa X-Forwarded-For (Cloudflare + Render)
+});
 const log = app.log as any;
 
 // -------------------- Sentry --------------------
@@ -70,10 +73,29 @@ if (ENABLE_SECURITY_HEADERS) {
   } as any);
 }
 
+import rateLimit, { RateLimitOptions } from '@fastify/rate-limit';
+
+
 // -------------------- Plugin/Routes --------------------
 await app.register(systemPlugin);
 await app.register(chatRoutes);
-
+// ✅ Rate limit (Fastify v4 + @fastify/rate-limit v7)
+await app.register(import('@fastify/rate-limit'), {
+  global: true,            // applica a tutte le route nello scope
+  max: 60,                 // 60 richieste
+  timeWindow: 60_000,      // 60s (in ms) — puoi usare anche '1 minute'
+  ban: 0,                  // niente ban, solo 429
+  skipOnError: true,       // se il limiter ha problemi, non bloccare l'API
+  nameSpace: 'global',
+  keyGenerator: (req) =>
+    (req.headers['cf-connecting-ip'] as string) || req.ip || 'anonymous',
+  // ❗usa allowList per ESCLUDERE health/version/csp-report e i preflight
+  allowList: (req /*, key */) => {
+    if (req.method === 'OPTIONS') return true; // preflight
+    const p = req.url;
+    return p === '/health' || p === '/version' || p === '/csp-report';
+  },
+});
 
 
 // Endpoint per i report CSP
