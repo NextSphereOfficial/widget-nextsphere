@@ -9,6 +9,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1"
   }
 }
-

@@ -6,6 +6,8 @@ import * as Sentry from '@sentry/node'
 
 import { chatRoutes } from './routes/chat.js'
 import systemPlugin from './plugins/system.js'
+
+
 const app = Fastify({ logger: true })
 const log = app.log as any
 
@@ -16,6 +18,7 @@ Sentry.init({
   tracesSampleRate: 0.0,
   sendDefaultPii: true,
 });
+
 
 
 
@@ -37,7 +40,10 @@ app.get('/sentry-test', async () => {
   return { sent: true };
 });
 
-
+// opzionale: regex per preview (disabilitata di default)
+const PREVIEW_REGEX = process.env.CORS_PREVIEW_REGEX
+  ? new RegExp(process.env.CORS_PREVIEW_REGEX)
+  : null;
 
 // ---------- CORS (env-driven) ----------
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
@@ -45,16 +51,33 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .map(s => s.trim())
   .filter(Boolean)
 
+
+
 await app.register(cors, {
+  // Controllo puntuale sull'Origin in ingresso
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true) // server-to-server / curl
-    if (ALLOWED_ORIGINS.length === 0) return cb(null, true)
-    const ok = ALLOWED_ORIGINS.includes(origin)
-    cb(ok ? null : new Error('CORS blocked'), ok)
+    // richieste server-to-server (senza Origin): consenti
+    if (!origin) return cb(null, true);
+
+    const allowed =
+      ALLOWED_ORIGINS.includes(origin) ||
+      (PREVIEW_REGEX ? PREVIEW_REGEX.test(origin) : false);
+
+    cb(null, allowed);
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-})
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: [
+    'Authorization',
+    'Content-Type',
+    'X-Requested-With',
+    // per Sentry tracing nel browser:
+    'sentry-trace',
+    'baggage'
+  ],
+  exposedHeaders: [],     // aggiungi se devi esporre header custom al client
+  credentials: true,      // lascia true se invii cookie/Authorization dal widget
+  maxAge: 600             // cache preflight 10 minuti
+});
 
 // ---------- Rate limit (flag) ----------
 const ENABLE_RATE_LIMIT = (process.env.ENABLE_RATE_LIMIT || 'true') === 'true'
