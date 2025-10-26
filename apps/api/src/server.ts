@@ -10,7 +10,17 @@ import systemPlugin from './plugins/system.js';
 // -------------------- App --------------------
 const app = Fastify({
   logger: true,
-  trustProxy: true, // usa X-Forwarded-For (Cloudflare + Render)
+  trustProxy: true,
+  bodyLimit: 1 * 1024 * 1024, // 1MB: blocca payload eccessivi
+  ajv: {
+    customOptions: {
+      coerceTypes: true,          // coerce numeri/stringhe quando sensato
+      removeAdditional: 'all',    // rimuove campi extra non previsti dallo schema
+      useDefaults: true,          // applica default dai tuoi schema
+      allErrors: false,           // fail-fast
+      allowUnionTypes: true
+    }
+  }
 });
 const log = app.log as any;
 
@@ -21,6 +31,33 @@ Sentry.init({
   environment: process.env.NODE_ENV || 'production',
   release: process.env.COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || undefined,
 });
+
+app.setErrorHandler((err, req, reply) => {
+  // Errori di validazione Fastify/AJV
+  if ((err as any).validation || (err.code === 'FST_ERR_VALIDATION')) {
+    const issues = (err as any).validation || [];
+    const details = issues.slice(0, 3).map((v: any) => ({
+      field: v.instancePath || v.dataPath || v.params?.missingProperty || 'unknown',
+      message: v.message || 'invalid'
+    }));
+    return reply.code(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: 'Invalid request payload',
+      details
+    });
+  }
+
+  // default: lascia 500 ma senza leak
+  req.log.error({ err }, 'Unhandled error');
+  return reply.code(err.statusCode || 500).send({
+    statusCode: err.statusCode || 500,
+    error: 'Internal Server Error',
+    message: 'Unexpected error'
+  });
+});
+
+
 
 // Cattura tutti gli errori runtime
 app.addHook('onError', (req, reply, err, done) => {
@@ -74,6 +111,28 @@ if (ENABLE_SECURITY_HEADERS) {
 }
 
 import rateLimit, { RateLimitOptions } from '@fastify/rate-limit';
+
+
+const REQUIRE_JSON = (process.env.REQUIRE_JSON ?? 'true') === 'true';
+if (REQUIRE_JSON) {
+  app.addHook('onRequest', (req, reply, done) => {
+    // Applica solo alle POST/PUT/PATCH
+    const m = req.method;
+    if (m === 'POST' || m === 'PUT' || m === 'PATCH') {
+      const ct = (req.headers['content-type'] || '').toLowerCase();
+      if (!ct.includes('application/json')) {
+        reply.code(415).send({
+          statusCode: 415,
+          error: 'Unsupported Media Type',
+          message: 'Use application/json'
+        });
+        return;
+      }
+    }
+    done();
+  });
+}
+
 
 
 // -------------------- Plugin/Routes --------------------
