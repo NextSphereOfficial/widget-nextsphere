@@ -40,44 +40,52 @@ app.get('/sentry-test', async () => {
   return { sent: true };
 });
 
-// opzionale: regex per preview (disabilitata di default)
+
+
+// --- CORS setup ---
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS ?? '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
 const PREVIEW_REGEX = process.env.CORS_PREVIEW_REGEX
   ? new RegExp(process.env.CORS_PREVIEW_REGEX)
   : null;
 
-// ---------- CORS (env-driven) ----------
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean)
-
-
+// crea un Set per lookup più veloce
+const ORIGIN_SET = new Set(ALLOWED_ORIGINS);
 
 await app.register(cors, {
-  // Controllo puntuale sull'Origin in ingresso
   origin: (origin, cb) => {
     // richieste server-to-server (senza Origin): consenti
     if (!origin) return cb(null, true);
 
     const allowed =
-      ALLOWED_ORIGINS.includes(origin) ||
+      ORIGIN_SET.has(origin) ||
       (PREVIEW_REGEX ? PREVIEW_REGEX.test(origin) : false);
 
-    cb(null, allowed);
+    if (allowed) {
+      // echo esplicito: obbligatorio con credentials:true
+      return cb(null, origin);
+    }
+
+    return cb(null, false);
   },
   methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
   allowedHeaders: [
     'Authorization',
     'Content-Type',
     'X-Requested-With',
-    // per Sentry tracing nel browser:
     'sentry-trace',
     'baggage'
   ],
-  exposedHeaders: [],     // aggiungi se devi esporre header custom al client
-  credentials: true,      // lascia true se invii cookie/Authorization dal widget
-  maxAge: 600             // cache preflight 10 minuti
+  exposedHeaders: [],
+  credentials: true,
+  maxAge: 600,
 });
+
+
+
 
 // ---------- Rate limit (flag) ----------
 const ENABLE_RATE_LIMIT = (process.env.ENABLE_RATE_LIMIT || 'true') === 'true'
