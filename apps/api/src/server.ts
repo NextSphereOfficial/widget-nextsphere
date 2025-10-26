@@ -68,8 +68,7 @@ if (ENABLE_CANONICAL_REDIRECT) {
 
     const host = req.headers.host || '';
     if (host && host !== CANONICAL_HOST) {
-      const location = `https://${CANONICAL_HOST}${req.url}`;
-      reply.redirect(308, location);
+      reply.redirect(308, `https://${CANONICAL_HOST}${req.url}`);
       return;
     }
     done();
