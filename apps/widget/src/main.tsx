@@ -10,18 +10,12 @@ Sentry.init({
   // For example, automatic IP address collection on events
   sendDefaultPii: true
 });
-// Add this button component to your app to test Sentry's error tracking
-function ErrorButton() {
-  return (
-    <button
-      onClick={() => {
-        throw new Error('This is your first error!');
-      }}
-    >
-      Break the world
-    </button>
-  );
+const hasSentryTest = new URLSearchParams(window.location.search).has('sentryTest');
+if (hasSentryTest) {
+  Sentry.captureMessage('FE connectivity test');
+  setTimeout(() => { throw new Error('Sentry FE test'); }, 0);
 }
+
 
 // Legge l'API URL dalla finestra o dall'ambiente di Vite
 const API_URL =
