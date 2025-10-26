@@ -8,8 +8,8 @@ export async function chatRoutes(app: FastifyInstance) {
     // (sovrascrive quello globale)
     config: {
       rateLimit: {
-        max: 1,
-        timeWindow: 2000, // ms
+        max: 10,
+        timeWindow: 10000, // ms
       },
     } as any, // <- in TS, per evitare warning dei tipi
 
