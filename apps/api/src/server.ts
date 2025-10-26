@@ -14,6 +14,12 @@ Sentry.init({
   tracesSampleRate: 0.0,
   sendDefaultPii: true,
 });
+if (process.env.SENTRY_DSN) {
+  const masked = process.env.SENTRY_DSN.replace(/.{30}(?=.{10})/,'***');
+  console.log('[SENTRY] DSN presente:', masked);
+} else {
+  console.error('[SENTRY] DSN MANCANTE!');
+}
 
 
 const app = Fastify({ logger: true })
