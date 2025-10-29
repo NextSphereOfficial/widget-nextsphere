@@ -7,6 +7,10 @@ import * as Sentry from '@sentry/node';
 import { chatRoutes } from './routes/chat.js';
 import systemPlugin from './plugins/system.js';
 
+
+
+
+
 // -------------------- App --------------------
 const app = Fastify({
   logger: true,
@@ -226,6 +230,104 @@ if (ENABLE_CSP_REPORT_ONLY) {
     done();
   });
 }
+
+
+// ===== [OBSERVABILITY - BEGIN] =====
+
+// 1) Identità e costanti runtime
+const APP_NAME = "NextSphere API";
+const ENV = process.env.NODE_ENV || "development";
+const COMMIT_SHA = process.env.COMMIT_SHA || "dev";
+const BOOT_TIME_ISO = new Date().toISOString();
+
+// 2) Request-ID: usa quello di Fastify (req.id) con genReqId per coerenza
+app.withTypeProvider(); // se già presente, lascia pure
+// Se hai già passato un logger personalizzato a Fastify(...) con genReqId, ok.
+// In caso contrario, assicurati almeno che req.id sia disponibile:
+if (!app.hasDecorator("genReqId")) {
+  // Fastify fornisce già req.id; questo è solo un fallback di coerenza nei log.
+  // Nessuna azione necessaria se già configuri genReqId nel costruttore.
+}
+
+// 3) Metriche in-memory semplici
+const metrics = {
+  startTimeIso: BOOT_TIME_ISO,
+  reqTotal: 0,
+  reqByRoute: {} as Record<string, number>,
+  fiveXxCount: 0,
+  rateLimitWarns: 0,
+};
+
+// Hook per contare richieste e 5xx
+app.addHook("onResponse", async (req, reply) => {
+  try {
+    metrics.reqTotal += 1;
+    const route = req.routeOptions?.url || req.raw.url || "unknown";
+    metrics.reqByRoute[route] = (metrics.reqByRoute[route] || 0) + 1;
+
+    const status = reply.statusCode || 0;
+    if (status >= 500) metrics.fiveXxCount += 1;
+
+    // 4) Near-limit alert (legge gli header impostati dal rate limiter)
+    const remaining = reply.getHeader("x-ratelimit-remaining");
+    if (typeof remaining === "string" || typeof remaining === "number") {
+      const num = Number(remaining);
+      if (!Number.isNaN(num) && num <= 1) {
+        metrics.rateLimitWarns += 1;
+        req.log.warn(
+          {
+            msg: "Near rate limit",
+            route,
+            requestId: req.id,
+            remaining: num,
+            ip: req.ip,
+          },
+          "rate-limit-warning"
+        );
+      }
+    }
+  } catch (err) {
+    req.log.error({ err, requestId: req.id }, "metrics-hook-error");
+  }
+});
+
+// 5) Error handler compatto con tracciabilità
+app.setErrorHandler((err, req, reply) => {
+  req.log.error({ err, requestId: req.id }, "unhandled-error");
+  reply.status(err.statusCode || 500).send({ ok: false, errorId: req.id });
+});
+
+// 6) /version — info minime di build e uptime
+app.get("/version", async (req, reply) => {
+  const uptimeSec = Math.floor(process.uptime());
+  return reply.send({
+    ok: true,
+    name: APP_NAME,
+    env: ENV,
+    commit: COMMIT_SHA,
+    buildTime: BOOT_TIME_ISO,
+    uptimeSec,
+  });
+});
+
+// 7) /metrics — snapshot JSON (prometheus-like, ma semplice)
+app.get("/metrics", async (req, reply) => {
+  // Non esporre dati sensibili; solo contatori generali
+  return reply.send({
+    ok: true,
+    startTimeIso: metrics.startTimeIso,
+    uptimeSec: Math.floor(process.uptime()),
+    reqTotal: metrics.reqTotal,
+    fiveXxCount: metrics.fiveXxCount,
+    rateLimitWarns: metrics.rateLimitWarns,
+    reqByRoute: metrics.reqByRoute,
+  });
+});
+
+// ===== [OBSERVABILITY - END] =====
+
+
+
 
 // -------------------- Listen --------------------
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 8081);
