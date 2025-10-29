@@ -2,50 +2,56 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles/index.css";
-import * as Sentry from '@sentry/react'
+import * as Sentry from "@sentry/react";
 
+// ------- Sentry (safe init via env) -------
+const SENTRY_DSN =
+  (window as any).VITE_SENTRY_DSN ?? import.meta.env.VITE_SENTRY_DSN;
 
-Sentry.init({
-  dsn: "https://18cbe4e05e88269f8bd08f0818316488@o4510256421863424.ingest.de.sentry.io/4510256444473424",
-  environment: import.meta.env.MODE,
-  release: import.meta.env.VITE_COMMIT_SHA ?? 'local',
-  tracesSampleRate: 0.0,
-  sendDefaultPii: true,
-  beforeSend(event: any, hint?: any) {
-  const msg =
-    event?.message ??
-    event?.logentry?.message ??
-    hint?.originalException?.message ??
-    ''
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: import.meta.env.MODE ?? "production",
+    release: import.meta.env.VITE_COMMIT_SHA ?? "dev",
+    tracesSampleRate: 0.0,
+    sendDefaultPii: true,
+    beforeSend(event: any, hint?: any) {
+      const msg =
+        event?.message ??
+        event?.logentry?.message ??
+        hint?.originalException?.message ??
+        "";
 
-  if (
-    typeof msg === 'string' &&
-    (msg.includes('ResizeObserver') || msg.includes('Non-Error exception'))
-  ) {
-    return null
-  }
-  return event
-},
+      if (
+        typeof msg === "string" &&
+        (msg.includes("ResizeObserver") || msg.includes("Non-Error exception"))
+      ) {
+        return null;
+      }
+      return event;
+    },
+  });
 }
-);
 
-
-
-// Legge l'API URL dalla finestra o dall'ambiente di Vite
+// ------- API base URL -------
 const API_URL =
   (window as any).VITE_API_URL ?? import.meta.env.VITE_API_URL ?? "";
 
-// Espone la variabile a livello globale (opzionale ma utile)
+// (opzionale) esponi anche su window per debug/override runtime
 declare global {
   interface Window {
     VITE_API_URL?: string;
+    VITE_SENTRY_DSN?: string;
   }
 }
+if (API_URL && !(window as any).VITE_API_URL) {
+  (window as any).VITE_API_URL = API_URL;
+}
 
-// Trova o crea il container di montaggio
+// ------- Mount -------
 function ensureContainer(): HTMLElement {
   const candidates = [
-    "nx-widget", // tuo id originale
+    "nx-widget",
     "ns-concierge-widget-root",
     "ns-concierge-widget",
     "ns_widget",
