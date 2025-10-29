@@ -33,7 +33,6 @@ if (SENTRY_DSN) {
   });
 }
 
-console.log("🧭 Widget release build:", import.meta.env.VITE_COMMIT_SHA);
 
 
 // ------- API base URL -------
