@@ -233,23 +233,12 @@ if (ENABLE_CSP_REPORT_ONLY) {
 
 
 // ===== [OBSERVABILITY - BEGIN] =====
-
-// 1) Identità e costanti runtime
 const APP_NAME = "NextSphere API";
 const ENV = process.env.NODE_ENV || "development";
-const COMMIT_SHA = process.env.COMMIT_SHA || "dev";
+const COMMIT_SHA = process.env.COMMIT_SHA || "unknown";
 const BOOT_TIME_ISO = new Date().toISOString();
 
-// 2) Request-ID: usa quello di Fastify (req.id) con genReqId per coerenza
-app.withTypeProvider(); // se già presente, lascia pure
-// Se hai già passato un logger personalizzato a Fastify(...) con genReqId, ok.
-// In caso contrario, assicurati almeno che req.id sia disponibile:
-if (!app.hasDecorator("genReqId")) {
-  // Fastify fornisce già req.id; questo è solo un fallback di coerenza nei log.
-  // Nessuna azione necessaria se già configuri genReqId nel costruttore.
-}
-
-// 3) Metriche in-memory semplici
+// metriche semplici in memoria
 const metrics = {
   startTimeIso: BOOT_TIME_ISO,
   reqTotal: 0,
@@ -258,7 +247,7 @@ const metrics = {
   rateLimitWarns: 0,
 };
 
-// Hook per contare richieste e 5xx
+// conta richieste e intercetta near-limit (se usi rate limiter con header standard)
 app.addHook("onResponse", async (req, reply) => {
   try {
     metrics.reqTotal += 1;
@@ -268,36 +257,26 @@ app.addHook("onResponse", async (req, reply) => {
     const status = reply.statusCode || 0;
     if (status >= 500) metrics.fiveXxCount += 1;
 
-    // 4) Near-limit alert (legge gli header impostati dal rate limiter)
     const remaining = reply.getHeader("x-ratelimit-remaining");
     if (typeof remaining === "string" || typeof remaining === "number") {
       const num = Number(remaining);
       if (!Number.isNaN(num) && num <= 1) {
         metrics.rateLimitWarns += 1;
-        req.log.warn(
-          {
-            msg: "Near rate limit",
-            route,
-            requestId: req.id,
-            remaining: num,
-            ip: req.ip,
-          },
-          "rate-limit-warning"
-        );
+        req.log?.warn?.({ route, requestId: req.id, remaining: num, ip: req.ip }, "rate-limit-warning");
       }
     }
   } catch (err) {
-    req.log.error({ err, requestId: req.id }, "metrics-hook-error");
+    req.log?.error?.({ err, requestId: req.id }, "metrics-hook-error");
   }
 });
 
-// 5) Error handler compatto con tracciabilità
+// error handler compatto
 app.setErrorHandler((err, req, reply) => {
-  req.log.error({ err, requestId: req.id }, "unhandled-error");
+  req.log?.error?.({ err, requestId: req.id }, "unhandled-error");
   reply.status(err.statusCode || 500).send({ ok: false, errorId: req.id });
 });
 
-// 6) /version — info minime di build e uptime
+// /version
 app.get("/version", async (req, reply) => {
   const uptimeSec = Math.floor(process.uptime());
   return reply.send({
@@ -310,9 +289,8 @@ app.get("/version", async (req, reply) => {
   });
 });
 
-// 7) /metrics — snapshot JSON (prometheus-like, ma semplice)
+// /metrics
 app.get("/metrics", async (req, reply) => {
-  // Non esporre dati sensibili; solo contatori generali
   return reply.send({
     ok: true,
     startTimeIso: metrics.startTimeIso,
@@ -323,8 +301,8 @@ app.get("/metrics", async (req, reply) => {
     reqByRoute: metrics.reqByRoute,
   });
 });
-
 // ===== [OBSERVABILITY - END] =====
+
 
 
 
