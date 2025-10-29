@@ -1,3 +1,5 @@
+// apps/api/src/server.ts
+
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -7,238 +9,71 @@ import * as Sentry from '@sentry/node';
 import { chatRoutes } from './routes/chat.js';
 import systemPlugin from './plugins/system.js';
 
-
-
-
+// -------------------- Costanti runtime --------------------
+const APP_NAME = 'NextSphere API';
+const ENV = process.env.NODE_ENV || 'development';
+const COMMIT_SHA = process.env.COMMIT_SHA || 'unknown';
+const BOOT_TIME_ISO = new Date().toISOString();
 
 // -------------------- App --------------------
 const app = Fastify({
-  logger: true,
-  trustProxy: true,
-  bodyLimit: 1 * 1024 * 1024, // 1MB: blocca payload eccessivi
-  ajv: {
-    customOptions: {
-      coerceTypes: true,          // coerce numeri/stringhe quando sensato
-      removeAdditional: 'all',    // rimuove campi extra non previsti dallo schema
-      useDefaults: true,          // applica default dai tuoi schema
-      allErrors: false,           // fail-fast
-      allowUnionTypes: true
-    }
-  }
-});
-const log = app.log as any;
-
-// -------------------- Sentry --------------------
-Sentry.init({
-  dsn: process.env.SENTRY_DSN || "https://80884f7caf09e54b1f67953d37457791@o4510256421863424.ingest.de.sentry.io/4510256449454160",
-  tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 0) || 0,
-  environment: process.env.NODE_ENV || 'production',
-  release: process.env.COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || undefined,
+  logger: true, // usa pino integrato
 });
 
-app.setErrorHandler((err, req, reply) => {
-  // Errori di validazione Fastify/AJV
-  if ((err as any).validation || (err.code === 'FST_ERR_VALIDATION')) {
-    const issues = (err as any).validation || [];
-    const details = issues.slice(0, 3).map((v: any) => ({
-      field: v.instancePath || v.dataPath || v.params?.missingProperty || 'unknown',
-      message: v.message || 'invalid'
-    }));
-    return reply.code(400).send({
-      statusCode: 400,
-      error: 'Bad Request',
-      message: 'Invalid request payload',
-      details
-    });
-  }
+// alias comodo
+const log = app.log;
 
-  // default: lascia 500 ma senza leak
-  req.log.error({ err }, 'Unhandled error');
-  return reply.code(err.statusCode || 500).send({
-    statusCode: err.statusCode || 500,
-    error: 'Internal Server Error',
-    message: 'Unexpected error'
+// -------------------- Sentry (se DSN presente) --------------------
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: ENV,
+    release: COMMIT_SHA,
+    tracesSampleRate: 0.0, // niente tracing per ora
   });
-});
 
-// --- Canonical host redirect ---
-const ENABLE_CANONICAL_REDIRECT = (process.env.ENABLE_CANONICAL_REDIRECT ?? 'true') === 'true';
-const CANONICAL_HOST = process.env.CANONICAL_HOST || 'api.svapartments.it';
-
-if (ENABLE_CANONICAL_REDIRECT) {
-  app.addHook('onRequest', (req, reply, done) => {
-    // ✅ NON toccare i preflight: i browser non seguono redirect su OPTIONS
-    if (req.method === 'OPTIONS') return done();
-
-    const host = req.headers.host || '';
-    if (host && host !== CANONICAL_HOST) {
-      reply.redirect(308, `https://${CANONICAL_HOST}${req.url}`);
-      return;
+  app.addHook('onError', async (req, reply, err) => {
+    try {
+      Sentry.withScope((scope) => {
+        scope.setTag('route', req.routerPath || req.raw.url || 'unknown');
+        scope.setTag('method', req.method);
+        scope.setTag('env', ENV);
+        scope.setExtra('requestId', (req as any).id);
+        Sentry.captureException(err);
+      });
+    } catch (e) {
+      log.warn({ err: e }, 'sentry-capture-failed');
     }
-    done();
   });
 }
 
-
-// Cattura tutti gli errori runtime
-app.addHook('onError', (req, reply, err, done) => {
-  Sentry.captureException(err, { extra: { url: req.url, method: req.method, requestId: (req as any).id } });
-  done();
-});
-
-// -------------------- CORS (allowlist + echo) --------------------
-const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS ?? '')
-  .split(',')
-  .map(s => s.trim())
-  .filter(Boolean);
-
-const PREVIEW_REGEX = process.env.CORS_PREVIEW_REGEX
-  ? new RegExp(process.env.CORS_PREVIEW_REGEX)
-  : null;
-
-const ORIGIN_SET = new Set(ALLOWED_ORIGINS);
-
+// -------------------- Sicurezza --------------------
 await app.register(cors, {
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // server-to-server
-    const allowed = ORIGIN_SET.has(origin) || (PREVIEW_REGEX ? PREVIEW_REGEX.test(origin) : false);
-    if (allowed) return cb(null, origin); // echo esplicito (necessario con credentials:true)
-    return cb(null, false);
+    // Allowlist di esempio minimale; adatta se hai già la tua
+    const allow = [
+      'https://widget.svapartments.it',
+      'https://svapartments.it',
+      'http://localhost:5173',
+    ];
+    if (!origin || allow.includes(origin)) return cb(null, true);
+    return cb(new Error('CORS not allowed'), false);
   },
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: [
-    'Authorization',
-    'Content-Type',
-    'X-Requested-With',
-    // Sentry browser tracing headers
-    'sentry-trace',
-    'baggage',
-  ],
   credentials: true,
-  maxAge: 600,
 });
 
-// -------------------- Helmet (senza CSP) --------------------
-const ENABLE_SECURITY_HEADERS = (process.env.ENABLE_SECURITY_HEADERS ?? 'true') === 'true';
-if (ENABLE_SECURITY_HEADERS) {
-  await app.register(helmet, {
-  contentSecurityPolicy: false,      // CSP la gestiamo noi in report-only
-  crossOriginEmbedderPolicy: false,  // compatibilità
+await app.register(helmet, {
+  // HSTS 1 anno
   hsts: {
-    maxAge: 31536000,                // 🔒 12 mesi
+    maxAge: 31536000,
     includeSubDomains: true,
-    preload: true,                   // opzionale ma consigliato
+    preload: true,
   },
-} as any);
-
-}
-
-import rateLimit, { RateLimitOptions } from '@fastify/rate-limit';
-
-
-const REQUIRE_JSON = (process.env.REQUIRE_JSON ?? 'true') === 'true';
-if (REQUIRE_JSON) {
-  app.addHook('onRequest', (req, reply, done) => {
-    // Applica solo alle POST/PUT/PATCH
-    const m = req.method;
-    if (m === 'POST' || m === 'PUT' || m === 'PATCH') {
-      const ct = (req.headers['content-type'] || '').toLowerCase();
-      if (!ct.includes('application/json')) {
-        reply.code(415).send({
-          statusCode: 415,
-          error: 'Unsupported Media Type',
-          message: 'Use application/json'
-        });
-        return;
-      }
-    }
-    done();
-  });
-}
-
-
-
-// -------------------- Plugin/Routes --------------------
-await app.register(systemPlugin);
-await app.register(chatRoutes);
-// ✅ Rate limit (Fastify v4 + @fastify/rate-limit v7)
-await app.register(import('@fastify/rate-limit'), {
-  global: true,            // applica a tutte le route nello scope
-  max: 60,                 // 60 richieste
-  timeWindow: 60_000,      // 60s (in ms) — puoi usare anche '1 minute'
-  ban: 0,                  // niente ban, solo 429
-  skipOnError: true,       // se il limiter ha problemi, non bloccare l'API
-  nameSpace: 'global',
-  keyGenerator: (req) =>
-    (req.headers['cf-connecting-ip'] as string) || req.ip || 'anonymous',
-  // ❗usa allowList per ESCLUDERE health/version/csp-report e i preflight
-  allowList: (req /*, key */) => {
-    if (req.method === 'OPTIONS') return true; // preflight
-    const p = req.url;
-    return p === '/health' || p === '/version' || p === '/csp-report';
-  },
+  // CSP in report-only se vuoi, qui lasciamo minimale
+  contentSecurityPolicy: false,
 });
 
-// --- Friendly root route ---
-app.get('/', async () => ({
-  ok: true,
-  name: 'NextSphere API',
-  description: 'Backend for NextSphere Concierge AI',
-  endpoints: {
-    health: '/health',
-    version: '/version',
-    chat: '/chat'
-  }
-}));
-
-
-// Endpoint per i report CSP
-app.post('/csp-report', {
-  schema: { body: { type: 'object', additionalProperties: true } }
-}, async (req, reply) => {
-  try {
-    const report = req.body;
-    req.log.warn({ cspReport: report }, 'CSP report-only violation');
-  } catch (e) {
-    req.log.error({ err: e }, 'Error processing CSP report');
-  }
-  return reply.code(204).send();
-});
-
-// -------------------- CSP (report-only) hard-override --------------------
-const ENABLE_CSP_REPORT_ONLY = (process.env.ENABLE_CSP_REPORT_ONLY ?? 'true') === 'true';
-const API_CSP_REPORT_ONLY = [
-  "default-src 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "img-src 'none'",
-  "script-src 'none'",
-  "style-src 'none'",
-  "connect-src 'self'",
-  "report-uri /csp-report",
-].join('; ');
-
-// Registriamo l’hook DOPO plugin/route per vincere su qualsiasi set precedente
-await app.after();
-if (ENABLE_CSP_REPORT_ONLY) {
-  app.addHook('onSend', (req, reply, payload, done) => {
-    reply.removeHeader('Content-Security-Policy');
-    reply.removeHeader('Content-Security-Policy-Report-Only');
-    reply.header('Content-Security-Policy-Report-Only', API_CSP_REPORT_ONLY);
-    done();
-  });
-}
-
-
-// ===== [OBSERVABILITY - BEGIN] =====
-const APP_NAME = "NextSphere API";
-const ENV = process.env.NODE_ENV || "development";
-const COMMIT_SHA = process.env.COMMIT_SHA || "unknown";
-const BOOT_TIME_ISO = new Date().toISOString();
-
-// metriche semplici in memoria
+// -------------------- Metriche semplici in-memory --------------------
 const metrics = {
   startTimeIso: BOOT_TIME_ISO,
   reqTotal: 0,
@@ -247,65 +82,108 @@ const metrics = {
   rateLimitWarns: 0,
 };
 
-// conta richieste e intercetta near-limit (se usi rate limiter con header standard)
-app.addHook("onResponse", async (req, reply) => {
+// Conta richieste + warning vicino al rate limit (se header presenti)
+app.addHook('onResponse', async (req, reply) => {
   try {
     metrics.reqTotal += 1;
-    const route = req.routeOptions?.url || req.raw.url || "unknown";
+    const route = (req.routeOptions && (req.routeOptions.url as string)) || req.raw.url || 'unknown';
     metrics.reqByRoute[route] = (metrics.reqByRoute[route] || 0) + 1;
 
     const status = reply.statusCode || 0;
     if (status >= 500) metrics.fiveXxCount += 1;
 
-    const remaining = reply.getHeader("x-ratelimit-remaining");
-    if (typeof remaining === "string" || typeof remaining === "number") {
+    const remaining = reply.getHeader('x-ratelimit-remaining');
+    if (typeof remaining === 'string' || typeof remaining === 'number') {
       const num = Number(remaining);
       if (!Number.isNaN(num) && num <= 1) {
         metrics.rateLimitWarns += 1;
-        req.log?.warn?.({ route, requestId: req.id, remaining: num, ip: req.ip }, "rate-limit-warning");
+        log.warn(
+          {
+            msg: 'Near rate limit',
+            route,
+            requestId: (req as any).id,
+            remaining: num,
+            ip: (req as any).ip,
+          },
+          'rate-limit-warning',
+        );
       }
     }
   } catch (err) {
-    req.log?.error?.({ err, requestId: req.id }, "metrics-hook-error");
+    log.error({ err }, 'metrics-hook-error');
   }
 });
 
-// error handler compatto
+// -------------------- Error handler compatto --------------------
 app.setErrorHandler((err, req, reply) => {
-  req.log?.error?.({ err, requestId: req.id }, "unhandled-error");
-  reply.status(err.statusCode || 500).send({ ok: false, errorId: req.id });
+  log.error({ err, requestId: (req as any).id }, 'unhandled-error');
+  reply.status(err.statusCode || 500).send({ ok: false, errorId: (req as any).id });
 });
 
-// /version
-app.get("/version", async (req, reply) => {
-  const uptimeSec = Math.floor(process.uptime());
-  return reply.send({
-    ok: true,
-    name: APP_NAME,
-    env: ENV,
-    commit: COMMIT_SHA,
-    buildTime: BOOT_TIME_ISO,
-    uptimeSec,
+// -------------------- Plugin/Routes locali --------------------
+await app.register(systemPlugin); // ATTENZIONE: potrebbe già registrare /version e /health
+await app.register(chatRoutes, { prefix: '/chat' });
+
+// -------------------- /version (prova a registrare, altrimenti warn) --------------------
+try {
+  app.get('/version', async (req, reply) => {
+    const uptimeSec = Math.floor(process.uptime());
+    return reply.send({
+      ok: true,
+      name: APP_NAME,
+      env: ENV,
+      commit: COMMIT_SHA,
+      buildTime: BOOT_TIME_ISO,
+      uptimeSec,
+    });
   });
-});
+} catch (err: any) {
+  // Se la route esiste già (esposta da systemPlugin), non fermare il boot
+  if (err && err.code === 'FST_ERR_DUPLICATED_ROUTE') {
+    log.warn('Route /version già registrata da un altro plugin. Uso quella esistente.');
+  } else {
+    throw err;
+  }
+}
 
-// /metrics
-app.get("/metrics", async (req, reply) => {
-  return reply.send({
-    ok: true,
-    startTimeIso: metrics.startTimeIso,
-    uptimeSec: Math.floor(process.uptime()),
-    reqTotal: metrics.reqTotal,
-    fiveXxCount: metrics.fiveXxCount,
-    rateLimitWarns: metrics.rateLimitWarns,
-    reqByRoute: metrics.reqByRoute,
+// -------------------- /metrics (nuova) --------------------
+try {
+  app.get('/metrics', async (req, reply) => {
+    return reply.send({
+      ok: true,
+      startTimeIso: metrics.startTimeIso,
+      uptimeSec: Math.floor(process.uptime()),
+      reqTotal: metrics.reqTotal,
+      fiveXxCount: metrics.fiveXxCount,
+      rateLimitWarns: metrics.rateLimitWarns,
+      reqByRoute: metrics.reqByRoute,
+    });
   });
-});
-// ===== [OBSERVABILITY - END] =====
+} catch (err: any) {
+  if (err && err.code === 'FST_ERR_DUPLICATED_ROUTE') {
+    log.warn('Route /metrics già registrata. Uso quella esistente.');
+  } else {
+    throw err;
+  }
+}
 
-
-
-
+// -------------------- Root informativa (se non già definita altrove) --------------------
+try {
+  app.get('/', async () => {
+    return {
+      ok: true,
+      name: APP_NAME,
+      description: 'Backend for NextSphere Concierge AI',
+      endpoints: { health: '/health', version: '/version', chat: '/chat' },
+    };
+  });
+} catch (err: any) {
+  if (err && err.code === 'FST_ERR_DUPLICATED_ROUTE') {
+    // ignoriamo se già definita
+  } else {
+    throw err;
+  }
+}
 
 // -------------------- Listen --------------------
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 8081);
@@ -318,5 +196,6 @@ try {
   log.error(err);
   process.exit(1);
 }
+
 
 
