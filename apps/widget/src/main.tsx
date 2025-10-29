@@ -33,6 +33,9 @@ if (SENTRY_DSN) {
   });
 }
 
+console.log("🧭 Widget release build:", import.meta.env.VITE_COMMIT_SHA);
+
+
 // ------- API base URL -------
 const API_URL =
   (window as any).VITE_API_URL ?? import.meta.env.VITE_API_URL ?? "";
