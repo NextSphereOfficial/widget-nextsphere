@@ -2,10 +2,15 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "outDir": "dist"
+    "outDir": "dist",
+    "types": ["vite/client"],        // <- aggiunto: abilita import.meta.env
+    "baseUrl": "src"                 // <- opzionale: per import "@/..."
   },
   "include": [
     "src",
-    "vite.config.ts"
+    "src/**/*.d.ts",
+    "vite.config.ts",
+    "src/vite-env.d.ts",             // <- assicurati che esista
+    "src/env.d.ts"                   // <- se aggiungi la dichiarazione esplicita
   ]
 }
