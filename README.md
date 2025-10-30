@@ -1,12 +1,24 @@
-# QR generator for local LAN testing
+# NextSphere – Admin
 
-This script creates a QR code that points to your dev server at:
-`http://192.168.1.2:8081/?hotel=ns-apartment&room=A1&lang=auto&source=room-card`
+Backend e widget di supporto per il progetto **NextSphere Concierge AI**, integrato con l’infrastruttura **svapartments.it**.
 
-## Usage
-1) Ensure `qrcode` is installed (already included in the previous package's package.json).
-2) Run:
+## 📦 Architettura
+Monorepo gestito con **pnpm**, composto da:
+- **apps/api** → backend Fastify (Render) → [`https://api.svapartments.it`](https://api.svapartments.it)
+- **apps/widget** → widget React/Vite (Vercel) → [`https://widget.svapartments.it`](https://widget.svapartments.it)
+- **apps/admin** → (in sviluppo) interfaccia per gestori e multi-tenant
+
+---
+
+## 🚀 Endpoints principali
+| Metodo | Path | Descrizione |
+|--------|------|-------------|
+| `GET` | `/health` | Stato API, uptime e timestamp (supporta anche `HEAD` per UptimeRobot). |
+| `GET` | `/version` | Informazioni su release, commit e boot time. |
+| `POST` | `/chat` | Endpoint GPT (backend) collegato al widget. |
+| `GET` | `/metrics` | (facoltativo) metriche interne per monitoring. |
+
+Esempio:
 ```bash
-node tools/generate-one-qr-local.js
-```
-3) The QR will be created at `qr/ns-apartment-A1-local.png`.
+curl https://api.svapartments.it/health
+# {"status":"ok","uptimeSec":...,"timestamp":"..."}
