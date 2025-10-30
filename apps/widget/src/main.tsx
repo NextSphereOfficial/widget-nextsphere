@@ -4,6 +4,9 @@ import App from "./App";
 import "./styles/index.css";
 import * as Sentry from "@sentry/react";
 
+
+console.log("API_BASE =", import.meta.env.VITE_API_BASE);
+
 // ------- Sentry (safe init via env) -------
 const SENTRY_DSN =
   (window as any).VITE_SENTRY_DSN ?? import.meta.env.VITE_SENTRY_DSN;
