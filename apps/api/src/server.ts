@@ -1,189 +1,134 @@
 // apps/api/src/server.ts
-
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import * as Sentry from '@sentry/node';
 
 // Plugin/route locali
-import { chatRoutes } from './routes/chat.js';
-import systemPlugin from './plugins/system.js';
+import { chatRoutes } from './routes/chat.js';   // deve esportare una route POST '/chat'
+import systemPlugin from './plugins/system.js';  // health/version/root info
 
-// -------------------- Costanti runtime --------------------
+// -------------------- Costanti --------------------
 const APP_NAME = 'NextSphere API';
 const ENV = process.env.NODE_ENV || 'development';
 const COMMIT_SHA = process.env.COMMIT_SHA || 'unknown';
 const BOOT_TIME_ISO = new Date().toISOString();
 
-// -------------------- App --------------------
+// -------------------- Logger --------------------
 const app = Fastify({
-  logger: true, // usa pino integrato
+  trustProxy: true,
+  logger: {
+    level: process.env.LOG_LEVEL || 'info',
+    transport: ENV === 'development'
+      ? { target: 'pino-pretty', options: { singleLine: true, colorize: true } }
+      : undefined
+  }
 });
 
-// alias comodo
+// Shortcut per logger
 const log = app.log;
 
-// -------------------- Sentry (se DSN presente) --------------------
+// -------------------- Sentry --------------------
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
+    tracesSampleRate: 0.1,
     environment: ENV,
-    release: COMMIT_SHA,
-    tracesSampleRate: 0.0, // niente tracing per ora
+    release: COMMIT_SHA
   });
 
   app.addHook('onError', async (req, reply, err) => {
-    try {
-      Sentry.withScope((scope) => {
-        scope.setTag('route', req.routerPath || req.raw.url || 'unknown');
-        scope.setTag('method', req.method);
-        scope.setTag('env', ENV);
-        scope.setExtra('requestId', (req as any).id);
-        Sentry.captureException(err);
-      });
-    } catch (e) {
-      log.warn({ err: e }, 'sentry-capture-failed');
-    }
+    Sentry.withScope((scope) => {
+      scope.setTag('route', req.routerPath ?? req.url);
+      scope.setExtra('method', req.method);
+      scope.setExtra('query', req.query);
+      scope.setExtra('params', req.params);
+      scope.setExtra('body', req.body);
+      Sentry.captureException(err);
+    });
   });
 }
 
-// -------------------- Sicurezza --------------------
+// -------------------- Security --------------------
+await app.register(helmet, {
+  global: true,
+  // HSTS 1 anno + preload
+  hsts: {
+    maxAge: 60 * 60 * 24 * 365,
+    includeSubDomains: true,
+    preload: true
+  },
+  contentSecurityPolicy: false // CSP gestita separatamente se/quando serve
+});
+
+// CORS allowlist: widget prod + preview Vercel (+ curl/robots senza origin)
+const allowlist = new Set<string>([
+  'https://widget.svapartments.it'
+]);
+
 await app.register(cors, {
   origin: (origin, cb) => {
-    // Allowlist di esempio minimale; adatta se hai già la tua
-    const allow = [
-      'https://widget.svapartments.it',
-      'https://svapartments.it',
-      'http://localhost:5173',
-    ];
-    if (!origin || allow.includes(origin)) return cb(null, true);
-    return cb(new Error('CORS not allowed'), false);
-  },
-  credentials: true,
-});
+    // Nessun origin (curl, healthcheck) → consenti
+    if (!origin) return cb(null, true);
+    try {
+      const u = new URL(origin);
+      const host = `${u.protocol}//${u.hostname}`;
 
-await app.register(helmet, {
-  // HSTS 1 anno
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true,
-  },
-  // CSP in report-only se vuoi, qui lasciamo minimale
-  contentSecurityPolicy: false,
-});
+      // Produzione
+      if (allowlist.has(host)) return cb(null, true);
 
-// -------------------- Metriche semplici in-memory --------------------
-const metrics = {
-  startTimeIso: BOOT_TIME_ISO,
-  reqTotal: 0,
-  reqByRoute: {} as Record<string, number>,
-  fiveXxCount: 0,
-  rateLimitWarns: 0,
-};
-
-// Conta richieste + warning vicino al rate limit (se header presenti)
-app.addHook('onResponse', async (req, reply) => {
-  try {
-    metrics.reqTotal += 1;
-    const route = (req.routeOptions && (req.routeOptions.url as string)) || req.raw.url || 'unknown';
-    metrics.reqByRoute[route] = (metrics.reqByRoute[route] || 0) + 1;
-
-    const status = reply.statusCode || 0;
-    if (status >= 500) metrics.fiveXxCount += 1;
-
-    const remaining = reply.getHeader('x-ratelimit-remaining');
-    if (typeof remaining === 'string' || typeof remaining === 'number') {
-      const num = Number(remaining);
-      if (!Number.isNaN(num) && num <= 1) {
-        metrics.rateLimitWarns += 1;
-        log.warn(
-          {
-            msg: 'Near rate limit',
-            route,
-            requestId: (req as any).id,
-            remaining: num,
-            ip: (req as any).ip,
-          },
-          'rate-limit-warning',
-        );
-      }
+      // Preview Vercel (sottodomini *.vercel.app)
+      if (/\.vercel\.app$/i.test(u.hostname)) return cb(null, true);
+    } catch {
+      // origin malformato → nega
     }
-  } catch (err) {
-    log.error({ err }, 'metrics-hook-error');
+    cb(new Error('CORS not allowed'), false);
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false
+});
+
+// -------------------- Body/JSON limits (hardening) --------------------
+app.addHook('onRoute', (routeOpts) => {
+  routeOpts.bodyLimit ??= 1_000_000; // 1MB default
+});
+app.addHook('onRequest', async (req, reply) => {
+  if (req.method !== 'GET' && !req.headers['content-type']?.includes('application/json')) {
+    reply.code(415).send({ error: 'Unsupported Media Type', message: 'JSON only', statusCode: 415 });
   }
 });
 
-// -------------------- Error handler compatto --------------------
+// -------------------- Root Info --------------------
+app.get('/', async () => {
+  return {
+    ok: true,
+    name: APP_NAME,
+    description: 'Backend for NextSphere Concierge AI',
+    env: ENV,
+    commit: COMMIT_SHA,
+    boot: BOOT_TIME_ISO,
+    endpoints: { health: '/health', version: '/version', chat: '/chat' }
+  };
+});
+
+// -------------------- Plugin di sistema (health/version) --------------------
+await app.register(systemPlugin);
+
+// -------------------- Chat routes --------------------
+// ⚠️ Nessun prefix: la route deve essere esattamente POST /chat
+await app.register(chatRoutes);
+
+// -------------------- Error handler "pulito" --------------------
 app.setErrorHandler((err, req, reply) => {
-  log.error({ err, requestId: (req as any).id }, 'unhandled-error');
-  reply.status(err.statusCode || 500).send({ ok: false, errorId: (req as any).id });
+  log.error({ err }, 'Unhandled error');
+  const status = (err.statusCode && err.statusCode >= 400) ? err.statusCode : 500;
+  reply.code(status).send({
+    error: status === 500 ? 'Internal Server Error' : err.name || 'Error',
+    message: status === 500 ? 'Something went wrong' : err.message,
+    statusCode: status
+  });
 });
-
-// -------------------- Plugin/Routes locali --------------------
-await app.register(systemPlugin); // ATTENZIONE: potrebbe già registrare /version e /health
-await app.register(chatRoutes, { prefix: '/chat' });
-
-// -------------------- /version (prova a registrare, altrimenti warn) --------------------
-try {
-  app.get('/version', async (req, reply) => {
-    const uptimeSec = Math.floor(process.uptime());
-    return reply.send({
-      ok: true,
-      name: APP_NAME,
-      env: ENV,
-      commit: COMMIT_SHA,
-      buildTime: BOOT_TIME_ISO,
-      uptimeSec,
-    });
-  });
-} catch (err: any) {
-  // Se la route esiste già (esposta da systemPlugin), non fermare il boot
-  if (err && err.code === 'FST_ERR_DUPLICATED_ROUTE') {
-    log.warn('Route /version già registrata da un altro plugin. Uso quella esistente.');
-  } else {
-    throw err;
-  }
-}
-
-// -------------------- /metrics (nuova) --------------------
-try {
-  app.get('/metrics', async (req, reply) => {
-    return reply.send({
-      ok: true,
-      startTimeIso: metrics.startTimeIso,
-      uptimeSec: Math.floor(process.uptime()),
-      reqTotal: metrics.reqTotal,
-      fiveXxCount: metrics.fiveXxCount,
-      rateLimitWarns: metrics.rateLimitWarns,
-      reqByRoute: metrics.reqByRoute,
-    });
-  });
-} catch (err: any) {
-  if (err && err.code === 'FST_ERR_DUPLICATED_ROUTE') {
-    log.warn('Route /metrics già registrata. Uso quella esistente.');
-  } else {
-    throw err;
-  }
-}
-
-// -------------------- Root informativa (se non già definita altrove) --------------------
-try {
-  app.get('/', async () => {
-    return {
-      ok: true,
-      name: APP_NAME,
-      description: 'Backend for NextSphere Concierge AI',
-      endpoints: { health: '/health', version: '/version', chat: '/chat' },
-    };
-  });
-} catch (err: any) {
-  if (err && err.code === 'FST_ERR_DUPLICATED_ROUTE') {
-    // ignoriamo se già definita
-  } else {
-    throw err;
-  }
-}
 
 // -------------------- Listen --------------------
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 8081);
@@ -196,6 +141,3 @@ try {
   log.error(err);
   process.exit(1);
 }
-
-
-
