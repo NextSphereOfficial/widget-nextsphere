@@ -94,8 +94,17 @@ app.addHook('onRoute', (routeOpts) => {
   routeOpts.bodyLimit ??= 1_000_000; // 1MB default
 });
 app.addHook('onRequest', async (req, reply) => {
-  if (req.method !== 'GET' && !req.headers['content-type']?.includes('application/json')) {
-    reply.code(415).send({ error: 'Unsupported Media Type', message: 'JSON only', statusCode: 415 });
+  const m = req.method;
+
+  // Consenti GET, HEAD e OPTIONS senza header JSON
+  if (m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS') {
+    const ct = req.headers['content-type'] || '';
+    if (!ct.includes('application/json')) {
+      reply
+        .code(415)
+        .send({ error: 'Unsupported Media Type', message: 'JSON only', statusCode: 415 });
+      return;
+    }
   }
 });
 
