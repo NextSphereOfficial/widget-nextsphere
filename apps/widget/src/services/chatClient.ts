@@ -1,13 +1,14 @@
 // src/services/chatClient.ts
 
 export type Ctx = {
-  hotel?: string;
+  hotel?: string;  // legacy: usato come fallback per structureId
   room?: string;
   locale?: string;
 };
 
 export type ChatResponse = {
   reply: string;
+  // il backend può aggiungere altri campi (es. ok, meta.ctx) che non tipizziamo qui
 };
 
 // --- Base URL (senza /api) ---
@@ -19,10 +20,23 @@ function resolveApiBase(): string {
 }
 
 export const API_BASE = resolveApiBase();
-export const ENDPOINT = `${API_BASE}/chat`;
 
 const DEFAULT_TIMEOUT_MS = 20_000;
 
+// --- Query param helper (no deps) ---
+function getParam(name: string): string | null {
+  try {
+    return new URLSearchParams(globalThis.location?.search ?? "").get(name);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Invio messaggio alla route pulita: POST /chat/:structureId
+ * - structureId: letto da ?structure=... (fallback ctx.hotel, poi "svapartments")
+ * - room: letto da ?room=... (fallback ctx.room)
+ */
 export async function sendChat(
   message: string,
   ctx: Ctx = {},
@@ -31,6 +45,20 @@ export async function sendChat(
   if (!message || typeof message !== "string") {
     throw new Error("Messaggio non valido.");
   }
+
+  // Risolviamo structureId e room in ordine di priorità: URL → ctx → default
+  const structureId =
+    getParam("structure") ||
+    ctx.hotel ||                       // legacy fallback
+    "svapartments";
+
+  const room =
+    getParam("room") ||
+    ctx.room ||
+    undefined;
+
+  // Endpoint dinamico /chat/:structureId
+  const endpoint = `${API_BASE}/chat/${encodeURIComponent(structureId)}`;
 
   const controller =
     !opts.signal && typeof AbortController !== "undefined"
@@ -42,14 +70,14 @@ export async function sendChat(
     : undefined;
 
   try {
-    const res = await fetch(ENDPOINT, {
+    const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       // credentials: "include", // se in futuro invii cookie/Authorization
       body: JSON.stringify({
-        message,       // richiesto dallo schema backend
-        text: message, // compat vecchia
-        ...ctx,
+        message,             // richiesto dallo schema backend
+        room,                // opzionale, usato dal resolver per gli override
+        locale: ctx.locale,  // non obbligatorio, pronto per estensioni future
       }),
       signal: opts.signal ?? controller?.signal,
     });
