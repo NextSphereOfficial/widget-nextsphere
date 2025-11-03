@@ -1,4 +1,4 @@
-import type { StructureConfig } from "../../../types/Structure";
+import type { StructureConfig } from "../../../types/Structure.js";
 import { mergeDefaultsWithOverrides } from "./mergeConfig.js";
 
 export type LLMContext = {

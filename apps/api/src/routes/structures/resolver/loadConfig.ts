@@ -6,7 +6,7 @@ import AjvModule from "ajv";
 import addFormatsModule from "ajv-formats";
 const Ajv = AjvModule.default;
 const addFormats = addFormatsModule.default;
-import type { StructureConfig } from "../../../types/Structure";
+import type { StructureConfig } from "../../../types/Structure.js";
 
 
 
