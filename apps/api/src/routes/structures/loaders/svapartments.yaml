@@ -1,0 +1,47 @@
+version: 1.0.0
+structure:
+  id: svapartments
+  name: "SVA Apartments"
+  locale: it-IT
+  timezone: Europe/Rome
+
+defaults:
+  wifi:
+    ssid: "SVA_Guest"
+    password: "${WIFI_PW_DEFAULT}"
+  checkin:
+    from: "15:00"
+    method: "self"
+    instructions: |
+      Apri il portone con il codice fornito. Salita scala A, 1° piano.
+      Smart lock: inserisci il codice e premi ✔.
+  checkout:
+    until: "10:00"
+  rules:
+    - "No smoking"
+    - "No party"
+  emergencies:
+    number: "112"
+    instructions: "Segui i cartelli verdi; estintore al piano 1."
+  faqs:
+    - q: "Dove trovo il Wi-Fi?"
+      a: "Nelle info della stanza e sul cartellino accanto alla TV."
+
+rooms:
+  - id: "101"
+    name: "Camera 101"
+    overrides:
+      wifi:
+        password: "${WIFI_PW_101}"
+      checkin:
+        instructions: "Smart lock: 1234# (non condividere)."
+      assets:
+        photos:
+          - "/assets/svapartments/rooms/101/hero.jpg"
+
+  - id: "102"
+    name: "Camera 102"
+    overrides:
+      rules:
+        - "No smoking"
+        - "Animali ammessi su richiesta"

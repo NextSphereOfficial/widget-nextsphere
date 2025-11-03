@@ -7,6 +7,7 @@ import * as Sentry from '@sentry/node';
 // Plugin/route locali
 import { chatRoutes } from './routes/chat.js';   // deve esportare una route POST '/chat'
 import systemPlugin from './plugins/system.js';  // health/version/root info
+import structuresRoutes from './routes/structures/index.js'; // ✅ nuovo plugin multi-struttura
 
 // -------------------- Costanti --------------------
 const APP_NAME = 'NextSphere API';
@@ -52,32 +53,26 @@ if (process.env.SENTRY_DSN) {
 // -------------------- Security --------------------
 await app.register(helmet, {
   global: true,
-  // HSTS 1 anno + preload
   hsts: {
     maxAge: 60 * 60 * 24 * 365,
     includeSubDomains: true,
     preload: true
   },
-  contentSecurityPolicy: false // CSP gestita separatamente se/quando serve
+  contentSecurityPolicy: false
 });
 
-// CORS allowlist: widget prod + preview Vercel (+ curl/robots senza origin)
+// -------------------- CORS --------------------
 const allowlist = new Set<string>([
   'https://widget.svapartments.it'
 ]);
 
 await app.register(cors, {
   origin: (origin, cb) => {
-    // Nessun origin (curl, healthcheck) → consenti
     if (!origin) return cb(null, true);
     try {
       const u = new URL(origin);
       const host = `${u.protocol}//${u.hostname}`;
-
-      // Produzione
       if (allowlist.has(host)) return cb(null, true);
-
-      // Preview Vercel (sottodomini *.vercel.app)
       if (/\.vercel\.app$/i.test(u.hostname)) return cb(null, true);
     } catch {
       // origin malformato → nega
@@ -89,46 +84,42 @@ await app.register(cors, {
   credentials: false
 });
 
-// -------------------- Body/JSON limits (hardening) --------------------
+// -------------------- Body/JSON limits --------------------
 app.addHook('onRoute', (routeOpts) => {
-  routeOpts.bodyLimit ??= 1_000_000; // 1MB default
+  routeOpts.bodyLimit ??= 1_000_000;
 });
 app.addHook('onRequest', async (req, reply) => {
   const m = req.method;
-
-  // Consenti GET, HEAD e OPTIONS senza header JSON
   if (m !== 'GET' && m !== 'HEAD' && m !== 'OPTIONS') {
     const ct = req.headers['content-type'] || '';
     if (!ct.includes('application/json')) {
-      reply
-        .code(415)
-        .send({ error: 'Unsupported Media Type', message: 'JSON only', statusCode: 415 });
+      reply.code(415).send({ error: 'Unsupported Media Type', message: 'JSON only', statusCode: 415 });
       return;
     }
   }
 });
 
 // -------------------- Root Info --------------------
-app.get('/', async () => {
-  return {
-    ok: true,
-    name: APP_NAME,
-    description: 'Backend for NextSphere Concierge AI',
-    env: ENV,
-    commit: COMMIT_SHA,
-    boot: BOOT_TIME_ISO,
-    endpoints: { health: '/health', version: '/version', chat: '/chat' }
-  };
-});
+app.get('/', async () => ({
+  ok: true,
+  name: APP_NAME,
+  description: 'Backend for NextSphere Concierge AI',
+  env: ENV,
+  commit: COMMIT_SHA,
+  boot: BOOT_TIME_ISO,
+  endpoints: { health: '/health', version: '/version', chat: '/chat', structures: '/structures' }
+}));
 
-// -------------------- Plugin di sistema (health/version) --------------------
+// -------------------- Plugin di sistema --------------------
 await app.register(systemPlugin);
 
+// -------------------- Route multi-struttura --------------------
+await app.register(structuresRoutes);
+
 // -------------------- Chat routes --------------------
-// ⚠️ Nessun prefix: la route deve essere esattamente POST /chat
 await app.register(chatRoutes);
 
-// -------------------- Error handler "pulito" --------------------
+// -------------------- Error handler --------------------
 app.setErrorHandler((err, req, reply) => {
   log.error({ err }, 'Unhandled error');
   const status = (err.statusCode && err.statusCode >= 400) ? err.statusCode : 500;

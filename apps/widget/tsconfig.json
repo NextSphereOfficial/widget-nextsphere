@@ -1,3 +1,4 @@
+
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
@@ -13,4 +14,5 @@
     "src/vite-env.d.ts",             // <- assicurati che esista
     "src/env.d.ts"                   // <- se aggiungi la dichiarazione esplicita
   ]
+  
 }
