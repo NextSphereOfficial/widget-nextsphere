@@ -3,10 +3,12 @@ import { loadConfig, getAvailableStructures } from "./resolver/loadConfig.js";
 import { toLLMContext } from "./resolver/toLLMContext.js";
 
 const structuresRoutes: FastifyPluginAsync = async (fastify) => {
+  // --- elenco strutture disponibili ---
   fastify.get("/structures", async () => {
     return { ok: true, structures: getAvailableStructures() };
   });
 
+  // --- contesto completo (con merge defaults/room) ---
   fastify.get<{
     Params: { structureId: string };
     Querystring: { room?: string; redact?: string };
@@ -23,16 +25,72 @@ const structuresRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-  // Optional: enriched echo for testing
+  // --- chat logica base: risposte da YAML ---
   fastify.post<{
     Params: { structureId: string };
-    Body: { message: string; room?: string };
+    Body: { message: string; room?: string; locale?: string };
   }>("/chat/:structureId", async (req) => {
     const { structureId } = req.params;
     const { room, message } = req.body;
+
     const cfg = loadConfig(structureId);
-    const ctx = toLLMContext(cfg, room, true);
-    return { ok: true, reply: `Echo: ${message}`, meta: { ctx } };
+    const ctx = toLLMContext(cfg, room, true); // redatto per sicurezza
+    const text = (message || "").toLowerCase().trim();
+
+    const reply = (s: string) => ({ ok: true, reply: s, meta: { ctx } });
+    const info = ctx.info || {};
+
+    // intent basilari
+    const isWifi = /wi[-\s]*fi|internet|rete|password|ssid/.test(text);
+    const isCheckin = /check[-\s]*in|arrivo|entrare|codice (porta|porta)|smart\s*lock/.test(text);
+    const isCheckout = /check[-\s]*out|uscita|partenza|orario.*(uscita|check)/.test(text);
+    const isRules = /regole|rules|fumo|fumare|party|animali/.test(text);
+    const isEmerg = /emergenze?|emergency|soccorso|numero.*emergenze/.test(text);
+    const isFaq = /faq|domande|aiuto|help/.test(text);
+
+    if (isWifi && info.wifi) {
+      const pw = info.wifi.password ? ` — password: ${info.wifi.password}` : "";
+      return reply(`Wi-Fi: SSID "${info.wifi.ssid}"${pw}`);
+    }
+
+    if (isCheckin && info.checkin) {
+      const from = info.checkin.from ? ` dalle ${info.checkin.from}` : "";
+      const method = info.checkin.method ? ` (${info.checkin.method})` : "";
+      const instr = info.checkin.instructions ? `\nIstruzioni: ${info.checkin.instructions}` : "";
+      return reply(`Check-in${from}${method}.${instr}`);
+    }
+
+    if (isCheckout && info.checkout) {
+      const until = info.checkout.until ? ` entro le ${info.checkout.until}` : "";
+      const instr = info.checkout.instructions ? `\nIndicazioni: ${info.checkout.instructions}` : "";
+      return reply(`Check-out${until}.${instr}`);
+    }
+
+    if (isRules && info.rules?.length) {
+      return reply(`Regole: ${info.rules.join(" • ")}`);
+    }
+
+    if (isEmerg && info.emergencies) {
+      const num = info.emergencies.number ? `Numero emergenze: ${info.emergencies.number}.` : "";
+      const instr = info.emergencies.instructions ? ` ${info.emergencies.instructions}` : "";
+      return reply(`${num}${instr}`.trim() || "In caso di emergenza chiama il 112.");
+    }
+
+    if (isFaq && info.faqs?.length) {
+      const first = info.faqs[0];
+      return reply(`${first.q}\n${first.a}`);
+    }
+
+    // fallback: FAQ correlate
+    if (info.faqs?.length) {
+      const hit = info.faqs.find(f =>
+        text && (f.q.toLowerCase().includes(text) || f.a.toLowerCase().includes(text))
+      );
+      if (hit) return reply(hit.a);
+    }
+
+    // fallback finale
+    return reply(`Echo: ${message}`);
   });
 };
 
