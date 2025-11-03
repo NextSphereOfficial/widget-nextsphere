@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://svapartments.it/schemas/structure.schema.json",
+  "title": "StructureConfig",
+  "type": "object",
+  "required": ["version", "structure", "defaults", "rooms"],
+  "properties": {
+    "version": { "type": "string" },
+    "structure": {
+      "type": "object",
+      "required": ["id", "name", "locale", "timezone"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "locale": { "type": "string" },
+        "timezone": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "defaults": { "$ref": "#/definitions/Defaults" },
+    "rooms": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/Room" },
+      "uniqueItems": true
+    },
+    "translations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "string" }
+      }
+    }
+  },
+  "definitions": {
+        "WifiPartial": {
+      "type": "object",
+      "properties": {
+        "ssid": { "type": "string" },
+        "password": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "Wifi": {
+      "type": "object",
+      "properties": {
+        "ssid": { "type": "string" },
+        "password": { "type": "string" }
+      },
+      "required": ["ssid"],
+      "additionalProperties": false
+    },
+    "Checkin": {
+      "type": "object",
+      "properties": {
+        "from": { "type": "string" },
+        "method": { "type": "string" },
+        "instructions": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "Checkout": {
+      "type": "object",
+      "properties": {
+        "until": { "type": "string" },
+        "instructions": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "Emergencies": {
+      "type": "object",
+      "properties": {
+        "number": { "type": "string" },
+        "instructions": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "FAQ": {
+      "type": "object",
+      "required": ["q", "a"],
+      "properties": {
+        "q": { "type": "string" },
+        "a": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "Assets": {
+      "type": "object",
+      "properties": {
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "documents": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    },
+    "Defaults": {
+      "type": "object",
+      "properties": {
+        "wifi": { "$ref": "#/definitions/Wifi" },
+        "checkin": { "$ref": "#/definitions/Checkin" },
+        "checkout": { "$ref": "#/definitions/Checkout" },
+        "rules": { "type": "array", "items": { "type": "string" } },
+        "emergencies": { "$ref": "#/definitions/Emergencies" },
+        "faqs": { "type": "array", "items": { "$ref": "#/definitions/FAQ" } }
+      },
+      "additionalProperties": true
+    },
+    "Room": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+"overrides": {
+  "type": "object",
+  "properties": {
+    "wifi": { "$ref": "#/definitions/WifiPartial" },
+    "checkin": { "$ref": "#/definitions/Checkin" },
+    "checkout": { "$ref": "#/definitions/Checkout" },
+    "rules": { "type": "array", "items": { "type": "string" } },
+    "emergencies": { "$ref": "#/definitions/Emergencies" },
+    "faqs": { "type": "array", "items": { "$ref": "#/definitions/FAQ" } },
+    "assets": { "$ref": "#/definitions/Assets" }
+  },
+  "additionalProperties": false
+}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

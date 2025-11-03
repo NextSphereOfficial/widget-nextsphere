@@ -1,7 +1,28 @@
-node_modules
-dist
-build
+# Node & build artifacts
+node_modules/
+dist/
+.cache/
+out/
+
+# Env & config
 .env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 *.log
-*.sqlite
-*.db
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Generated archives
+*.zip
+
+# IDE/editor folders
+.vscode/
+.idea/
