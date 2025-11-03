@@ -5,7 +5,7 @@ import helmet from '@fastify/helmet';
 import * as Sentry from '@sentry/node';
 
 // Plugin/route locali
-import { chatRoutes } from './routes/chat.js';   // deve esportare una route POST '/chat'
+
 import systemPlugin from './plugins/system.js';  // health/version/root info
 import structuresRoutes from './routes/structures/index.js'; // ✅ nuovo plugin multi-struttura
 
@@ -116,8 +116,7 @@ await app.register(systemPlugin);
 // -------------------- Route multi-struttura --------------------
 await app.register(structuresRoutes);
 
-// -------------------- Chat routes --------------------
-await app.register(chatRoutes);
+
 
 // -------------------- Error handler --------------------
 app.setErrorHandler((err, req, reply) => {
