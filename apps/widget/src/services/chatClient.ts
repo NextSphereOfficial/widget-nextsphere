@@ -1,111 +1,44 @@
 // src/services/chatClient.ts
 
+// --- Tipi ---
 export type Ctx = {
-  hotel?: string;  // legacy: usato come fallback per structureId
+  hotel?: string;   // legacy: usato come fallback per structureId
   room?: string;
   locale?: string;
 };
 
-export type ChatResponse = {
-  reply: string;
-  // il backend può aggiungere altri campi (es. ok, meta.ctx) che non tipizziamo qui
-};
+export type ChatResponse = { reply: string };
 
 // --- Base URL (senza /api) ---
 function resolveApiBase(): string {
-  const winVal = (globalThis as any)?.VITE_API_URL;
-  const envVal = (import.meta as any)?.env?.VITE_API_URL;
-  const base = String(winVal ?? envVal ?? "https://api.svapartments.it");
-  return base.replace(/\/+$/, ""); // rimuovi slash finali
+  // Ordine robusto: window → import.meta.env → process.env → fallback
+  try {
+    const winVal = (globalThis as any)?.VITE_API_URL;
+    if (typeof winVal === "string" && winVal.trim()) return winVal.replace(/\/+$/, "");
+  } catch {}
+
+  try {
+    const envVal = (import.meta as any)?.env?.VITE_API_URL;
+    if (typeof envVal === "string" && envVal.trim()) return envVal.replace(/\/+$/, "");
+  } catch {}
+
+  try {
+    const procVal = (globalThis as any)?.process?.env?.VITE_API_URL;
+    if (typeof procVal === "string" && procVal.trim()) return procVal.replace(/\/+$/, "");
+  } catch {}
+
+  // Fallback sicuro in prod
+  return "https://api.svapartments.it";
 }
 
-export const API_BASE = resolveApiBase();
-
+const API_BASE = resolveApiBase();
 const DEFAULT_TIMEOUT_MS = 20_000;
 
-// --- Query param helper (no deps) ---
+// --- Utils ---
 function getParam(name: string): string | null {
-  try {
-    return new URLSearchParams(globalThis.location?.search ?? "").get(name);
-  } catch {
-    return null;
-  }
+  try { return new URLSearchParams(globalThis.location?.search ?? "").get(name); }
+  catch { return null; }
 }
-
-/**
- * Invio messaggio alla route pulita: POST /chat/:structureId
- * - structureId: letto da ?structure=... (fallback ctx.hotel, poi "svapartments")
- * - room: letto da ?room=... (fallback ctx.room)
- */
-export async function sendChat(
-  message: string,
-  ctx: Ctx = {},
-  opts: { signal?: AbortSignal; timeoutMs?: number } = {}
-): Promise<ChatResponse> {
-  if (!message || typeof message !== "string") {
-    throw new Error("Messaggio non valido.");
-  }
-
-  // Risolviamo structureId e room in ordine di priorità: URL → ctx → default
-  const structureId =
-    getParam("structure") ||
-    ctx.hotel ||                       // legacy fallback
-    "svapartments";
-
-  const room =
-    getParam("room") ||
-    ctx.room ||
-    undefined;
-
-  // Endpoint dinamico /chat/:structureId
-  const endpoint = `${API_BASE}/chat/${encodeURIComponent(structureId)}`;
-
-  const controller =
-    !opts.signal && typeof AbortController !== "undefined"
-      ? new AbortController()
-      : undefined;
-
-  const timer = controller
-    ? setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS)
-    : undefined;
-
-  try {
-    const res = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // credentials: "include", // se in futuro invii cookie/Authorization
-      body: JSON.stringify({
-        message,             // richiesto dallo schema backend
-        room,                // opzionale, usato dal resolver per gli override
-        locale: ctx.locale,  // non obbligatorio, pronto per estensioni future
-      }),
-      signal: opts.signal ?? controller?.signal,
-    });
-
-    if (!res.ok) {
-      const text = await safeReadText(res);
-      throw new Error(`HTTP ${res.status} ${text || res.statusText}`);
-    }
-
-    const data = (await res.json()) as unknown;
-    if (!isChatResponse(data)) {
-      throw new Error("Risposta inattesa dal server.");
-    }
-    return data;
-  } catch (err: any) {
-    if (err?.name === "AbortError") {
-      throw new Error("Timeout o richiesta annullata.");
-    }
-    throw new Error(err?.message || "Errore di rete.");
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-
-// 🔁 Alias per retrocompatibilità con App.tsx
-export const sendMessage = sendChat;
-
-// --- Helpers ---
 
 function isChatResponse(x: unknown): x is ChatResponse {
   return !!x && typeof (x as any).reply === "string";
@@ -118,4 +51,74 @@ async function safeReadText(res: Response): Promise<string> {
   } catch {
     return "";
   }
+}
+
+/**
+ * Invia un messaggio all'API:
+ * - POST /chat/:structureId
+ * - structureId: da ?structure=…, fallback ctx.hotel, poi "svapartments"
+ * - room: da ?room=…, fallback ctx.room
+ * - locale: passato come "lang"
+ */
+export async function sendChat(
+  message: string,
+  ctx: Ctx = {},
+  opts: { signal?: AbortSignal; timeoutMs?: number } = {}
+): Promise<ChatResponse> {
+  const structureId =
+    getParam("structure") ||
+    ctx.hotel ||
+    "svapartments";
+
+  const room =
+    getParam("room") ||
+    ctx.room ||
+    undefined;
+
+  const path = `/chat/${encodeURIComponent(structureId)}`;
+  const url = `${API_BASE}${path}`;
+
+  const body: Record<string, any> = { message };
+  if (room) body.room = room;
+  if (ctx.locale) body.lang = ctx.locale;
+
+  const controller =
+    !opts.signal && typeof AbortController !== "undefined"
+      ? new AbortController()
+      : undefined;
+
+  const timer = controller
+    ? setTimeout(() => controller.abort(), opts.timeoutMs ?? DEFAULT_TIMEOUT_MS)
+    : undefined;
+
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: opts.signal ?? controller?.signal
+    });
+  } catch (e: any) {
+    if (timer) clearTimeout(timer);
+    throw new Error(`Fetch failed @ ${url}: ${e?.message || e}`);
+  }
+  if (timer) clearTimeout(timer);
+
+  if (!res.ok) {
+    const txt = await safeReadText(res);
+    throw new Error(`API ${res.status} ${res.statusText} @ ${url} – ${txt}`);
+  }
+
+  const data = (await res.json()) as unknown;
+  if (!isChatResponse(data)) {
+    throw new Error(`Invalid response shape: ${JSON.stringify(data).slice(0, 200)}…`);
+  }
+  return data;
+}
+
+// Debug minimal (rimuovi quando hai verificato)
+if (typeof console !== "undefined") {
+  // eslint-disable-next-line no-console
+  console.info("[Widget] API_BASE =", API_BASE);
 }
