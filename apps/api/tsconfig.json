@@ -8,14 +8,13 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "types": ["node"],             // niente "vitest/globals"
-    "skipLibCheck": true
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    "rootDir": "src",
+    "outDir": "dist"
   },
   "include": ["src/**/*.ts"],
-  "exclude": [
-    "test",
-    "**/*.spec.ts",
-    "**/*.test.ts"
-  ]
+  "exclude": ["test", "**/*.spec.ts", "**/*.test.ts"]
 }
 
