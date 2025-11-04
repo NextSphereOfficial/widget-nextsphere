@@ -6,7 +6,7 @@ import * as Sentry from '@sentry/node';
 
 // Plugin/route locali
 import systemPlugin from './plugins/system.js';               // health/version/root info
-import structuresRoutes from './routes/structures/index.js';  // plugin multi-struttura
+import { chatRoutes } from './routes/chat.js';
 
 // -------------------- Costanti --------------------
 const APP_NAME = 'NextSphere API';
@@ -113,7 +113,7 @@ app.get('/', async () => ({
 await app.register(systemPlugin);
 
 // -------------------- Route multi-struttura (chat + retrocompat) --------------------
-await app.register(structuresRoutes);
+await app.register(chatRoutes);
 
 // -------------------- Listen --------------------
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 8081);

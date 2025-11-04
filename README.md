@@ -22,3 +22,35 @@ Esempio:
 ```bash
 curl https://api.svapartments.it/health
 # {"status":"ok","uptimeSec":...,"timestamp":"..."}
+
+✅ Fix Issues – Routing / CORS / Fallback (chiusura)
+
+Data: 2025-11-04
+Progetto: NextSphere Concierge AI
+Responsabile: Sam
+
+Modifiche principali:
+
+🧱 Rimossa cartella duplicata /api → mantenuto solo /apps/api
+
+🔐 Aggiornati plugin cors.ts e security.ts con allowlist e CSP corretti
+
+🌐 CORS validati in locale e in produzione (preflight 204 + POST 200)
+
+🧭 chatClient.ts riscritto con:
+
+fallback sicuro svapartments su link corto
+
+risoluzione robusta di VITE_API_URL
+
+rimozione completa del contesto NS001
+
+⚙️ vercel.json aggiornato con CSP report-only
+
+🧪 Verifica completata:
+
+https://widget.svapartments.it/?structure=svapartments&room=101 → ✅ /chat/svapartments
+
+https://widget.svapartments.it/ → ✅ /chat/svapartments
+
+🧾 Sistema ora coerente, stabile e allineato tra Render e Vercel
