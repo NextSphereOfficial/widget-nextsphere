@@ -65,10 +65,9 @@ export async function sendChat(
   ctx: Ctx = {},
   opts: { signal?: AbortSignal; timeoutMs?: number } = {}
 ): Promise<ChatResponse> {
-  const structureId =
-    getParam("structure") ||
-    ctx.hotel ||
-    "svapartments";
+let structureId = getParam("structure") || ctx.hotel || "svapartments";
+if (structureId === "NS001") structureId = "svapartments";
+
 
   const room =
     getParam("room") ||
