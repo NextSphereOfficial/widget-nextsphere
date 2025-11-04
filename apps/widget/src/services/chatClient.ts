@@ -117,6 +117,15 @@ export async function sendChat(
   return data;
 }
 
+/** Alias retro-compatibile per App.tsx */
+export async function sendMessage(
+  text: string,
+  ctx?: Ctx,
+  opts?: { signal?: AbortSignal; timeoutMs?: number }
+): Promise<ChatResponse> {
+  return sendChat(text, ctx, opts);
+}
+
 // Debug minimal (rimuovi quando hai verificato)
 if (typeof console !== "undefined") {
   // eslint-disable-next-line no-console
