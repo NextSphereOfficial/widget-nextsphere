@@ -2,13 +2,63 @@ import type { FastifyPluginAsync } from "fastify";
 import { loadConfig, getAvailableStructures } from "./resolver/loadConfig.js";
 import { toLLMContext } from "./resolver/toLLMContext.js";
 
+function buildReply(message: string, ctx: ReturnType<typeof toLLMContext>) {
+  return { ok: true, reply: message, meta: { ctx } };
+}
+
+function makeResponder(text: string, ctx: ReturnType<typeof toLLMContext>) {
+  const t = text.toLowerCase().trim();
+  const info = ctx.info || {};
+  const isWifi = /wi[-\s]*fi|internet|rete|password|ssid/.test(t);
+  const isCheckin = /check[-\s]*in|arrivo|entrare|codice (porta|porta)|smart\s*lock/.test(t);
+  const isCheckout = /check[-\s]*out|uscita|partenza|orario.*(uscita|check)/.test(t);
+  const isRules = /regole|rules|fumo|fumare|party|animali/.test(t);
+  const isEmerg = /emergenze?|emergency|soccorso|numero.*emergenze/.test(t);
+  const isFaq = /faq|domande|aiuto|help/.test(t);
+
+  if (isWifi && info.wifi) {
+    const pw = info.wifi.password ? ` — password: ${info.wifi.password}` : "";
+    return buildReply(`Wi-Fi: SSID "${info.wifi.ssid}"${pw}`, ctx);
+  }
+  if (isCheckin && info.checkin) {
+    const from = info.checkin.from ? ` dalle ${info.checkin.from}` : "";
+    const method = info.checkin.method ? ` (${info.checkin.method})` : "";
+    const instr = info.checkin.instructions ? `\nIstruzioni: ${info.checkin.instructions}` : "";
+    return buildReply(`Check-in${from}${method}.${instr}`, ctx);
+  }
+  if (isCheckout && info.checkout) {
+    const until = info.checkout.until ? ` entro le ${info.checkout.until}` : "";
+    const instr = info.checkout.instructions ? `\nIndicazioni: ${info.checkout.instructions}` : "";
+    return buildReply(`Check-out${until}.${instr}`, ctx);
+  }
+  if (isRules && info.rules?.length) {
+    return buildReply(`Regole: ${info.rules.join(" • ")}`, ctx);
+  }
+  if (isEmerg && info.emergencies) {
+    const num = info.emergencies.number ? `Numero emergenze: ${info.emergencies.number}.` : "";
+    const instr = info.emergencies.instructions ? ` ${info.emergencies.instructions}` : "";
+    const msg = `${num}${instr}`.trim() || "In caso di emergenza chiama il 112.";
+    return buildReply(msg, ctx);
+  }
+  if (isFaq && info.faqs?.length) {
+    const first = info.faqs[0];
+    return buildReply(`${first.q}\n${first.a}`, ctx);
+  }
+  if (info.faqs?.length) {
+    const hit = info.faqs.find(f => t && (f.q.toLowerCase().includes(t) || f.a.toLowerCase().includes(t)));
+    if (hit) return buildReply(hit.a, ctx);
+  }
+
+  return buildReply(`Echo: ${text}`, ctx);
+}
+
 const structuresRoutes: FastifyPluginAsync = async (fastify) => {
-  // --- elenco strutture disponibili ---
+  // elenco strutture
   fastify.get("/structures", async () => {
     return { ok: true, structures: getAvailableStructures() };
   });
 
-  // --- contesto completo (con merge defaults/room) ---
+  // contesto struttura
   fastify.get<{
     Params: { structureId: string };
     Querystring: { room?: string; redact?: string };
@@ -25,60 +75,27 @@ const structuresRoutes: FastifyPluginAsync = async (fastify) => {
     }
   });
 
-// Retrocompat: /chat -> usa structure dal body o default "svapartments"
-fastify.post<{
-  Body: { message: string; room?: string; locale?: string; structure?: string };
-}>("/chat", async (req, reply) => {
-  const { structure = "svapartments", room, message } = req.body || {};
-  // riusa la logica della route /chat/:structureId
-  // (copiaincolla la parte di intent qui, oppure richiama internamente)
-  const cfg = loadConfig(structure);
-  const ctx = toLLMContext(cfg, room, true);
-  const text = (message || "").toLowerCase().trim();
+  // chat "pulita": /chat/:structureId
+  fastify.post<{
+    Params: { structureId: string };
+    Body: { message: string; room?: string; locale?: string };
+  }>("/chat/:structureId", async (req) => {
+    const { structureId } = req.params;
+    const { room, message } = req.body || { message: "" };
+    const cfg = loadConfig(structureId);
+    const ctx = toLLMContext(cfg, room, true);
+    return makeResponder(message ?? "", ctx);
+  });
 
-  const replyObj = (s: string) => ({ ok: true, reply: s, meta: { ctx } });
-  const info = ctx.info || {};
-  const isWifi = /wi[-\s]*fi|internet|rete|password|ssid/.test(text);
-  const isCheckin = /check[-\s]*in|arrivo|entrare|codice (porta|porta)|smart\s*lock/.test(text);
-  const isCheckout = /check[-\s]*out|uscita|partenza|orario.*(uscita|check)/.test(text);
-  const isRules = /regole|rules|fumo|fumare|party|animali/.test(text);
-  const isEmerg = /emergenze?|emergency|soccorso|numero.*emergenze/.test(text);
-  const isFaq = /faq|domande|aiuto|help/.test(text);
-
-  if (isWifi && info.wifi) {
-    const pw = info.wifi.password ? ` — password: ${info.wifi.password}` : "";
-    return replyObj(`Wi-Fi: SSID "${info.wifi.ssid}"${pw}`);
-  }
-  if (isCheckin && info.checkin) {
-    const from = info.checkin.from ? ` dalle ${info.checkin.from}` : "";
-    const method = info.checkin.method ? ` (${info.checkin.method})` : "";
-    const instr = info.checkin.instructions ? `\nIstruzioni: ${info.checkin.instructions}` : "";
-    return replyObj(`Check-in${from}${method}.${instr}`);
-  }
-  if (isCheckout && info.checkout) {
-    const until = info.checkout.until ? ` entro le ${info.checkout.until}` : "";
-    const instr = info.checkout.instructions ? `\nIndicazioni: ${info.checkout.instructions}` : "";
-    return replyObj(`Check-out${until}.${instr}`);
-  }
-  if (isRules && info.rules?.length) return replyObj(`Regole: ${info.rules.join(" • ")}`);
-  if (isEmerg && info.emergencies) {
-    const num = info.emergencies.number ? `Numero emergenze: ${info.emergencies.number}.` : "";
-    const instr = info.emergencies.instructions ? ` ${info.emergencies.instructions}` : "";
-    return replyObj(`${num}${instr}`.trim() || "In caso di emergenza chiama il 112.");
-  }
-  if (isFaq && info.faqs?.length) {
-    const first = info.faqs[0];
-    return replyObj(`${first.q}\n${first.a}`);
-  }
-  if (info.faqs?.length) {
-    const hit = info.faqs.find(f =>
-      text && (f.q.toLowerCase().includes(text) || f.a.toLowerCase().includes(text))
-    );
-    if (hit) return replyObj(hit.a);
-  }
-  return replyObj(`Echo: ${message}`);
-});
-
+  // retrocompat: /chat (usa body.structure o default "svapartments")
+  fastify.post<{
+    Body: { message: string; room?: string; locale?: string; structure?: string };
+  }>("/chat", async (req) => {
+    const { structure = "svapartments", room, message } = req.body || { message: "" };
+    const cfg = loadConfig(structure);
+    const ctx = toLLMContext(cfg, room, true);
+    return makeResponder(message ?? "", ctx);
+  });
 };
 
 export default structuresRoutes;

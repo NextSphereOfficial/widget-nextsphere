@@ -5,9 +5,8 @@ import helmet from '@fastify/helmet';
 import * as Sentry from '@sentry/node';
 
 // Plugin/route locali
-
-import systemPlugin from './plugins/system.js';  // health/version/root info
-import structuresRoutes from './routes/structures/index.js'; // ✅ nuovo plugin multi-struttura
+import systemPlugin from './plugins/system.js';               // health/version/root info
+import structuresRoutes from './routes/structures/index.js';  // plugin multi-struttura
 
 // -------------------- Costanti --------------------
 const APP_NAME = 'NextSphere API';
@@ -25,9 +24,18 @@ const app = Fastify({
       : undefined
   }
 });
-
-// Shortcut per logger
 const log = app.log;
+
+// -------------------- Error handler (PRIMA di tutto) --------------------
+app.setErrorHandler((err, req, reply) => {
+  log.error({ err }, 'Unhandled error');
+  const status = (err.statusCode && err.statusCode >= 400) ? err.statusCode : 500;
+  reply.code(status).send({
+    error: status === 500 ? 'Internal Server Error' : err.name || 'Error',
+    message: status === 500 ? 'Something went wrong' : err.message,
+    statusCode: status
+  });
+});
 
 // -------------------- Sentry --------------------
 if (process.env.SENTRY_DSN) {
@@ -40,7 +48,7 @@ if (process.env.SENTRY_DSN) {
 
   app.addHook('onError', async (req, reply, err) => {
     Sentry.withScope((scope) => {
-      scope.setTag('route', req.routerPath ?? req.url);
+      scope.setTag('route', (req as any).routerPath ?? req.url);
       scope.setExtra('method', req.method);
       scope.setExtra('query', req.query);
       scope.setExtra('params', req.params);
@@ -53,19 +61,12 @@ if (process.env.SENTRY_DSN) {
 // -------------------- Security --------------------
 await app.register(helmet, {
   global: true,
-  hsts: {
-    maxAge: 60 * 60 * 24 * 365,
-    includeSubDomains: true,
-    preload: true
-  },
+  hsts: { maxAge: 60 * 60 * 24 * 365, includeSubDomains: true, preload: true },
   contentSecurityPolicy: false
 });
 
 // -------------------- CORS --------------------
-const allowlist = new Set<string>([
-  'https://widget.svapartments.it'
-]);
-
+const allowlist = new Set<string>(['https://widget.svapartments.it']);
 await app.register(cors, {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
@@ -74,9 +75,7 @@ await app.register(cors, {
       const host = `${u.protocol}//${u.hostname}`;
       if (allowlist.has(host)) return cb(null, true);
       if (/\.vercel\.app$/i.test(u.hostname)) return cb(null, true);
-    } catch {
-      // origin malformato → nega
-    }
+    } catch {}
     cb(new Error('CORS not allowed'), false);
   },
   methods: ['GET', 'POST', 'OPTIONS'],
@@ -113,30 +112,20 @@ app.get('/', async () => ({
 // -------------------- Plugin di sistema --------------------
 await app.register(systemPlugin);
 
-// -------------------- Route multi-struttura --------------------
+// -------------------- Route multi-struttura (chat + retrocompat) --------------------
 await app.register(structuresRoutes);
-
-
-
-// -------------------- Error handler --------------------
-app.setErrorHandler((err, req, reply) => {
-  log.error({ err }, 'Unhandled error');
-  const status = (err.statusCode && err.statusCode >= 400) ? err.statusCode : 500;
-  reply.code(status).send({
-    error: status === 500 ? 'Internal Server Error' : err.name || 'Error',
-    message: status === 500 ? 'Something went wrong' : err.message,
-    statusCode: status
-  });
-});
 
 // -------------------- Listen --------------------
 const port = Number(process.env.PORT ?? process.env.API_PORT ?? 8081);
 const host = process.env.API_HOST || '0.0.0.0';
 
 try {
+  await app.ready();
+  log.info('\n' + app.printRoutes()); // debug routes (rimuovilo quando vuoi)
   await app.listen({ port, host });
   log.info(`✅ API listening on http://${host}:${port}`);
 } catch (err) {
   log.error(err);
   process.exit(1);
 }
+
