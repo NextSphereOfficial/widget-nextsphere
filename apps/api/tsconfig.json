@@ -1,17 +1,21 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "types": ["vitest/globals", "node"],
-    "outDir": "dist",
-    "rootDir": "src",
+    "target": "ES2022",
+    "lib": ["ES2022"],
     "strict": true,
-    "noImplicitAny": false,
     "esModuleInterop": true,
-    "skipLibCheck": true,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": ["node"],             // niente "vitest/globals"
+    "skipLibCheck": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "test",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
 }
+
