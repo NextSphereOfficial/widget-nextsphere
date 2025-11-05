@@ -6,7 +6,7 @@ import * as Sentry from '@sentry/node';
 
 // Plugin/route locali
 import systemPlugin from './plugins/system.js';               // health/version/root info
-import { chatRoutes } from './routes/chat.js';
+import  chatRoutes  from './routes/chat.js';
 
 // -------------------- Costanti --------------------
 const APP_NAME = 'NextSphere API';
