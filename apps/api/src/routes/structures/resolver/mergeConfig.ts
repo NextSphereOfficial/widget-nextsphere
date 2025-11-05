@@ -1,28 +1,26 @@
-import type { Defaults } from "../../../types/Structure.js";
+// config/mergeconfig.ts — shim minimale per evitare errori di tipo/import
 
-function isPlainObject(v: any): v is Record<string, any> {
-  return v && typeof v === "object" && !Array.isArray(v);
-}
+export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
-export function deepMerge<T>(base: T, patch: Partial<T>): T {
-  if (Array.isArray(base) && Array.isArray(patch)) {
-    return patch as any;
-  }
-  if (isPlainObject(base) && isPlainObject(patch)) {
-    const out: Record<string, any> = { ...base };
-    for (const k of Object.keys(patch)) {
-      const a = (base as any)[k];
-      const b = (patch as any)[k];
-      out[k] = (isPlainObject(a) || Array.isArray(a)) && (isPlainObject(b) || Array.isArray(b))
-        ? deepMerge(a, b)
-        : b;
+export type ResponseConfig = {
+  defaultMode: "short" | "long";
+  maxButtons: number;
+};
+
+export const DEFAULT_RESPONSE_CONFIG: ResponseConfig = {
+  defaultMode: "short",
+  maxButtons: 3,
+};
+
+export function mergeConfig<T extends object>(base: T, override?: DeepPartial<T>): T {
+  if (!override) return base;
+  const out: any = Array.isArray(base) ? [...(base as any)] : { ...(base as any) };
+  for (const [k, v] of Object.entries(override)) {
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      out[k] = mergeConfig((out[k] ?? {}) as any, v as any);
+    } else {
+      out[k] = v;
     }
-    return out as T;
   }
-  return (patch as any) ?? base;
-}
-
-export function mergeDefaultsWithOverrides(defaults: Defaults, overrides?: Partial<Defaults>): Defaults {
-  if (!overrides) return defaults;
-  return deepMerge(defaults, overrides);
+  return out as T;
 }

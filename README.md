@@ -54,3 +54,35 @@ https://widget.svapartments.it/?structure=svapartments&room=101 → ✅ /chat/sv
 https://widget.svapartments.it/ → ✅ /chat/svapartments
 
 🧾 Sistema ora coerente, stabile e allineato tra Render e Vercel
+
+//..........................................//
+🧩 NextSphere Concierge AI – YAML Engine v1 (Deployed ✅)
+
+Data: 2025-11-04
+Ambito: NextSphere Beyond / Concierge AI / Admin
+
+Stato tecnico:
+
+Backend Fastify su Render (https://api.svapartments.it)
+
+Frontend/widget React su Vercel (https://widget.svapartments.it)
+
+Sistema multistruttura attivo → /chat/:structureId
+
+YAML loader e engine completati:
+
+parsing e validazione dei file YAML
+
+intent matching (exact, keyword, regex, fuzzy)
+
+template rendering con variabili ({{wifi.ssid}}, ecc.)
+
+fallback contestuale multilingua
+
+Test PowerShell e via widget entrambi superati (Wi-Fi, check-in, fallback)
+
+Deploy stabile con pipeline GitHub → Render/Vercel
+
+Config: threshold 0.65, output reply: out.text
+
+Debug e code leftovers rimossi

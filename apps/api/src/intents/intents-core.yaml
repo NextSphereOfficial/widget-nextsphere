@@ -1,27 +1,67 @@
+# --- ADD / UPDATE: Wi-Fi intent
 wifi:
   id: wifi
   priority: 100
-  synonyms_it: ["wifi","wi-fi","internet","rete","password wifi","connessione"]
-  synonyms_en: ["wifi","wi-fi","internet","network","wifi password","connection"]
-  keywords_it: ["wifi","password"]
-  keywords_en: ["wifi","password"]
-  template_it: "Ecco il Wi-Fi:\nSSID: {{wifi.ssid}}\nPassword: {{wifi.password}}"
-  template_en: "Here is the Wi-Fi:\nSSID: {{wifi.ssid}}\nPassword: {{wifi.password}}"
+  synonyms_it: [wifi, wi-fi, internet, rete, password wifi, connessione, ssid]
+  synonyms_en: [wifi, wi-fi, internet, network, wifi password, connection, ssid]
+  keywords_it: [wifi, password, rete, ssid]
+  keywords_en: [wifi, password, network, ssid]
+  patterns:
+    - "(?i)password(.*)wifi"
+    - "(?i)ssid"
+  negative: ["porta", "portone", "cancello", "cassaforte", "lucchetto"]
+  followups:
+    it: []
+    en: []
+  actions:
+    copyable_fields: ["wifi.password", "wifi.ssid"]
+    cta:
+      it: "Copia password"
+      en: "Copy password"
+  output:
+    default: short
+    rich: true
 
-checkin:
-  id: checkin
+# --- ADD: Late Check-out
+late_checkout:
+  id: late_checkout
+  priority: 85
+  synonyms_it: [late checkout, check out tardi, uscire più tardi, posticipare checkout]
+  synonyms_en: [late checkout, check out later, extend checkout, postpone checkout]
+  keywords_it: [checkout, tardi, estensione, orario]
+  keywords_en: [checkout, late, extension, time]
+  patterns:
+    - "(?i)late(.*)check(.*)out"
+    - "(?i)posticipa(.*)checkout"
+  negative: []
+  followups:
+    it: ["A che ora ti farebbe comodo? Posso verificare la disponibilità."]
+    en: ["What time would work for you? I can check availability."]
+  actions:
+    cta:
+      it: "Richiedi estensione"
+      en: "Request extension"
+  output:
+    default: short
+    rich: true
+
+# --- UPDATE: Emergency (contestualizza Mestre)
+emergency:
+  id: emergency
   priority: 90
-  synonyms_it: ["check in","arrivo","orari checkin","orario arrivo","deposito bagagli"]
-  synonyms_en: ["check in","arrival","arrival time","checkin hours","luggage drop"]
-  keywords_it: ["check","in"]
-  keywords_en: ["check","in"]
-  template_it: "Check-in: dalle {{checkin.from}} alle {{checkin.to}}. {{checkin.late_policy_it}}"
-  template_en: "Check-in: from {{checkin.from}} to {{checkin.to}}. {{checkin.late_policy_en}}"
-
-rules:
-  id: rules
-  priority: 80
-  synonyms_it: ["regole","silenzio","quiet hours","fumo","animali","feste"]
-  synonyms_en: ["rules","quiet hours","smoke","pets","party"]
-  template_it: "Regole: silenzio {{rules.quiet_hours}}. Fumo: {{#if rules.smoking}}consentito{{/if}}{{#if rules.smoking}}{{else}}{{/if}}{{#if rules.smoking}}{{else}}vietato{{/if}}. Animali: {{#if rules.pets}}consentiti{{/if}}{{#if rules.pets}}{{else}}{{/if}}{{#if rules.pets}}{{else}}non consentiti{{/if}}. {{rules.extra_it}}"
-  template_en: "House rules: quiet {{rules.quiet_hours}}. Smoking: {{#if rules.smoking}}allowed{{/if}}{{#if rules.smoking}}{{else}}{{/if}}{{#if rules.smoking}}{{else}}not allowed{{/if}}. Pets: {{#if rules.pets}}allowed{{/if}}{{#if rules.pets}}{{else}}{{/if}}{{#if rules.pets}}{{else}}not allowed{{/if}}. {{rules.extra_en}}"
+  synonyms_it: [emergenza, aiuto, urgenza, ambulanza, incendio, furto, polizia]
+  synonyms_en: [emergency, help, urgent, ambulance, fire, theft, police]
+  keywords_it: [polizia, ambulanza, vigili, incendio, medico, emergenza]
+  keywords_en: [police, ambulance, fire, emergency, medical]
+  patterns: []
+  negative: []
+  followups:
+    it: []
+    en: []
+  actions:
+    cta:
+      it: "Chiama adesso"
+      en: "Call now"
+  output:
+    default: short
+    rich: true
