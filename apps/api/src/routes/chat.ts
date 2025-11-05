@@ -72,15 +72,19 @@ async function getStructure(structureId: string) {
 const norm = (s = "") => s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
 // score con synonyms/keywords/patterns/negative
-function scoreIntent(userText: string, intent: any): number {
+function scoreIntent(userText: string, intent: any): { score: number; matched: boolean } {
   const t = norm(userText);
-  let score = intent.priority ?? 0;
+  let score = 0;
+  let matched = false;
 
   const bags = [intent.synonyms_it, intent.synonyms_en, intent.keywords_it, intent.keywords_en];
   for (const bag of bags) {
     if (Array.isArray(bag)) {
       for (const k of bag) {
-        if (k && t.includes(norm(k))) score += 5;
+        if (k && t.includes(norm(k))) {
+          score += 5;
+          matched = true;
+        }
       }
     }
   }
@@ -88,34 +92,50 @@ function scoreIntent(userText: string, intent: any): number {
   if (Array.isArray(intent.patterns)) {
     for (const p of intent.patterns) {
       try {
-        if (new RegExp(p, "i").test(userText)) score += 10;
-      } catch {
-        /* ignore bad regex */
-      }
+        if (new RegExp(p, "i").test(userText)) {
+          score += 10;
+          matched = true;
+        }
+      } catch { /* ignore bad regex */ }
     }
   }
 
   if (Array.isArray(intent.negative)) {
     for (const n of intent.negative) {
-      if (n && t.includes(norm(n))) score -= 12;
+      if (n && t.includes(norm(n))) {
+        score -= 12;
+        // non settiamo matched=false: un hit negativo non invalida il fatto di aver avuto un match
+      }
     }
   }
 
-  return score;
+  // aggiungi la priorità solo se c'è stato almeno UN match positivo
+  if (matched) score += (intent.priority ?? 0);
+
+  return { score, matched };
 }
 
+
 function resolveIntent(userText: string, intentsCore: Record<string, any>) {
-  const intents = Object.entries(intentsCore || {}).map(([key, def]: any) => ({
-    key,
-    def: { id: key, ...(def || {}) },
-    score: scoreIntent(userText, def || {}),
-  }));
+  const intents = Object.entries(intentsCore || {}).map(([key, def]: any) => {
+    const { score, matched } = scoreIntent(userText, def || {});
+    return { key, def: { id: key, ...(def || {}) }, score, matched };
+  });
+
   intents.sort((a, b) => b.score - a.score);
-  const top = intents[0] || { key: "fallback", def: {}, score: 0 };
+  const top = intents[0] || { key: "fallback", def: {}, score: 0, matched: false };
   const second = intents[1];
+
+  // Se nessun intent ha avuto match o il punteggio top <= 0, scegli fallback
+  const anyMatched = intents.some(i => i.matched && i.score > 0);
+  if (!anyMatched || (top.score ?? 0) <= 0) {
+    return { top: { key: "fallback", def: {}, score: 0, matched: false }, ambiguous: false, candidates: intents.slice(0, 3) };
+  }
+
   const ambiguous = !!(second && Math.abs((top.score ?? 0) - (second.score ?? 0)) < 8);
   return { top, ambiguous, candidates: intents.slice(0, 3) };
 }
+
 
 // render semplice: {{content.x.y}} / {{meta.default_locale}} ecc.
 function renderFromYaml(structureYaml: any, intentKey: string, lang: "it" | "en", mode: "short" | "long") {
