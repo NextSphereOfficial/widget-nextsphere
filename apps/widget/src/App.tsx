@@ -43,6 +43,18 @@ export default function App() {
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
 
+  // Messaggio di benvenuto alla prima apertura
+useEffect(() => {
+  if (open && msgs.length === 0) {
+    setMsgs([
+      {
+        role: 'assistant',
+        content: 'Benvenuti in NextSphere ✨ Come posso aiutarvi?'
+      }
+    ]);
+  }
+}, [open]);
+
   // Autoscroll all'ultimo messaggio
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });

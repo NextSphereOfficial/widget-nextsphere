@@ -86,3 +86,20 @@ Deploy stabile con pipeline GitHub → Render/Vercel
 Config: threshold 0.65, output reply: out.text
 
 Debug e code leftovers rimossi
+
+-------------------------------------------------------------------------------------------------------------
+NextSphere – Concierge AI | Step 5 – YAML Responses Refining ✅
+
+📦 Risultato finale:
+
+Backend stabile e deployato (Render + Vercel).
+
+Chat funzionante con risposta dinamica da YAML.
+
+Motore di matching raffinato (synonyms / keywords / patterns / negative / scoring adattivo).
+
+Compatibilità piena con il widget (campo reply incluso).
+
+Sistema ora completamente estensibile via YAML, senza necessità di modifiche TypeScript.
+
+Template pronti per l’ampliamento del linguaggio.
