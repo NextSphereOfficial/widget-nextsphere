@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { readFile, access } from "node:fs/promises";
 import { constants as FS } from "node:fs";
 import YAML from "yaml";
+import { orchestrateChat } from '../core/orchestrator.js';
 
 // -----------------------------------------------------
 // Cache
@@ -13,6 +14,14 @@ const _structuresCache = new Map<string, any>();     // key: structureId
 
 // -----------------------------------------------------
 // FS helpers
+function renderTemplate(tpl: string, data: any) {
+  if (!tpl) return '';
+  return String(tpl).replace(/{{\s*([\w\.]+)\s*}}/g, (_m, path) => {
+    const val = path.split('.').reduce((acc: any, k: string) => (acc && acc[k] != null ? acc[k] : undefined), data);
+    return (val ?? '').toString();
+  });
+}
+
 // -----------------------------------------------------
 const ROOT = process.cwd();
 
@@ -69,39 +78,60 @@ async function getStructure(structureId: string) {
 // -----------------------------------------------------
 // NLP mini-helpers (scoring + rendering)
 // -----------------------------------------------------
-const norm = (s = "") => s.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
 
-// score con synonyms/keywords/patterns/negative
-function scoreIntent(userText: string, intent: any): { score: number; matched: boolean } {
-  const t = norm(userText);
+// normalizza testo: minuscole, rimuovi accenti, togli punteggiatura,
+// unifica trattini/spazi per far combaciare "wi-fi" == "wifi"
+function norm(s: string) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')                  // separa accenti
+    .replace(/[\u0300-\u036f]/g, '')   // rimuove accenti
+    .replace(/[_\-]+/g, ' ')           // trattini → spazio
+    .replace(/[^\p{L}\p{N} ]+/gu, '')  // rimuove simboli/punteggi
+    .replace(/\s+/g, ' ')              // spazi multipli → singolo
+    .trim();
+}
+
+// verifica pattern semplice (array di stringhe o regex)
+function matchAny(text: string, list?: any[]): boolean {
+  if (!list || !Array.isArray(list) || list.length === 0) return false;
+
+  const t = norm(text);
+  const tCompact = t.replace(/\s+/g, ''); // "wi fi" -> "wifi"
+
+  for (const item of list) {
+    if (!item) continue;
+    if (typeof item === 'string') {
+      const i = norm(item);
+      const iCompact = i.replace(/\s+/g, '');
+      if (t.includes(i) || tCompact.includes(iCompact)) return true;
+    } else if (item instanceof RegExp) {
+      if (item.test(text)) return true; // regex lasciata “grezza” (se le usi)
+    }
+  }
+  return false;
+}
+
+
+function scoreIntent(intent: any, text: string) {
+  // punteggio base su synonyms/keywords/patterns
   let score = 0;
   let matched = false;
 
-  const bags = [intent.synonyms_it, intent.synonyms_en, intent.keywords_it, intent.keywords_en];
-  for (const bag of bags) {
-    if (Array.isArray(bag)) {
-      for (const k of bag) {
-        if (k && t.includes(norm(k))) {
-          score += 5;
-          matched = true;
-        }
-      }
-    }
-  }
+  const t = norm(text);
 
-  if (Array.isArray(intent.patterns)) {
-    for (const p of intent.patterns) {
-      try {
-        if (new RegExp(p, "i").test(userText)) {
-          score += 10;
-          matched = true;
-        }
-      } catch { /* ignore bad regex */ }
-    }
-  }
+  const synonyms = intent?.synonyms || [];
+  const keywords = intent?.keywords || [];
+  const patterns = intent?.patterns || [];
 
-  if (Array.isArray(intent.negative)) {
-    for (const n of intent.negative) {
+  if (matchAny(t, synonyms)) { score += 10; matched = true; }
+  if (matchAny(t, keywords)) { score += 6; matched = true; }
+  if (matchAny(t, patterns)) { score += 8; matched = true; }
+
+  // penalità su negative
+  const negative = intent?.negative || [];
+  if (negative && Array.isArray(negative) && negative.length > 0) {
+    for (const n of negative) {
       if (n && t.includes(norm(n))) {
         score -= 12;
         // non settiamo matched=false: un hit negativo non invalida il fatto di aver avuto un match
@@ -115,52 +145,53 @@ function scoreIntent(userText: string, intent: any): { score: number; matched: b
   return { score, matched };
 }
 
-
 function resolveIntent(userText: string, intentsCore: Record<string, any>) {
+  const t = norm(userText);
+
+  // scoring standard
   const intents = Object.entries(intentsCore || {}).map(([key, def]: any) => {
-    const { score, matched } = scoreIntent(userText, def || {});
-    return { key, def: { id: key, ...(def || {}) }, score, matched };
+    const { score, matched } = scoreIntent(def, userText);
+    return { key, score, matched };
   });
 
-  intents.sort((a, b) => b.score - a.score);
-  const top = intents[0] || { key: "fallback", def: {}, score: 0, matched: false };
-  const second = intents[1];
-
-  // Se nessun intent ha avuto match o il punteggio top <= 0, scegli fallback
-  const anyMatched = intents.some(i => i.matched && i.score > 0);
-  if (!anyMatched || (top.score ?? 0) <= 0) {
-    return { top: { key: "fallback", def: {}, score: 0, matched: false }, ambiguous: false, candidates: intents.slice(0, 3) };
+  // 🔧 Heuristic override per gli intent base (failsafe)
+  // Wi-Fi
+  if (/\bwi\s*fi\b/.test(t) || t.includes('wifi') || t.includes('password wifi') || t.includes('ssid')) {
+    const idx = intents.findIndex(i => i.key === 'wifi');
+    if (idx >= 0) intents[idx] = { key: 'wifi', score: 999, matched: true };
+    else intents.push({ key: 'wifi', score: 999, matched: true });
+  }
+  // Late checkout
+  if (t.includes('late checkout') || /posticip(a|o)\s*il?\s*checkout/.test(t) || /checkout\s*tardi/.test(t)) {
+    const idx = intents.findIndex(i => i.key === 'late_checkout');
+    if (idx >= 0) intents[idx] = { key: 'late_checkout', score: 999, matched: true };
+    else intents.push({ key: 'late_checkout', score: 999, matched: true });
+  }
+  // Emergency
+  if (t.includes('emergenz') || t.includes('ambulanza') || t.includes('polizia') || t.includes('carabinieri') || t.includes('vigili del fuoco') || t.includes('incendio')) {
+    const idx = intents.findIndex(i => i.key === 'emergency');
+    if (idx >= 0) intents[idx] = { key: 'emergency', score: 999, matched: true };
+    else intents.push({ key: 'emergency', score: 999, matched: true });
   }
 
-  const ambiguous = !!(second && Math.abs((top.score ?? 0) - (second.score ?? 0)) < 8);
-  return { top, ambiguous, candidates: intents.slice(0, 3) };
+  intents.sort((a, b) => b.score - a.score);
+  const top = intents[0] || { key: 'fallback', score: 0, matched: false };
+  return { top, intents };
 }
 
 
-// render semplice: {{content.x.y}} / {{meta.default_locale}} ecc.
 function renderFromYaml(structureYaml: any, intentKey: string, lang: "it" | "en", mode: "short" | "long") {
-  const node = structureYaml?.responses?.[intentKey];
-  if (!node) return { text: "", buttons: [] as any[] };
+  const resp = structureYaml?.responses?.[intentKey];
+  if (!resp) return { text: "", buttons: [] as any[] };
 
-  const tpl =
-    node?.[mode]?.[lang] ??
-    node?.short?.[lang] ??
-    "";
+  // varianti
+const variant = (mode === "long" ? (resp?.long?.[lang] ?? "") : (resp?.short?.[lang] ?? ""));
+const raw = String(variant || "").trim();
+// Interpola usando l'intero YAML struttura (così `{{content.wifi.ssid}}` funziona)
+const text = renderTemplate(raw, structureYaml);
 
-  const text = String(tpl || "").replace(/\{\{\s*([^#][^}]*)\s*\}\}/g, (_m, pathRaw) => {
-    const path = String(pathRaw).trim();
-    const val = path.split(".").reduce((acc: any, k: string) => (acc ? acc[k] : undefined), structureYaml);
-    return val == null ? "" : String(val);
-  });
 
-  const rawButtons = node?.buttons?.[lang] ?? [];
-  const buttons = Array.isArray(rawButtons)
-    ? rawButtons.map((b: any) => ({
-        label: String(b?.label ?? ""),
-        action: String(b?.action ?? ""),
-      }))
-    : [];
-
+  const buttons = Array.isArray(resp?.buttons) ? resp.buttons : [];
   return { text, buttons };
 }
 
@@ -176,15 +207,25 @@ function fallbackText(structureYaml: any, intentKey: string, lang: "it" | "en") 
 
 // trova risposta usando l'intents-core refined
 function findResponse(intentsCore: any, structureYaml: any, message: string) {
-  const { top } = resolveIntent(message, intentsCore);
-  const lang: "it" | "en" = "it"; // semplice: default it
-  const defaultMode: "short" | "long" =
-    (intentsCore?.[top.key]?.output?.default === "long" ? "long" : "short");
+const { top } = resolveIntent(message, intentsCore);
+const lang: "it" | "en" = "it";
+const defaultMode: "short" | "long" =
+  (intentsCore?.[top.key]?.output?.default === "long" ? "long" : "short");
+// Se nessun intent ha matchato davvero, NON prendere il top a score 0 → usa fallback
+if (!top.matched) {
+  return {
+    intent: 'fallback',
+    text: fallbackText(structureYaml, 'fallback', lang),
+    buttons: [] as any[],
+    isFallback: true
+  };
+}
+
 
   const { text, buttons } = renderFromYaml(structureYaml, top.key, lang, defaultMode);
-  if (text) return { intent: top.key, text, buttons };
+  if (text) return { intent: top.key, text, buttons, isFallback: false };
 
-  return { intent: top.key, text: fallbackText(structureYaml, top.key, lang), buttons: [] as any[] };
+  return { intent: top.key, text: fallbackText(structureYaml, top.key, lang), buttons: [] as any[], isFallback: true };
 }
 
 async function runEngine({ structureId, message }: { structureId: string; message: string }) {
@@ -198,6 +239,7 @@ async function runEngine({ structureId, message }: { structureId: string; messag
     meta: {
       mode: "short",
       uiButtons: resp.buttons || [],
+      isFallback: !!resp.isFallback,
     },
     text: resp.text || "Mi dispiace, non ho trovato una risposta.",
   };
@@ -226,14 +268,22 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     }
   });
 
-  // Retrocompat: POST /chat → svapartments
+  // Retrocompatibilità: POST /chat (default structure)
   app.post("/chat", async (req, reply) => {
     try {
       const body = (req.body as any) || {};
       const message = String(body?.message ?? "").trim();
       if (!message) return reply.code(400).send({ ok: false, error: "Missing message", reply: "Missing message" });
 
-      const out = await runEngine({ structureId: "svapartments", message });
+      const defaultStructure = "svapartments"; // retrocompat
+      const out = await runEngine({ structureId: defaultStructure, message });
+
+      // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore
+      if (out?.meta?.isFallback === true) {
+        const llmOut = await orchestrateChat(defaultStructure, message, { matched: false, intent: out.intent, confidence: 0.3 });
+        return reply.code(200).send(llmOut);
+      }
+
       return reply.code(200).send({
         ok: true,
         intent: out.intent,
@@ -258,6 +308,11 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       if (!message) return reply.code(400).send({ ok: false, error: "Missing message", reply: "Missing message" });
 
       const out = await runEngine({ structureId, message });
+      // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore
+      if (out?.meta?.isFallback === true) {
+        const llmOut = await orchestrateChat(structureId, message, { matched: false, intent: out.intent, confidence: 0.3 });
+        return reply.code(200).send(llmOut);
+      }
       return reply.code(200).send({
         ok: true,
         intent: out.intent,
@@ -266,6 +321,7 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         text: out.text,
         reply: out.text, // alias per il widget
         ui: { buttons: out.meta?.uiButtons ?? [] },
+      
       });
     } catch (err: any) {
       const msg = err?.message || "Errore inatteso";
