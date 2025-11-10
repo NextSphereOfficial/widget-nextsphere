@@ -7,63 +7,34 @@
   --ns-grad-end:   #66a6ff;
   --ns-text-on: #fff;
   --ns-text-muted: #6b7280; /* zinc-500 */
-  --ns-bg-ghost: rgba(255,255,255,0.08);
-  --ns-border-ghost: rgba(255,255,255,0.20);
+  --ns-bg-ghost: rgba(0,0,0,.03);
+  --ns-border-ghost: rgba(0,0,0,.10);
 }
 
 .dark {
-  --ns-text-muted: #9ca3af; /* zinc-400 */
-  --ns-bg-ghost: rgba(255,255,255,0.06);
-  --ns-border-ghost: rgba(255,255,255,0.18);
+  --ns-text-muted: #9ca3af;      /* zinc-400 */
+  --ns-bg-ghost: rgba(255,255,255,.06);
+  --ns-border-ghost: rgba(255,255,255,.18);
 }
 
-/* ====== Base gradient (Uiverse-inspired) ====== */
-.ns-gradient {
-  background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
-  color: var(--ns-text-on);
-  transition: transform .25s ease, box-shadow .25s ease, background-position .3s ease;
-  background-size: 100% auto;
-  will-change: transform;
-}
-.ns-gradient:hover {
-  transform: translateY(-2px);
-  background-position: right center;
-  box-shadow: 0 10px 20px rgba(0,0,0,.15);
-}
-.ns-gradient:active {
-  transform: scale(.98);
-  box-shadow: 0 4px 10px rgba(0,0,0,.15);
-}
-.ns-focusable:focus-visible {
-  outline: none;
-  box-shadow: var(--ns-focus);
-}
+/* ====== Helpers ====== */
+.ns-focusable:focus-visible { outline: none; box-shadow: var(--ns-focus); }
 
-/* ====== 1) ns-btn — WelcomeCard actions ====== */
+/* ====== Layout azioni (WelcomeCard) ====== */
+.ns-actions { display: flex; gap: 8px; }
+.ns-actions--wrap { flex-wrap: wrap; }
+
+/* ====== ns-btn — bottoni principali (WelcomeCard) ====== */
 .ns-btn {
   border: none;
   border-radius: var(--ns-radius);
-  padding: .65em 1.1em;
-  font-size: 15px;
+  padding: 0.55em 0.95em;       /* compatto */
+  font-size: 14px;              /* più piccolo */
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: .5em;
-  cursor: pointer;
-  box-shadow: var(--ns-shadow);
-}
-/* 1) ns-btn */
-.ns-btn {
-  border: none;
-  border-radius: var(--ns-radius);
-  padding: .65em 1.1em;
-  font-size: 15px;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5em;
+  gap: 0.45em;
   cursor: pointer;
   box-shadow: var(--ns-shadow);
   background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
@@ -72,38 +43,52 @@
   background-size: 100% auto;
   will-change: transform;
 }
-.ns-btn:hover {
-  transform: translateY(-2px);
-  background-position: right center;
-  box-shadow: 0 10px 20px rgba(0,0,0,.15);
-}
-.ns-btn:active {
-  transform: scale(.98);
-  box-shadow: 0 4px 10px rgba(0,0,0,.15);
-}
-.ns-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--ns-focus);
+.ns-btn--sm { padding: 0.42em 0.8em; font-size: 13.5px; }
+.ns-btn:hover { transform: translateY(-2px); background-position: right center; box-shadow: 0 10px 20px rgba(0,0,0,.15); }
+.ns-btn:active { transform: scale(.98); box-shadow: 0 4px 10px rgba(0,0,0,.15); }
+.ns-btn:focus-visible { box-shadow: var(--ns-focus); }
+.ns-btn[disabled] { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ====== ns-quickbar — barra quick actions ====== */
+.ns-quickbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  padding: .25rem 0 .5rem;
 }
 
-/* 2) ns-chip--accent (rimuoviamo composes) */
+/* ====== ns-chip — quick actions (prima apparivano come testo) ====== */
+.ns-chip {
+  border: 1px solid var(--ns-border-ghost);
+  background: var(--ns-bg-ghost);
+  color: inherit;
+  border-radius: 999px;
+  padding: .38em .85em;
+  font-size: 13.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4em;
+  cursor: pointer;
+  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.ns-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.08); }
+.ns-chip:active { transform: scale(.98); box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+.ns-chip:focus-visible { box-shadow: var(--ns-focus); }
+.ns-chip[disabled] { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* Variante accent opzionale (se vuoi chips “pieni”) */
 .ns-chip--accent {
   background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
   color: var(--ns-text-on);
   border: none;
   transition: transform .25s ease, box-shadow .25s ease, background-position .3s ease;
 }
-.ns-chip--accent:hover {
-  transform: translateY(-2px);
-  background-position: right center;
-  box-shadow: 0 10px 20px rgba(0,0,0,.15);
-}
-.ns-chip--accent:focus-visible {
-  outline: none;
-  box-shadow: var(--ns-focus);
-}
+.ns-chip--accent:hover { transform: translateY(-2px); background-position: right center; box-shadow: 0 10px 20px rgba(0,0,0,.15); }
+.ns-chip--accent:focus-visible { box-shadow: var(--ns-focus); }
 
-/* 3) ns-sendbtn (rimuoviamo composes) */
+/* ====== ns-sendbtn — pulsante invio tondo ✈️ ====== */
 .ns-sendbtn {
   width: 42px; height: 42px;
   min-width: 42px;
@@ -120,8 +105,33 @@
   background-size: 100% auto;
   will-change: transform;
 }
+.ns-sendbtn svg { width: 18px; height: 18px; fill: var(--ns-text-on); transition: transform .25s ease; }
 .ns-sendbtn:hover svg { transform: rotate(35deg); }
-.ns-sendbtn:focus-visible {
-  outline: none;
-  box-shadow: var(--ns-focus);
+.ns-sendbtn:focus-visible { box-shadow: var(--ns-focus); }
+.ns-sendbtn[disabled] { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ====== Typing loader (tre pallini) ====== */
+.ns-typing { display: flex; align-items: center; gap: 6px; padding: 6px 0; }
+.ns-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(0,0,0,.35);
+  animation: ns-bounce 1.4s infinite ease-in-out both;
 }
+.ns-dot:nth-child(1) { animation-delay: -0.32s; }
+.ns-dot:nth-child(2) { animation-delay: -0.16s; }
+@keyframes ns-bounce {
+  0%, 80%, 100% { transform: scale(0); opacity: .5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* ====== Card base ====== */
+.ns-card {
+  width: 100%;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.06);
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+}
+.ns-card-body { padding: 12px 12px 10px; }
+.ns-title { font-size: 15px; font-weight: 700; }
+.ns-subtitle { font-size: 13.5px; color: var(--ns-text-muted); margin-top: 2px; }
