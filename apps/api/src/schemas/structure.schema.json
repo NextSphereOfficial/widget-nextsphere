@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Structure",
+  "type": "object",
+  "required": ["meta", "intents"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["id", "name", "version", "language"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "version": { "type": "string" },
+        "language": { "type": "string", "enum": ["it", "en"] }
+      },
+      "additionalProperties": true
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "intents": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "synonyms": { "type": "array", "items": { "type": "string" } },
+          "keywords": { "type": "array", "items": { "type": "string" } },
+          "patterns": { "type": "array", "items": { "type": "string" } },
+          "negative": { "type": "array", "items": { "type": "string" } },
+          "output": {
+            "type": "object",
+            "properties": {
+              "default": { "type": ["string", "null"] },
+              "short":   { "type": ["string", "null"] },
+              "long":    { "type": ["string", "null"] },
+              "ui": {
+                "type": "object",
+                "properties": {
+                  "buttons": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": { "type": "string" },
+                        "label": { "type": "string" }
+                      },
+                      "required": ["id", "label"],
+                      "additionalProperties": true
+                    }
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "required": ["default"],
+            "additionalProperties": true
+          }
+        },
+        "required": ["output"],
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

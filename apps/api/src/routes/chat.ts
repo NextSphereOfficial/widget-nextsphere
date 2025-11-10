@@ -1,82 +1,37 @@
 // apps/api/src/routes/chat.ts
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
-import { resolve } from "node:path";
-import { readFile, access } from "node:fs/promises";
-import { constants as FS } from "node:fs";
-import YAML from "yaml";
 import { orchestrateChat } from '../core/orchestrator.js';
+import { loadIntentsCore, loadStructure } from '../content/loader.js';
+
 
 // -----------------------------------------------------
 // Cache
-// -----------------------------------------------------
-const _intentsCache = new Map<string, any>();        // key: "core"
-const _structuresCache = new Map<string, any>();     // key: structureId
 
 // -----------------------------------------------------
 // FS helpers
 function renderTemplate(tpl: string, data: any) {
-  if (!tpl) return '';
-  return String(tpl).replace(/{{\s*([\w\.]+)\s*}}/g, (_m, path) => {
-    const val = path.split('.').reduce((acc: any, k: string) => (acc && acc[k] != null ? acc[k] : undefined), data);
-    return (val ?? '').toString();
+  if (!tpl) return "";
+
+  // 1) prima risolviamo i placeholder con doppie graffe {{ a.b.c }}
+  let out = String(tpl).replace(/\{\{\s*([\w.\[\]-]+)\s*\}\}/g, (_m, path) => {
+    const val = path.split(".").reduce((acc: any, k: string) => (acc && acc[k] != null ? acc[k] : undefined), data);
+    return (val === undefined || val === null) ? "" : String(val);
   });
+
+  // 2) poi gestiamo anche i placeholder con singola graffa { a.b.c }
+  out = out.replace(/\{\s*([\w.\[\]-]+)\s*\}/g, (_m, path) => {
+    const val = path.split(".").reduce((acc: any, k: string) => (acc && acc[k] != null ? acc[k] : undefined), data);
+    return (val === undefined || val === null) ? "" : String(val);
+  });
+
+  // pulizia spazi superflui prima della newline
+  return out.replace(/[ \t]+\n/g, "\n").trim();
 }
 
-// -----------------------------------------------------
-const ROOT = process.cwd();
 
-function intentsPath(): string {
-  return resolve(ROOT, "src", "intents", "intents-core.yaml");
-}
 
-// Trova il file della struttura provando più percorsi noti
-async function findStructurePath(structureId: string): Promise<string> {
-  const candidates = [
-    resolve(ROOT, "src", "structures", `${structureId}.yaml`),
-    resolve(ROOT, "src", "routes", "structures", "loaders", `${structureId}.yaml`),
-    resolve(ROOT, "src", "structures", `${structureId}.yml`),
-    resolve(ROOT, "src", "routes", "structures", "loaders", `${structureId}.yml`),
-  ];
-  for (const p of candidates) {
-    try {
-      await access(p, FS.F_OK);
-      return p;
-    } catch {}
-  }
-  throw new Error(`STRUCTURE_FILE_NOT_FOUND for ${structureId}\nTried:\n${candidates.join("\n")}`);
-}
 
-async function loadYaml(path: string) {
-  const raw = await readFile(path, "utf8");
-  return YAML.parse(raw);
-}
 
-async function getIntents(): Promise<Record<string, any>> {
-  if (_intentsCache.has("core")) return _intentsCache.get("core");
-  try {
-    const parsed = await loadYaml(intentsPath());
-    // normalizza in mappa { id: {..., id} }
-    const map: Record<string, any> = {};
-    for (const [id, def] of Object.entries(parsed || {})) {
-      map[id] = { id, ...(def as object) };
-    }
-    _intentsCache.set("core", map);
-    return map;
-  } catch (e: any) {
-    throw new Error(`INTENTS_LOAD_FAILED: ${intentsPath()} → ${e?.message || e}`);
-  }
-}
-
-async function getStructure(structureId: string) {
-  if (_structuresCache.has(structureId)) return _structuresCache.get(structureId);
-  const p = await findStructurePath(structureId);
-  const parsed = await loadYaml(p);
-  _structuresCache.set(structureId, parsed);
-  return parsed;
-}
-
-// -----------------------------------------------------
-// NLP mini-helpers (scoring + rendering)
 // -----------------------------------------------------
 
 // normalizza testo: minuscole, rimuovi accenti, togli punteggiatura,
@@ -229,8 +184,8 @@ if (!top.matched) {
 }
 
 async function runEngine({ structureId, message }: { structureId: string; message: string }) {
-  const intentsCore = await getIntents();
-  const structureYaml = await getStructure(structureId);
+const intentsCore = await loadIntentsCore();
+const structureYaml = await loadStructure(structureId);
   const resp = findResponse(intentsCore, structureYaml, message);
 
   return {
@@ -253,8 +208,8 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   app.get("/_debug/chat/:structureId", async (req, reply) => {
     try {
       const { structureId } = req.params as { structureId: string };
-      const intentsCore = await getIntents();
-      const structureYaml = await getStructure(structureId);
+      const intentsCore = await loadIntentsCore();
+      const structureYaml = await loadStructure(structureId);
       return reply.send({
         ok: true,
         hasIntents: !!intentsCore && Object.keys(intentsCore).length > 0,
@@ -300,35 +255,93 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   });
 
   // Multistruttura: POST /chat/:structureId
-  app.post("/chat/:structureId", async (req, reply) => {
-    try {
-      const { structureId } = req.params as { structureId: string };
-      const body = (req.body as any) || {};
-      const message = String(body?.message ?? "").trim();
-      if (!message) return reply.code(400).send({ ok: false, error: "Missing message", reply: "Missing message" });
+// Multistruttura: POST /chat/:structureId
+app.post("/chat/:structureId", async (req, reply) => {
+  try {
+    const { structureId } = req.params as { structureId: string };
+    const body = (req.body as any) || {};
+    const message = String(body?.message ?? "").trim();
+    if (!message) {
+      return reply.code(400).send({ ok: false, error: "Missing message", reply: "Missing message" });
+    }
 
-      const out = await runEngine({ structureId, message });
-      // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore
-      if (out?.meta?.isFallback === true) {
-        const llmOut = await orchestrateChat(structureId, message, { matched: false, intent: out.intent, confidence: 0.3 });
-        return reply.code(200).send(llmOut);
-      }
-      return reply.code(200).send({
-        ok: true,
+    // --- [CORTO-CIRCUITO YAML: intent wifi] ---------------------------------
+    // Normalizza testo: minuscole, dash unicode → '-', spazi compattati
+    const norm = message
+      .toLowerCase()
+      .normalize("NFKC")
+      .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Regex robuste per "password + wi-fi/wifi" in qualunque ordine
+    const wifiA = /\b(wi-?fi|wifi)\b.*\b(pass(?:word)?|pwd|chiave)\b/;
+    const wifiB = /\b(pass(?:word)?|pwd|chiave)\b.*\b(wi-?fi|wifi)\b/;
+    const wifiC = /qual\s*e'?\s*la\s*password.*wi-?fi/;
+
+    if (wifiA.test(norm) || wifiB.test(norm) || wifiC.test(norm)) {
+const structure = await loadStructure(structureId || "svapartments");
+const outY = structure?.intents?.wifi?.output;
+const rawText =
+  (outY && typeof outY === "object" && (outY as any).short) ? (outY as any).short :
+  (outY && typeof outY === "object" && (outY as any).default) ? (outY as any).default :
+  (typeof outY === "string" ? (outY as string) : null);
+
+if (rawText) {
+  const textY = renderTemplate(rawText, structure); // 👈 RENDERING QUI
+  return reply
+    .header("X-NS-Source", "yaml")
+    .code(200)
+    .send({
+      ok: true,
+      source: "yaml",
+      intent: "wifi",
+      confidence: 1.0,
+      lang: (structure as any)?.meta?.language ?? "it",
+      mode: "short",
+      text: textY,
+      reply: textY,
+      ui: (outY as any)?.ui ? { buttons: (outY as any).ui.buttons ?? [] } : { buttons: [] },
+    });
+}
+      // Se manca l'output YAML per wifi, proseguiamo con la pipeline normale
+    }
+    // ------------------------------------------------------------------------
+
+    const out = await runEngine({ structureId, message });
+
+    // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore
+    if (out?.meta?.isFallback === true) {
+      const llmOut = await orchestrateChat(structureId, message, {
+        matched: false,
         intent: out.intent,
+        confidence: 0.0, // non usiamo meta.score per evitare errori di tipo
+      });
+      return reply.code(200).send(llmOut);
+    }
+
+    // Risposta YAML “normale” proveniente dal motore
+    return reply
+      .header("X-NS-Source", "yaml")
+      .code(200)
+      .send({
+        ok: true,
+        source: "yaml",
+        intent: out.intent,
+        confidence: 1.0,
         lang: out.lang,
         mode: out.meta?.mode ?? "short",
         text: out.text,
         reply: out.text, // alias per il widget
         ui: { buttons: out.meta?.uiButtons ?? [] },
-      
       });
-    } catch (err: any) {
-      const msg = err?.message || "Errore inatteso";
-      return reply.code(500).send({ ok: false, error: msg, reply: msg });
-    }
-  });
-};
+  } catch (err: any) {
+    const msg = err?.message || "Errore inatteso";
+    return reply.code(500).send({ ok: false, error: msg, reply: msg });
+  }
+});
+
+}
 
 // esporti entrambi i modi (default + named) per compatibilità con l'import
 export { chatRoutes };

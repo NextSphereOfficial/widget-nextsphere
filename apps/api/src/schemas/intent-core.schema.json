@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "oneOf": [
+    {
+      "title": "Flat intents",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/definitions/intentDef" }
+    },
+    {
+      "title": "Wrapped intents",
+      "type": "object",
+      "required": ["intents"],
+      "properties": {
+        "intents": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/definitions/intentDef" }
+        }
+      },
+      "additionalProperties": true
+    }
+  ],
+  "definitions": {
+    "intentDef": {
+      "type": "object",
+      "properties": {
+        "synonyms": { "type": "array", "items": { "type": "string" } },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "patterns": { "type": "array", "items": { "type": "string" } },
+        "negative": { "type": "array", "items": { "type": "string" } },
+        "output": {
+          "type": "object",
+          "properties": {
+            "default": { "type": ["string", "null"] },
+            "short":   { "type": ["string", "null"] },
+            "long":    { "type": ["string", "null"] },
+            "ui": { "type": "object", "additionalProperties": true }
+          },
+          "required": ["default"],
+          "additionalProperties": true
+        }
+      },
+      "required": ["output"],
+      "additionalProperties": true
+    }
+  }
+}

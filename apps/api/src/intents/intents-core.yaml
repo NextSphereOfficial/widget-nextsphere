@@ -1,67 +1,257 @@
-# --- ADD / UPDATE: Wi-Fi intent
-wifi:
-  id: wifi
-  priority: 100
-  synonyms_it: [wifi, wi-fi, internet, rete, password wifi, connessione, ssid]
-  synonyms_en: [wifi, wi-fi, internet, network, wifi password, connection, ssid]
-  keywords_it: [wifi, password, rete, ssid]
-  keywords_en: [wifi, password, network, ssid]
-  patterns:
-    - "(?i)password(.*)wifi"
-    - "(?i)ssid"
-  negative: ["porta", "portone", "cancello", "cassaforte", "lucchetto"]
-  followups:
-    it: []
-    en: []
-  actions:
-    copyable_fields: ["wifi.password", "wifi.ssid"]
-    cta:
-      it: "Copia password"
-      en: "Copy password"
-  output:
-    default: short
-    rich: true
+intents:
+  wifi:
+    id: wifi
+    priority: 150
+    synonyms:
+      - wifi
+      - wi-fi
+      - wi-fi # U+2011 non-breaking hyphen
+      - wi‒fi # U+2012 figure dash
+      - wi–fi # U+2013 en dash
+      - wi—fi # U+2014 em dash
+      - wi ― fi # varianti eventuali
+      - wi fi
+      - internet
+      - rete
+      - connessione
+      - password wifi
+      - ssid
+      - hotspot
+      - rete wireless
+      - navigare
+    keywords:
+      - wifi
+      - wi-fi
+      - wi-fi
+      - wi‒fi
+      - wi–fi
+      - wi—fi
+      - wi fi
+      - password
+      - pass
+      - pwd
+      - chiave
+      - rete
+      - internet
+      - rete
+      - ssid
+      - internet
+      - connessione
+      - wireless
+    patterns:
+      # IT
+      - "(?i)qual\\s*e'?\\s*la\\s*password.*wi[-\\s]?fi"
+      - "(?i)\\b(wi[-\\s]?fi|wifi)\\b.*\\b(password|pass|pwd|chiave)\\b"
+      - "(?i)\\b(password|pass|pwd|chiave)\\b.*\\b(wi[-\\s]?fi|wifi)\\b"
+      - "(non funziona|problemi?).*(wi[- ]?fi|wifi|internet|connessione)"
+      - "come (mi|si) (connetto|collego).*(wi[- ]?fi|wifi|internet)"
+      - "(?i)\\b(wi[\\-\\u2010-\\u2015\\s]?fi)\\b.*\\b(pass(word)?|pwd|chiave)\\b"
+      - "(?i)\\b(pass(word)?|pwd|chiave)\\b.*\\b(wi[\\-\\u2010-\\u2015\\s]?fi)\\b"
+      # forma naturale più comune in italiano
+      - "(?i)qual\\s*e'?\\s*la\\s*password.*wi[\\-\\u2010-\\u2015\\s]?fi"
+      # EN
+      - "(^|\\b)wi[- ]?fi\\b"
+      - "(password).*(wi[- ]?fi)"
+      - "(internet|connection).*(issue|problem)"
+    negative:
+      - wife
+      - "wi fi (scritto 'wife')"
+      - wireless headphones
+      - hotspot personale
+    followups:
+      - "Vuoi vedere subito SSID e password?"
+      - "Serve una guida rapida se la rete non funziona?"
+    actions:
+      - show_wifi_credentials
+      - troubleshoot_wifi
+    output:
+      default: "Posso darti SSID e password del Wi-Fi o aiutarti con una diagnosi rapida se la rete non funziona."
+      short: "Vuoi SSID e password del Wi-Fi o una guida rapida?"
+      long: "Posso mostrarti subito SSID e password del Wi-Fi e, se la rete non dovesse funzionare, guidarti in una mini-diagnosi (riavvio router, verifica rete, ecc.). Dimmi se preferisci vedere le credenziali o ricevere assistenza."
+      ui:
+        buttons:
+          - "Mostra credenziali"
+          - "Non funziona il Wi-Fi"
+          - "Guida rapida"
 
-# --- ADD: Late Check-out
-late_checkout:
-  id: late_checkout
-  priority: 85
-  synonyms_it: [late checkout, check out tardi, uscire più tardi, posticipare checkout]
-  synonyms_en: [late checkout, check out later, extend checkout, postpone checkout]
-  keywords_it: [checkout, tardi, estensione, orario]
-  keywords_en: [checkout, late, extension, time]
-  patterns:
-    - "(?i)late(.*)check(.*)out"
-    - "(?i)posticipa(.*)checkout"
-  negative: []
-  followups:
-    it: ["A che ora ti farebbe comodo? Posso verificare la disponibilità."]
-    en: ["What time would work for you? I can check availability."]
-  actions:
-    cta:
-      it: "Richiedi estensione"
-      en: "Request extension"
-  output:
-    default: short
-    rich: true
+  supermarket:
+    id: supermarket
+    priority: 80
+    synonyms:
+      - supermercato
+      - ipermercato
+      - market
+      - minimarket
+      - alimentari
+      - negozio di alimentari
+      - drogheria
+      - fare la spesa
+      - discount
+      - grocery
+      - grocery store
+      - convenience store
+    keywords:
+      - supermercato
+      - spesa
+      - aperto
+      - vicino
+      - orari
+      - indirizzo
+      - mappa
+      - distanza
+      - supermarket
+      - groceries
+      - hours
+      - address
+      - map
+      - nearby
+    patterns:
+      # IT
+      - "dove.*(supermercat\\w*|market|minimarket|alimentar\\w*|discount)"
+      - "(supermercat\\w*|market|minimarket|alimentar\\w*|discount)(.*vicin\\w*|.*apert\\w*)?"
+      - "spesa(.*dove|.*vicin\\w*|.*apert\\w*)?"
+      # EN
+      - "(closest|nearest).*(supermarket|grocery|convenience)"
+      - "where.*(supermarket|grocery)"
+    negative:
+      - supernatural
+      - superuser
+      - super mario
+      - market cap
+      - stock market
+    followups:
+      - "Preferisci che apra la mappa o vuoi indicarmi una via/una zona?"
+      - "Cerchi catene specifiche (es. Conad, Coop, Esselunga, Carrefour, Lidl, MD)?"
+    actions:
+      - "open_map:supermarket"
+      - ask_area
+      - show_hours
+    output:
+      default: "Posso cercare un supermercato vicino, aprire la mappa o filtrare per zona/brand."
+      short: "Vuoi che apra la mappa dei supermercati vicini?"
+      long: "Posso mostrarti i supermercati nelle vicinanze e gli orari di apertura. Se preferisci, cerco per indirizzo/zona o per catena (Conad, Coop, Esselunga, Carrefour, Lidl, MD). Dimmi come ti è più comodo."
+      ui:
+        buttons:
+          - "Apri mappa"
+          - "Orari di apertura"
+          - "Indicami una zona"
 
-# --- UPDATE: Emergency (contestualizza Mestre)
-emergency:
-  id: emergency
-  priority: 90
-  synonyms_it: [emergenza, aiuto, urgenza, ambulanza, incendio, furto, polizia]
-  synonyms_en: [emergency, help, urgent, ambulance, fire, theft, police]
-  keywords_it: [polizia, ambulanza, vigili, incendio, medico, emergenza]
-  keywords_en: [police, ambulance, fire, emergency, medical]
-  patterns: []
-  negative: []
-  followups:
-    it: []
-    en: []
-  actions:
-    cta:
-      it: "Chiama adesso"
-      en: "Call now"
-  output:
-    default: short
-    rich: true
+  checkin:
+    id: checkin
+    priority: 120
+    synonyms:
+      - check-in
+      - check in
+      - arrivo
+      - accesso
+      - ingresso
+      - self check-in
+      - auto check-in
+      - ritiro chiavi
+      - consegna chiavi
+      - codice accesso
+      - serratura smart
+      - key box
+      - cassetta chiavi
+      - citofono
+    keywords:
+      - orario
+      - check-in
+      - documento
+      - codice
+      - smart lock
+      - keybox
+      - citofono
+      - porta
+      - indirizzo
+      - istruzioni
+      - arrivo
+    patterns:
+      # IT
+      - "(^|\\b)check[- ]?in\\b"
+      - "orari?.*check[- ]?in"
+      - "(come|dove).*(accedere|entrare|ingress\\w*|ritirare.*chiavi)"
+      - "(codice|serratura|smart lock|key ?box|citofono).*"
+      # EN
+      - "(check[- ]?in|arrival|access).*"
+    negative:
+      - check engine
+      - check invoice
+      - "check-in online volo"
+      - boarding pass
+      - "hotel front desk"
+    followups:
+      - "Vuoi le istruzioni passo-passo oppure solo il codice d’accesso?"
+      - "Arrivi ora o vuoi pianificare l’orario?"
+    actions:
+      - show_checkin_instructions
+      - show_access_code
+      - contact_host
+      - "open_map:entrance"
+    output:
+      default: "Ti fornisco istruzioni per il check-in e, se previsto, il codice d’accesso/smart-lock."
+      short: "Preferisci il codice d’accesso o le istruzioni passo-passo?"
+      long: "Posso guidarti nel check-in con istruzioni dettagliate (ingresso, citofono, key box, smart-lock) e indicarti l’orario previsto. Se necessario, posso aprire la mappa dell’ingresso o contattare l’host."
+      ui:
+        buttons:
+          - "Mostra istruzioni"
+          - "Codice d’accesso"
+          - "Apri mappa ingresso"
+
+  emergency:
+    id: emergency
+    priority: 200
+    synonyms:
+      - emergenza
+      - urgenza
+      - aiuto
+      - soccorso
+      - pronto intervento
+      - assistenza urgente
+      - problema grave
+      - incendio
+      - fuga di gas
+      - allagamento
+      - furto
+      - malore
+    keywords:
+      - centododici
+      - ambulanza
+      - polizia
+      - carabinieri
+      - vigili del fuoco
+      - incendio
+      - gas
+      - perdita
+      - allagamento
+      - emergenza
+      - primo soccorso
+      - pronto soccorso
+    patterns:
+      # IT
+      - "emergen[zs]a"
+      - "(ho|c'è).*(un|una)?\\s*(emergenza|incendio|fuga.*gas|allagamento|furto|malore)"
+      - "chiama(re)?.*(112|ambulanza|polizia|vigili|carabinieri)"
+      # EN
+      - "(emergency|help|fire|gas leak|ambulance|police)"
+    negative:
+      - emergency exit
+      - prova di evacuazione
+      - esercitazione
+    followups:
+      - "È un’emergenza medica, di sicurezza o un guasto (incendio/gas/acqua)?"
+      - "Vuoi che ti mostri subito i numeri utili e le istruzioni principali?"
+    actions:
+      - call_112
+      - show_emergency_numbers
+      - show_emergency_instructions
+      - contact_host_urgent
+    output:
+      default: "Se è un’emergenza chiama subito il 112. Posso mostrarti numeri utili e istruzioni rapide (incendio, fuga di gas, acqua)."
+      short: "Se è urgente chiama 112. Vuoi numeri/istruzioni rapide?"
+      long: "In caso di emergenza chiama subito il 112. Posso mostrarti i numeri utili (ambulanza, polizia, vigili del fuoco) e le istruzioni principali: incendio (allontanati, non usare ascensori, chiama 115), fuga di gas (chiudi il gas, apri le finestre, non usare fiamme o interruttori), allagamento (chiudi l’acqua, scollega la corrente se sicuro). Posso anche avvisare rapidamente l’host."
+      ui:
+        buttons:
+          - "Chiama 112"
+          - "Numeri utili"
+          - "Istruzioni rapide"

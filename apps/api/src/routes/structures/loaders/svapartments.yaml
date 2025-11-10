@@ -1,179 +1,37 @@
-# apps/api/src/structures/svapartments.yaml
-version: "1.1.0"
-
 meta:
-  structure:
-    id: svapartments
-    name: "SVA Apartments"
-  default_locale: "it-IT"
-  timezone: "Europe/Rome"
-  location:
-    city: "Mestre"
-    province: "VE"
-  room_aware: true
-
-privacy:
-  wifi:
-    mask_password: false
-  contacts:
-    show_in_emergency: true
+  id: svapartments
+  name: SVApartments
+  version: 1.0.0
+  language: it
 
 content:
   wifi:
-    ssid: "SV_Guest"           # <-- aggiorna se diverso
-    password: "SV2025_!"        # <-- INSERISCI QUI la password reale
-    note:
-      it: "Il router è vicino alla TV in soggiorno."
-      en: "The router is near the living room TV."
-    help:
-      it: "Se non vedi la rete, riavvia il Wi-Fi del telefono e attendi 10s."
-      en: "If you don't see the network, toggle your phone Wi-Fi and wait 10s."
-
-  checkout:
-    time: "10:30"
-    drop_keys:
-      it: "Lascia le chiavi sul tavolo e tira la porta."
-      en: "Leave the keys on the table and close the door."
-    late_option:
-      policy:
-        it: "Late check-out su richiesta, soggetto a disponibilità."
-        en: "Late check-out on request, subject to availability."
-      request_channel:
-        it: "Scrivi qui l’orario desiderato e verifichiamo subito."
-        en: "Send your desired time here and I’ll check right away."
-
-  rules:
-    quiet_hours: "22:00–8:00"
-    smoking: false
-    pets: false
-    extra:
-      it: "Per favore non spostare i mobili."
-      en: "Please do not move furniture."
-
+    ssid: "SVA_Guest"
+    password: "12345678"
+  checkin:
+    from: "15:00"
+    early_policy: "Scrivici: se l’appartamento è pronto ti avvisiamo."
+  supermarket:
+    nearest: "Conad City — Via Roma 12 (300 m)"
+    hours: "8:00–20:00 (lun–sab)"
   emergency:
-    police: "112"
-    medical: "118"
-    fire: "115"
-    note:
-      it: "Se necessario, indica: ‘Mestre (VE)’ per il corretto instradamento."
-      en: "If needed, mention: ‘Mestre (VE)’ for proper routing."
+    phone: "112"
+    note: "Indica l’indirizzo dell’appartamento al centralino."
 
-  contacts:
-    host:
-      phone: "+39 333 0000000"      # <-- aggiorna se vuoi
-      whatsapp: "+39 333 0000000"
-      email: "host@svapartments.it"
-
-responses:
+intents:
   wifi:
-    short:
-      it: "Wi-Fi — SSID: {{content.wifi.ssid}} · Password: {{content.wifi.password}}"
-      en: "Wi-Fi — SSID: {{content.wifi.ssid}} · Password: {{content.wifi.password}}"
-    long:
-      it: |
-        Ecco il Wi-Fi:
-        • SSID: {{content.wifi.ssid}}
-        • Password: {{content.wifi.password}}
-        {{content.wifi.note.it}}
-        Aiuto: {{content.wifi.help.it}}
-      en: |
-        Here’s the Wi-Fi:
-        • SSID: {{content.wifi.ssid}}
-        • Password: {{content.wifi.password}}
-        {{content.wifi.note.en}}
-        Help: {{content.wifi.help.en}}
-    troubleshooting:
-      it:
-        - "Non vedi la rete? Riavvia il Wi-Fi del telefono e attendi 10s."
-        - "Ancora nulla? Spegni/riaccendi il router (switch dietro la TV)."
-      en:
-        - "Can't see the network? Toggle phone Wi-Fi and wait 10s."
-        - "Still nothing? Power-cycle the router (switch behind the TV)."
-    buttons:
-      it:
-        - label: "Copia password"
-          action: "copy:{{content.wifi.password}}"
-      en:
-        - label: "Copy password"
-          action: "copy:{{content.wifi.password}}"
-    fallback:
-      it: "Vuoi che te la ripeta in breve o ti aiuto col router?"
-      en: "Want a quick repeat or help with the router?"
-
-  checkout:
-    short:
-      it: "Check-out entro le {{content.checkout.time}}. {{content.checkout.drop_keys.it}}"
-      en: "Check-out by {{content.checkout.time}}. {{content.checkout.drop_keys.en}}"
-    long:
-      it: |
-        Check-out:
-        • Orario standard: {{content.checkout.time}}
-        • Istruzioni: {{content.checkout.drop_keys.it}}
-        • {{content.checkout.late_option.policy.it}} {{content.checkout.late_option.request_channel.it}}
-      en: |
-        Check-out:
-        • Standard time: {{content.checkout.time}}
-        • Instructions: {{content.checkout.drop_keys.en}}
-        • {{content.checkout.late_option.policy.en}} {{content.checkout.late_option.request_channel.en}}
-    fallback:
-      it: "Vuoi richiedere un late check-out? Dimmi un orario e verifico."
-      en: "Want to request late check-out? Tell me a time and I’ll check."
-
-  late_checkout:
-    short:
-      it: "{{content.checkout.late_option.policy.it}} {{content.checkout.late_option.request_channel.it}}"
-      en: "{{content.checkout.late_option.policy.en}} {{content.checkout.late_option.request_channel.en}}"
-    followup:
-      it: "A che ora ti farebbe comodo uscire?"
-      en: "What time would work for you?"
-
-  rules:
-    short:
-      it: "Regole: silenzio {{content.rules.quiet_hours}}; fumo {{#bool content.rules.smoking 'non consentito' 'consentito'}}; animali {{#bool content.rules.pets 'non ammessi' 'ammessi'}}."
-      en: "Rules: quiet {{content.rules.quiet_hours}}; smoking {{#bool content.rules.smoking 'not allowed' 'allowed'}}; pets {{#bool content.rules.pets 'not allowed' 'allowed'}}."
-    long:
-      it: |
-        Regole casa:
-        • Silenzio: {{content.rules.quiet_hours}}
-        • Fumo: {{#bool content.rules.smoking 'non consentito' 'consentito'}}
-        • Animali: {{#bool content.rules.pets 'non ammessi' 'ammessi'}}
-        • Note: {{content.rules.extra.it}}
-      en: |
-        House rules:
-        • Quiet: {{content.rules.quiet_hours}}
-        • Smoking: {{#bool content.rules.smoking 'not allowed' 'allowed'}}
-        • Pets: {{#bool content.rules.pets 'not allowed' 'allowed'}}
-        • Notes: {{content.rules.extra.en}}
-
+    output:
+      short: "SSID: {content.wifi.ssid} — Password: {content.wifi.password}"
+      default: "SSID: {content.wifi.ssid} — Password: {content.wifi.password}"
+  checkin:
+    output:
+      short: "Check-in dalle {content.checkin.from}. {content.checkin.early_policy}"
+      default: "Check-in dalle {content.checkin.from}. {content.checkin.early_policy}"
+  supermarket:
+    output:
+      short: "{content.supermarket.nearest} — {content.supermarket.hours}"
+      default: "{content.supermarket.nearest} — {content.supermarket.hours}"
   emergency:
-    short:
-      it: "Emergenze in Italia (Mestre): Polizia {{content.emergency.police}} · Medica {{content.emergency.medical}} · Vigili {{content.emergency.fire}}"
-      en: "Emergencies in Italy (Mestre): Police {{content.emergency.police}} · Medical {{content.emergency.medical}} · Fire {{content.emergency.fire}}"
-    long:
-      it: |
-        Numeri di emergenza (Mestre, VE):
-        • Polizia: {{content.emergency.police}} (tel:{{content.emergency.police}})
-        • Medica: {{content.emergency.medical}} (tel:{{content.emergency.medical}})
-        • Vigili del fuoco: {{content.emergency.fire}} (tel:{{content.emergency.fire}})
-        {{content.emergency.note.it}}
-      en: |
-        Emergency numbers (Mestre, VE):
-        • Police: {{content.emergency.police}} (tel:{{content.emergency.police}})
-        • Medical: {{content.emergency.medical}} (tel:{{content.emergency.medical}})
-        • Fire: {{content.emergency.fire}} (tel:{{content.emergency.fire}})
-        {{content.emergency.note.en}}
-    buttons:
-      it:
-        - label: "Chiama 112"
-          action: "tel:{{content.emergency.police}}"
-        - label: "Chiama 118"
-          action: "tel:{{content.emergency.medical}}"
-        - label: "Chiama 115"
-          action: "tel:{{content.emergency.fire}}"
-      en:
-        - label: "Call 112"
-          action: "tel:{{content.emergency.police}}"
-        - label: "Call 118"
-          action: "tel:{{content.emergency.medical}}"
-        - label: "Call 115"
-          action: "tel:{{content.emergency.fire}}"
+    output:
+      short: "Emergenze: {content.emergency.phone}"
+      default: "In caso d’emergenza chiama {content.emergency.phone}. {content.emergency.note}"

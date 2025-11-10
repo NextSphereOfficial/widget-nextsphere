@@ -8,7 +8,9 @@
     "dev": "concurrently -k -n API,WIDGET -c blue,green \"npm:dev:api\" \"npm:dev:widget\""
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@types/node": "^20.19.23",
+    "concurrently": "^9.2.1",
+    "prettier": "^3.6.2"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

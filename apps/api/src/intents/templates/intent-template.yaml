@@ -1,0 +1,20 @@
+# Template standard per un nuovo intent
+# Copia e adatta i campi. Lo script "new:intent" genera questo blocco in automatico.
+intents:
+  my_intent_slug:
+    id: your-intent-id
+    synonyms:
+      - ""
+    keywords:
+      - ""
+    patterns:
+      - ""
+    negative: []
+    output:
+      # Testo di fallback lato struttura; qui serve solo la forma.
+      # Nei file structure userai variabili tipo {content.section.key}
+      default: ""
+      short: ""
+      long: ""
+      ui:
+        buttons: []

@@ -1,20 +1,19 @@
 {
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "target": "ES2022",
+    "module": "Node16",                 // <-- fix
+    "moduleResolution": "Node16",       // <-- fix
     "lib": ["ES2022"],
-    "strict": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "types": ["node"],
     "skipLibCheck": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "types": ["node"],
+    "rootDir": ".",                     // include anche /scripts
+    "outDir": "dist",
+    "allowSyntheticDefaultImports": true
 
-    "rootDir": "src",
-    "outDir": "dist"
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["test", "**/*.spec.ts", "**/*.test.ts"]
+  "include": ["src", "scripts"]
 }
-
