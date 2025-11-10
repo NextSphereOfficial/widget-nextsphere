@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "cross-env API_PORT=8081 API_HOST=0.0.0.0 tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json && pnpm run build:assets",
+    "build:assets": "shx mkdir -p dist/routes/structures && shx cp -r src/intents dist/ && shx cp -r src/routes/structures dist/routes/",
     "start": "node dist/server.js",
     "fix:intents": "tsx scripts/fix-intents-core.ts",
     "new:intent": "tsx scripts/new-intent.ts",
@@ -31,7 +32,8 @@
     "pino-pretty": "^13.1.2",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0",
-    "vitest": "^4.0.7"
+    "vitest": "^4.0.7",
+    "shx": "^0.3.4"
   },
   "engines": {
     "node": ">=18"

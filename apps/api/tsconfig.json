@@ -1,19 +1,19 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "Node16",                 // <-- fix
-    "moduleResolution": "Node16",       // <-- fix
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "lib": ["ES2022"],
+    "types": ["node"],
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
-    "noImplicitAny": true,
-    "types": ["node"],
-    "rootDir": ".",                     // include anche /scripts
+    "rootDir": "src",
     "outDir": "dist",
-    "allowSyntheticDefaultImports": true
-
+    "noEmit": false
   },
-  "include": ["src", "scripts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
