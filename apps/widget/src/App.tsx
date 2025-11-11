@@ -9,6 +9,10 @@ import QuickActions, { QuickItem } from "./components/QuickActions"; // a) impor
 import TypingLoader from "./components/TypingLoader";                // a) import
 import "./styles/WidgetUI.css";                                      // a) import
 
+import HeaderBar from "./components/HeaderBar";
+import Launcher from "./components/Launcher";
+
+
 type Msg = { role: 'user' | 'assistant'; content: string };
 
 export default function App() {
@@ -113,45 +117,23 @@ export default function App() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {!open && (
-        <button
-          className="rounded-full p-3 shadow bg-black text-white"
-          onClick={() => setOpen(true)}
-          aria-label={locale === 'en' ? 'Open chat' : 'Apri chat'}
-        >
-          💬
-        </button>
-      )}
+     {!open && (
+  <Launcher
+    onOpen={() => setOpen(true)}
+    ariaLabel={locale === 'en' ? 'Open chat' : 'Apri chat'}
+    showUnread={false} // potrai metterlo true in futuro se vuoi il badge
+  />
+)}
+
 
       {open && (
         <div className="w-96 max-w-[92vw] h-96 rounded-2xl shadow-xl overflow-hidden bg-white/80 backdrop-blur-md border border-black/5 flex flex-col">
           {/* Header minimal, senza testo/brand name visibile */}
-          <header className="h-12 flex items-center justify-between px-3 bg-gradient-to-r from-gray-50 via-white to-gray-50 border-b border-black/5">
-            {/* Icona tonda come marchio "muto" */}
-            <div className="flex items-center gap-2">
-              <span
-                className="inline-block h-6 w-6 rounded-full bg-black/80"
-                aria-hidden
-              />
-              <span className="sr-only">NextSphere</span>
-            </div>
+          <HeaderBar
+             locale={locale as "it" | "en"}
+           onClose={() => setOpen(false)}
+      />
 
-            {/* Pulsante chiudi (manteniamo solo close, niente minimize per ora) */}
-            <button
-              className="h-8 w-8 grid place-items-center rounded-lg hover:bg-black/5 transition"
-              aria-label={locale === 'en' ? 'Close chat' : 'Chiudi chat'}
-              onClick={() => setOpen(false)}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24">
-                <path
-                  d="M6 6l12 12M18 6L6 18"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-          </header>
 
           {/* Area messaggi */}
           <div className="flex-1 overflow-auto p-4 space-y-3 chat-scroll">
