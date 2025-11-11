@@ -1,4 +1,9 @@
-/* ====== Lumo UI Tokens ====== */
+/* ============================================================
+   LUMO WIDGET UI – NEXTSPHERE
+   Step 8.6 – Polishing Finale (Header, Launcher, Quickbar, Buttons)
+   ============================================================ */
+
+/* ====== UI Tokens ====== */
 :root {
   --ns-radius: 16px;
   --ns-shadow: 0 8px 24px rgba(0,0,0,.10);
@@ -12,7 +17,7 @@
 }
 
 .dark {
-  --ns-text-muted: #9ca3af;      /* zinc-400 */
+  --ns-text-muted: #9ca3af;
   --ns-bg-ghost: rgba(255,255,255,.06);
   --ns-border-ghost: rgba(255,255,255,.18);
 }
@@ -20,100 +25,131 @@
 /* ====== Helpers ====== */
 .ns-focusable:focus-visible { outline: none; box-shadow: var(--ns-focus); }
 
-/* ====== Layout azioni (WelcomeCard) ====== */
-.ns-actions { display: flex; gap: 8px; }
-.ns-actions--wrap { flex-wrap: wrap; }
+/* ============================================================
+   WELCOME CARD
+   ============================================================ */
+.ns-actions {
+  display: flex;
+  gap: 8px;
+}
+.ns-actions--wrap {
+  flex-wrap: wrap;
+}
 
-/* ====== ns-btn — bottoni principali (WelcomeCard) ====== */
+/* Bottoni principali */
 .ns-btn {
   border: none;
   border-radius: var(--ns-radius);
-  padding: 0.55em 0.95em;       /* compatto */
-  font-size: 14px;              /* più piccolo */
+  padding: 0.5em 0.9em;
+  font-size: 13.5px;
   font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.45em;
-  cursor: pointer;
-  box-shadow: var(--ns-shadow);
-  background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
   color: var(--ns-text-on);
+  background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
   transition: transform .25s ease, box-shadow .25s ease, background-position .3s ease;
   background-size: 100% auto;
-  will-change: transform;
+  cursor: pointer;
+  box-shadow: var(--ns-shadow);
 }
-.ns-btn--sm { padding: 0.42em 0.8em; font-size: 13.5px; }
-.ns-btn:hover { transform: translateY(-2px); background-position: right center; box-shadow: 0 10px 20px rgba(0,0,0,.15); }
-.ns-btn:active { transform: scale(.98); box-shadow: 0 4px 10px rgba(0,0,0,.15); }
-.ns-btn:focus-visible { box-shadow: var(--ns-focus); }
-.ns-btn[disabled] { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+.ns-btn:hover {
+  transform: translateY(-1px);
+  background-position: right center;
+  box-shadow: 0 8px 14px rgba(0,0,0,.15);
+}
+.ns-btn:active { transform: scale(.98); }
+.ns-btn[disabled] { opacity: .6; cursor: not-allowed; transform: none; }
 
-/* ====== ns-quickbar — barra quick actions ====== */
+/* Card contenitore */
+.ns-card {
+  width: 100%;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.06);
+  box-shadow: 0 6px 18px rgba(0,0,0,.06);
+}
+.ns-card-body { padding: 12px; }
+.ns-title { font-size: 15px; font-weight: 700; }
+.ns-subtitle { font-size: 13.5px; color: var(--ns-text-muted); margin-top: 2px; }
+
+/* ============================================================
+   QUICK ACTIONS BAR
+   ============================================================ */
+.ns-quickbar-wrap {
+  position: sticky;
+  bottom: 0;
+  padding: 6px 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.0) 0%, rgba(255,255,255,0.7) 80%);
+  backdrop-filter: blur(3px);
+  border-top: 1px solid rgba(0,0,0,0.04);
+}
 .ns-quickbar {
   display: flex;
   flex-wrap: wrap;
-  gap: .5rem;
-  padding: .25rem 0 .5rem;
+  gap: 6px;
+  padding-bottom: 4px;
 }
 
-/* ====== ns-chip — quick actions (prima apparivano come testo) ====== */
+/* Chip (bottoni rapidi) */
 .ns-chip {
   border: 1px solid var(--ns-border-ghost);
   background: var(--ns-bg-ghost);
-  color: inherit;
+  color: #111;
   border-radius: 999px;
-  padding: .38em .85em;
-  font-size: 13.5px;
+  padding: 0.35em 0.85em;
+  font-size: 13px;
   font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .4em;
   cursor: pointer;
-  transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+  transition: all 0.2s ease;
 }
-.ns-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,.08); }
-.ns-chip:active { transform: scale(.98); box-shadow: 0 2px 6px rgba(0,0,0,.06); }
-.ns-chip:focus-visible { box-shadow: var(--ns-focus); }
-.ns-chip[disabled] { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
-
-/* Variante accent opzionale (se vuoi chips “pieni”) */
-.ns-chip--accent {
-  background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
-  color: var(--ns-text-on);
-  border: none;
-  transition: transform .25s ease, box-shadow .25s ease, background-position .3s ease;
+.ns-chip:hover {
+  background: rgba(0,0,0,0.05);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
 }
-.ns-chip--accent:hover { transform: translateY(-2px); background-position: right center; box-shadow: 0 10px 20px rgba(0,0,0,.15); }
-.ns-chip--accent:focus-visible { box-shadow: var(--ns-focus); }
+.ns-chip[disabled] {
+  opacity: .6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
 
-/* ====== ns-sendbtn — pulsante invio tondo ✈️ ====== */
+/* ============================================================
+   INPUT BAR – SEND BUTTON
+   ============================================================ */
 .ns-sendbtn {
-  width: 42px; height: 42px;
-  min-width: 42px;
+  width: 42px;
+  height: 42px;
   border: none;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  box-shadow: var(--ns-shadow);
   background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
   color: var(--ns-text-on);
-  transition: transform .25s ease, box-shadow .25s ease, background-position .3s ease;
-  background-size: 100% auto;
-  will-change: transform;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.18);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
-.ns-sendbtn svg { width: 18px; height: 18px; fill: var(--ns-text-on); transition: transform .25s ease; }
+.ns-sendbtn svg {
+  width: 18px;
+  height: 18px;
+  fill: var(--ns-text-on);
+  transition: transform 0.25s ease;
+}
 .ns-sendbtn:hover svg { transform: rotate(35deg); }
-.ns-sendbtn:focus-visible { box-shadow: var(--ns-focus); }
-.ns-sendbtn[disabled] { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+.ns-sendbtn[disabled] { opacity: .6; cursor: not-allowed; }
 
-/* ====== Typing loader (tre pallini) ====== */
-.ns-typing { display: flex; align-items: center; gap: 6px; padding: 6px 0; }
+/* ============================================================
+   TYPING LOADER
+   ============================================================ */
+.ns-typing {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+}
 .ns-dot {
-  width: 6px; height: 6px; border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
   background: rgba(0,0,0,.35);
   animation: ns-bounce 1.4s infinite ease-in-out both;
 }
@@ -124,99 +160,121 @@
   40% { transform: scale(1); opacity: 1; }
 }
 
-/* ====== Card base ====== */
-.ns-card {
-  width: 100%;
-  border-radius: 16px;
-  background: #fff;
-  border: 1px solid rgba(0,0,0,.06);
-  box-shadow: 0 6px 18px rgba(0,0,0,.06);
-}
-.ns-card-body { padding: 12px 12px 10px; }
-.ns-title { font-size: 15px; font-weight: 700; }
-.ns-subtitle { font-size: 13.5px; color: var(--ns-text-muted); margin-top: 2px; }
-
-
-/* ====== Header (Lumo by NextSphere) ====== */
+/* ============================================================
+   HEADER BAR – “Lumo by NextSphere”
+   ============================================================ */
 .ns-header {
   height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 .75rem 0 .5rem;
-  background: linear-gradient(90deg, #fafafa 0%, #ffffff 60%, #fafafa 100%);
-  border-bottom: 1px solid rgba(0,0,0,.06);
+  padding: 0 0.75rem 0 0.6rem;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 .ns-header__brand {
   display: flex;
   align-items: center;
-  gap: .5rem;
+  gap: 0.5rem;
 }
 .ns-header__icon {
   display: inline-flex;
   border-radius: 999px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,.10);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 .ns-header__titles {
-  display: flex; flex-direction: column; line-height: 1.05;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
 }
 .ns-header__title {
-  font-size: 14px; font-weight: 800; letter-spacing: .2px;
+  font-size: 14px;
+  font-weight: 700;
 }
 .ns-header__subtitle {
-  font-size: 11px; color: #6b7280; /* zinc-500 */
+  font-size: 11px;
+  color: #9ca3af;
 }
 .ns-header__close {
-  height: 32px; width: 32px;
-  display: grid; place-items: center;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,.06);
+  height: 30px;
+  width: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.06);
   background: #fff;
-  transition: background .2s ease, transform .15s ease, box-shadow .2s ease;
+  transition: background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
 }
-.ns-header__close:hover { background: rgba(0,0,0,.04); transform: translateY(-1px); }
-.ns-header__close:active { transform: scale(.98); }
+.ns-header__close:hover {
+  background: rgba(0,0,0,0.05);
+  transform: translateY(-1px);
+}
 
-/* ====== Launcher (floating button) ====== */
+/* ============================================================
+   LAUNCHER (CHAT CHIUSA)
+   ============================================================ */
 .ns-launcher {
   position: fixed;
-  right: 16px; bottom: 16px;
-  width: 52px; height: 52px;
-  border: none; border-radius: 999px;
-  display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+  right: 18px;
+  bottom: 18px;
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
   color: var(--ns-text-on);
-  transition: transform .25s ease, box-shadow .25s ease, background-position .3s ease;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, background-position 0.3s ease;
   background-size: 100% auto;
   z-index: 60;
 }
-.ns-launcher:hover { transform: translateY(-2px); background-position: right center; box-shadow: 0 14px 30px rgba(0,0,0,.22); }
-.ns-launcher:focus-visible { outline: none; box-shadow: var(--ns-focus); }
+.ns-launcher:hover {
+  transform: translateY(-3px);
+  background-position: right center;
+  box-shadow: 0 14px 32px rgba(0,0,0,0.25);
+}
+.ns-launcher:focus-visible {
+  outline: none;
+  box-shadow: var(--ns-focus);
+}
 .ns-launcher__badge {
-  position: absolute; top: 6px; right: 6px;
-  width: 9px; height: 9px; border-radius: 999px;
-  background: #ef4444; /* red-500 */
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #ef4444;
   box-shadow: 0 0 0 2px #fff;
 }
 
-/* ====== Quickbar sticky + overflow mobile ====== */
-.ns-quickbar-wrap {
-  position: sticky; bottom: 0;
-  padding: 4px 8px;
-  background: linear-gradient(180deg, rgba(255,255,255,.0) 0%, rgba(255,255,255,.6) 70%);
-  backdrop-filter: blur(2px);
-}
-@media (max-width: 420px) {
-  .ns-quickbar {
-    overflow-x: auto;
-    white-space: nowrap;
-    padding-bottom: 4px;
-  }
+/* ============================================================
+   RESPONSIVE & DARK MODE
+   ============================================================ */
+@media (max-width: 480px) {
+  .ns-header__title { font-size: 13px; }
+  .ns-header__subtitle { font-size: 10px; }
+  .ns-launcher { right: 12px; bottom: 12px; width: 52px; height: 52px; }
+  .ns-quickbar { overflow-x: auto; white-space: nowrap; padding-bottom: 4px; }
   .ns-quickbar::-webkit-scrollbar { height: 6px; }
-  .ns-quickbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,.15); border-radius: 999px; }
+  .ns-quickbar::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,.15);
+    border-radius: 999px;
+  }
 }
 
-/* ====== Bubble spacing (rifiniture leggere) ====== */
-.chat-scroll > div { scroll-margin: 12px; }
+@media (prefers-color-scheme: dark) {
+  .ns-header {
+    background: #1e1e1e;
+    border-color: rgba(255,255,255,0.1);
+  }
+  .ns-header__subtitle { color: #9ca3af; }
+  .ns-launcher { box-shadow: 0 10px 24px rgba(0,0,0,0.5); }
+  .ns-quickbar-wrap {
+    background: linear-gradient(180deg, rgba(30,30,30,0.0) 0%, rgba(30,30,30,0.8) 80%);
+  }
+}
