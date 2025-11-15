@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import WelcomeCard from "./components/WelcomeCard";                 // a) import
 import QuickActions, { QuickItem } from "./components/QuickActions"; // a) import
 import TypingLoader from "./components/TypingLoader";                // a) import
-import "./styles/WidgetUI.css";                                      // a) import
+                                   // a) import
 
 import HeaderBar from "./components/HeaderBar";
 import Launcher from "./components/Launcher";

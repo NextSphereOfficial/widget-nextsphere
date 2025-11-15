@@ -9,15 +9,16 @@ type Props = {
 export default function HeaderBar({ locale, onClose }: Props) {
   return (
     <header className="ns-header" role="banner">
-      <div className="ns-header__brand">
-        <span className="ns-header__icon">
-          <IconLumo size={18} />
-        </span>
-        <div className="ns-header__titles">
-          <strong className="ns-header__title">Lumo</strong>
-          <span className="ns-header__subtitle">by NextSphere</span>
-        </div>
-      </div>
+        <div className="ns-header__brand">
+            <span className="ns-header__icon">
+    <IconLumo size={18} />
+  </span>
+  <div className="ns-header__titles">
+    <strong className="ns-header__title">Lumo</strong>
+    <span className="ns-header__subtitle">by NextSphere</span>
+  </div>
+</div>
+
       <button
         className="ns-header__close"
         aria-label={locale === "en" ? "Close chat" : "Chiudi chat"}

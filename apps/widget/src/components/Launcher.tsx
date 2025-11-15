@@ -15,7 +15,7 @@ export default function Launcher({ onOpen, ariaLabel, showUnread = false }: Prop
       onClick={onOpen}
       aria-label={ariaLabel || "Apri chat"}
     >
-      <IconLumo size={20} />
+      <IconLumo size={24} />
       {showUnread && <span className="ns-launcher__badge" aria-hidden />}
     </button>
   );

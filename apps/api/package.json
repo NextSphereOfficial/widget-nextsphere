@@ -11,7 +11,8 @@
     "fmt:yaml": "prettier --write \"src/**/*.yaml\"",
     "lint:yaml": "tsx scripts/validate-yaml.ts",
         "report:intents": "tsx scripts/report-intents.ts",
-    "check:content": "pnpm lint:yaml && pnpm report:intents"
+    "check:content": "pnpm lint:yaml && pnpm report:intents",
+    "report:llm": "tsx scripts/report-llm.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.0",

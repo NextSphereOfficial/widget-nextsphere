@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles/index.css";
 import * as Sentry from "@sentry/react";
-
+import './styles/WidgetUI.css'; // << aggiungi questa riga
 
 
 // ------- Sentry (safe init via env) -------
