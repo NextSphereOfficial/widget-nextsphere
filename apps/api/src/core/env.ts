@@ -1,9 +1,10 @@
+// apps/api/src/core/env.ts
 import { config } from 'dotenv';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname  = path.dirname(__filename);
+const __dirname = path.dirname(__filename);
 
 // env.ts sta in: apps/api/src/core/env.ts
 // il .env sta in: apps/api/.env  → sali di 2 livelli (src/core → .env)
@@ -11,10 +12,6 @@ const ENV_PATH = path.resolve(__dirname, '../../.env');
 
 // Carica e sovrascrivi eventuali variabili già presenti
 config({ path: ENV_PATH, override: true });
-
-// TEMP: verifica
-console.log('DEBUG_ENV_PATH', ENV_PATH);
-console.log('DEBUG_USE_LLM', process.env.USE_LLM);
 
 export const ENV = {
   USE_LLM: process.env.USE_LLM === 'true',

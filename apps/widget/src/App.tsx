@@ -1,17 +1,12 @@
-import { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getInitialContext } from './utils/params';
 import { sendMessage } from './services/chatClient';
 
-import React, { useEffect, useRef, useState } from 'react';
-
-import WelcomeCard from "./components/WelcomeCard";                 // a) import
-import QuickActions, { QuickItem } from "./components/QuickActions"; // a) import
-import TypingLoader from "./components/TypingLoader";                // a) import
-                                   // a) import
-
-import HeaderBar from "./components/HeaderBar";
-import Launcher from "./components/Launcher";
-
+import WelcomeCard from './components/WelcomeCard';
+import QuickActions, { QuickItem } from './components/QuickActions';
+import TypingLoader from './components/TypingLoader';
+import HeaderBar from './components/HeaderBar';
+import Launcher from './components/Launcher';
 
 type Msg = { role: 'user' | 'assistant'; content: string };
 
@@ -23,9 +18,9 @@ export default function App() {
     () => ({
       hotel: ctx.hotel,
       room: ctx.room,
-      locale: ctx.locale
+      locale: ctx.locale,
     }),
-    []
+    [],
   );
 
   // UI strings localizzate
@@ -36,73 +31,89 @@ export default function App() {
             title: 'NextSphere',
             placeholder: 'Type a message...',
             send: 'Send',
-            serverError: "Oops, I can't reach the server 😅"
+            serverError: "Oops, I can't reach the server 😅",
           }
         : {
             title: 'NextSphere',
             placeholder: 'Scrivi un messaggio...',
             send: 'Invia',
-            serverError: 'Ops, non riesco a contattare il server 😅'
+            serverError: 'Ops, non riesco a contattare il server 😅',
           },
-    [locale]
+    [locale],
   );
 
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const endRef = useRef<HTMLDivElement>(null);
+  const [isSending, setIsSending] = useState(false);
 
-  const [isSending, setIsSending] = useState(false); // b) stato invio in corso
+  // Quick actions localizzate
+  const quickItems: QuickItem[] = useMemo(
+    () =>
+      locale === 'en'
+        ? [
+            { id: 'wifi', label: 'Wi-Fi' },
+            { id: 'checkin', label: 'Check-in' },
+            { id: 'emergency', label: 'Emergencies' },
+            { id: 'supermarket', label: 'Supermarket' },
+          ]
+        : [
+            { id: 'wifi', label: 'Wi-Fi' },
+            { id: 'checkin', label: 'Check-in' },
+            { id: 'emergency', label: 'Emergenze' },
+            { id: 'supermarket', label: 'Supermercato' },
+          ],
+    [locale],
+  );
 
-  // c) Quick actions e mappa invio localizzata
-  const quickItems: QuickItem[] = (locale === "en"
-    ? [
-        { id: "wifi",        label: "Wi-Fi" },
-        { id: "checkin",     label: "Check-in" },
-        { id: "emergency",   label: "Emergencies" },
-        { id: "supermarket", label: "Supermarket" },
-      ]
-    : [
-        { id: "wifi",        label: "Wi-Fi" },
-        { id: "checkin",     label: "Check-in" },
-        { id: "emergency",   label: "Emergenze" },
-        { id: "supermarket", label: "Supermercato" },
-      ]);
-
-  const sendMap = (id: QuickItem["id"]) => {
-    if (locale === "en") return ({ wifi: "wifi", checkin: "checkin", emergency: "emergency", supermarket: "supermarket" })[id];
-    return ({ wifi: "wifi", checkin: "checkin", emergency: "emergenze", supermarket: "supermercato" })[id];
+  const sendMap = (id: QuickItem['id']) => {
+    if (locale === 'en') {
+      return (
+        {
+          wifi: 'wifi',
+          checkin: 'checkin',
+          emergency: 'emergency',
+          supermarket: 'supermarket',
+        } as const
+      )[id];
+    }
+    return (
+      {
+        wifi: 'wifi',
+        checkin: 'checkin',
+        emergency: 'emergenze',
+        supermarket: 'supermercato',
+      } as const
+    )[id];
   };
-
-  // (rimosso) Messaggio di benvenuto auto-inserito: usiamo la WelcomeCard quando msgs.length === 0
 
   // Autoscroll all'ultimo messaggio
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs]);
 
-  // d) Invio messaggio con gestione isSending
+  // Invio messaggio con gestione isSending
   async function send(textOverride?: string) {
     const value = (textOverride ?? text).trim();
     if (!value) return;
 
     const userMsg: Msg = { role: 'user', content: value };
-    setMsgs((m) => [...m, userMsg]);
+    setMsgs((prev) => [...prev, userMsg]);
     setText('');
     setIsSending(true);
 
     try {
-      const data = await sendMessage(value, conversationCtx);
-      setMsgs((m) => [
-        ...m,
-        { role: 'assistant', content: data?.reply ?? '...' }
-      ]);
-    } catch (err) {
-      console.error('Errore chiamata /api/chat', err);
-      setMsgs((m) => [
-        ...m,
-        { role: 'assistant', content: t.serverError }
-      ]);
+      const res = await sendMessage(value, conversationCtx);
+      const botMsg: Msg = { role: 'assistant', content: res.reply };
+      setMsgs((prev) => [...prev, botMsg]);
+    } catch (err: any) {
+      console.error(err);
+      const fallback: Msg = {
+        role: 'assistant',
+        content: t.serverError,
+      };
+      setMsgs((prev) => [...prev, fallback]);
     } finally {
       setIsSending(false);
     }
@@ -115,38 +126,46 @@ export default function App() {
     }
   }
 
+  // Handler tipizzato per le quick actions
+  const handleQuickAction = async (id: QuickItem['id']) => {
+    await send(sendMap(id));
+  };
+
   return (
     <div className="fixed bottom-4 right-4 z-50">
-     {!open && (
-  <Launcher
-    onOpen={() => setOpen(true)}
-    ariaLabel={locale === 'en' ? 'Open chat' : 'Apri chat'}
-    showUnread={false} // potrai metterlo true in futuro se vuoi il badge
-  />
-)}
-
+      {!open && (
+        <Launcher
+          onOpen={() => setOpen(true)}
+          ariaLabel={locale === 'en' ? 'Open chat' : 'Apri chat'}
+          showUnread={false} // in futuro potrai usare un badge se vuoi
+        />
+      )}
 
       {open && (
-        <div className="w-96 max-w-[92vw] h-96 rounded-2xl shadow-xl overflow-hidden bg-white/80 backdrop-blur-md border border-black/5 flex flex-col">
-          {/* Header minimal, senza testo/brand name visibile */}
+        <div className="w-96 max-w-[92vw] h-96 rounded-2xl shadow-2xl bg-white/80 backdrop-blur-md border border-black/5 flex flex-col">
+          {/* Header */}
           <HeaderBar
-             locale={locale as "it" | "en"}
-           onClose={() => setOpen(false)}
-      />
-
+            locale={locale as 'it' | 'en'}
+            onClose={() => setOpen(false)}
+          />
 
           {/* Area messaggi */}
           <div className="flex-1 overflow-auto p-4 space-y-3 chat-scroll">
-            {/* e) WelcomeCard quando non ci sono messaggi */}
+            {/* WelcomeCard quando non ci sono messaggi */}
             {msgs.length === 0 && (
               <WelcomeCard
-                locale={locale as "it" | "en"}
-                onAction={(id) => send(sendMap(id))}
+                locale={locale as 'it' | 'en'}
+                onAction={(id) => handleQuickAction(id)}
               />
             )}
 
             {msgs.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div
+                key={i}
+                className={`flex ${
+                  m.role === 'user' ? 'justify-end' : 'justify-start'
+                }`}
+              >
                 <div
                   className={
                     m.role === 'user'
@@ -159,7 +178,7 @@ export default function App() {
               </div>
             ))}
 
-            {/* f) TypingLoader durante invio */}
+            {/* Loader durante invio */}
             {isSending && (
               <div>
                 <TypingLoader />
@@ -169,42 +188,41 @@ export default function App() {
             <div ref={endRef} />
           </div>
 
-          {/* g) QuickActions sopra la barra input */}
-          <div className="px-2">
+          {/* Quick actions + input */}
+          <div className="border-t border-black/5 bg-white/80 px-3 py-2 space-y-2">
             <QuickActions
               items={quickItems}
+              onClick={(id: QuickItem['id']) => {
+                void handleQuickAction(id);
+              }}
               disabled={isSending}
-              onClick={(id) => send(sendMap(id))}
             />
-          </div>
 
-          {/* Barra input glass + micro-interactions */}
-          <div className="flex items-center gap-2 p-2 border-t bg-white/60 backdrop-blur-md">
-            <input
-              className="flex-1 border border-black/10 rounded-xl px-3 py-2 text-sm 
-               focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-black/20
-               placeholder:text-gray-400 transition-shadow"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={onKeyDown}
-              placeholder={t.placeholder}
-              aria-label={locale === 'en' ? 'Message input' : 'Input messaggio'}
-            />
-            <button
-              className={`px-3 py-2 rounded-xl text-sm font-medium transition
-                ${text.trim()
-                  ? 'bg-black text-white hover:opacity-90 active:scale-[0.98] shadow-sm'
-                  : 'bg-black/10 text-gray-500 cursor-not-allowed'
-                }`}
-              onClick={() => send()}
-              disabled={!text.trim()}
-              aria-label={locale === 'en' ? 'Send message' : 'Invia messaggio'}
-              title={locale === 'en' ? 'Press Enter to send' : 'Premi Invio per inviare'}
-            >
-              {t.send}
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white/90"
+                placeholder={t.placeholder}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={onKeyDown}
+              />
+              <button
+                className="rounded-xl bg-black text-white text-sm px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => send()}
+                disabled={!text.trim()}
+                aria-label={
+                  locale === 'en' ? 'Send message' : 'Invia messaggio'
+                }
+                title={
+                  locale === 'en'
+                    ? 'Press Enter to send'
+                    : 'Premi Invio per inviare'
+                }
+              >
+                {t.send}
+              </button>
+            </div>
           </div>
-
         </div>
       )}
     </div>

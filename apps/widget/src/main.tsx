@@ -1,10 +1,10 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import * as Sentry from "@sentry/react";
+
 import App from "./App";
 import "./styles/index.css";
-import * as Sentry from "@sentry/react";
-import './styles/WidgetUI.css'; // << aggiungi questa riga
-
+import "./styles/WidgetUI.css";
 
 // ------- Sentry (safe init via env) -------
 const SENTRY_DSN =
@@ -35,8 +35,6 @@ if (SENTRY_DSN) {
   });
 }
 
-
-
 // ------- API base URL -------
 const API_URL =
   (window as any).VITE_API_URL ?? import.meta.env.VITE_API_URL ?? "";
@@ -48,6 +46,7 @@ declare global {
     VITE_SENTRY_DSN?: string;
   }
 }
+
 if (API_URL && !(window as any).VITE_API_URL) {
   (window as any).VITE_API_URL = API_URL;
 }
@@ -62,13 +61,18 @@ function ensureContainer(): HTMLElement {
     "app",
     "root",
   ];
+
   for (const id of candidates) {
     const el = document.getElementById(id);
     if (el) return el;
   }
+
   const el = document.createElement("div");
   el.id = "nx-widget";
-  Object.assign(el.style, { position: "relative", zIndex: "2147483000" });
+  Object.assign(el.style, {
+    position: "relative",
+    zIndex: "2147483000",
+  });
   document.body.appendChild(el);
   return el;
 }
