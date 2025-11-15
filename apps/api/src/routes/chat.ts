@@ -3,6 +3,10 @@ import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { orchestrateChat } from "../core/orchestrator.js";
 import { loadIntentsCore, loadStructure } from "../content/loader.js";
 import { cacheGet, cacheSet } from "../core/runtimeGuards.js";
+import {
+  ensureSessionForChat,
+  saveMessage,
+} from "../services/sessionService.js";
 
 // -----------------------------------------------------
 // Cache
@@ -301,11 +305,16 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     }
   );
 
-  // Retrocompatibilità: POST /chat (default structure)
+    // Retrocompatibilità: POST /chat (default structure)
   app.post("/chat", async (req, reply) => {
     try {
       const body = (req.body as any) || {};
       const message = String(body?.message ?? "").trim();
+      const clientSessionId = body?.sessionId
+        ? String(body.sessionId)
+        : undefined;
+      const lang = body?.lang ? String(body.lang) : undefined;
+
       if (!message) {
         return reply.code(400).send({
           ok: false,
@@ -315,6 +324,22 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       }
 
       const defaultStructure = "svapartments"; // retrocompat
+
+      // 🧠 1) Assicuriamo / creiamo la sessione per questo utente
+      const session = await ensureSessionForChat({
+        structureId: defaultStructure,
+        sessionId: clientSessionId,
+        lang,
+      });
+
+      // 💾 2) Salviamo il messaggio dell’utente
+      await saveMessage({
+        sessionId: session.id,
+        role: "user",
+        content: message,
+      });
+
+      // 🧠 3) Motore YAML
       const out = await runEngine({ structureId: defaultStructure, message });
 
       // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
@@ -326,14 +351,19 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         if (cachedRaw) {
           try {
             const cached = JSON.parse(String(cachedRaw));
+
+            const resp = {
+              ...cached,
+              source: (cached as any).source ?? "llm_cache",
+              cacheHit: true,
+              // 🔗 sessione sempre presente nella risposta
+              sessionId: session.id,
+            };
+
             return reply
-  .header("X-NS-Source", "llm_cache")
-  .code(200)
-  .send({
-    ...cached,
-    source: (cached as any).source ?? "llm_cache",
-    cacheHit: true,
-  });
+              .header("X-NS-Source", "llm_cache")
+              .code(200)
+              .send(resp);
           } catch {
             // se il parse fallisce, proseguiamo con la chiamata LLM normale
           }
@@ -351,10 +381,38 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           cacheSet(cacheKey, JSON.stringify(llmOut));
         }
 
-        return reply.code(200).send(llmOut);
+        // 💾 4) Salviamo il messaggio dell’assistente (se c’è testo)
+        const assistantText =
+          (llmOut as any)?.reply ?? (llmOut as any)?.text ?? "";
+        if (assistantText) {
+          await saveMessage({
+            sessionId: session.id,
+            role: "assistant",
+            content: String(assistantText),
+          });
+        }
+
+        // 5) Risposta verso il widget con sessionId
+        const resp = {
+          ...(llmOut ?? {}),
+          sessionId: session.id,
+        };
+
+        return reply.code(200).send(resp);
       }
 
       // Risposta YAML “normale” proveniente dal motore
+      const replyText = out.text;
+
+      // 💾 Salviamo anche la risposta YAML come messaggio assistant
+      if (replyText) {
+        await saveMessage({
+          sessionId: session.id,
+          role: "assistant",
+          content: String(replyText),
+        });
+      }
+
       return reply
         .header("X-NS-Source", "yaml")
         .code(200)
@@ -365,9 +423,11 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           confidence: 1.0,
           lang: out.lang,
           mode: out.meta?.mode ?? "short",
-          text: out.text,
-          reply: out.text,
+          text: replyText,
+          reply: replyText,
           ui: { buttons: out.meta?.uiButtons ?? [] },
+          // 🔗 restituiamo sempre la sessione al widget
+          sessionId: session.id,
         });
     } catch (err: any) {
       const msg = err?.message || "Errore inatteso";
@@ -375,13 +435,18 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     }
   });
 
-  // Multistruttura: POST /chat/:structureId
+
   // Multistruttura: POST /chat/:structureId
   app.post("/chat/:structureId", async (req, reply) => {
     try {
       const { structureId } = req.params as { structureId: string };
       const body = (req.body as any) || {};
       const message = String(body?.message ?? "").trim();
+      const clientSessionId = body?.sessionId
+        ? String(body.sessionId)
+        : undefined;
+      const lang = body?.lang ? String(body.lang) : undefined;
+
       if (!message) {
         return reply.code(400).send({
           ok: false,
@@ -389,6 +454,20 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           reply: "Missing message",
         });
       }
+
+      // 🧠 1) Assicuriamo / creiamo la sessione per questa struttura
+      const session = await ensureSessionForChat({
+        structureId,
+        sessionId: clientSessionId,
+        lang,
+      });
+
+      // 💾 2) Salviamo il messaggio dell’utente
+      await saveMessage({
+        sessionId: session.id,
+        role: "user",
+        content: message,
+      });
 
       // --- [CORTO-CIRCUITO YAML: intent wifi] ---------------------------------
       // Normalizza testo: minuscole, dash unicode → '-', spazi compattati
@@ -409,8 +488,8 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         const outY = (structure?.responses as any)?.["wifi"];
 
         if (outY) {
-          const lang = (structure as any)?.meta?.language ?? "it";
-          const langObj = (outY as any)[lang] || (outY as any)["it"];
+          const sLang = (structure as any)?.meta?.language ?? "it";
+          const langObj = (outY as any)[sLang] || (outY as any)["it"];
 
           if (langObj) {
             const textY =
@@ -421,6 +500,13 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
                 : "";
 
             if (textY) {
+              // 💾 Salviamo risposta assistant
+              await saveMessage({
+                sessionId: session.id,
+                role: "assistant",
+                content: String(textY),
+              });
+
               return reply
                 .header("X-NS-Source", "yaml")
                 .code(200)
@@ -429,13 +515,15 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
                   source: "yaml",
                   intent: "wifi",
                   confidence: 1.0,
-                  lang: (structure as any)?.meta?.language ?? "it",
+                  lang: sLang,
                   mode: "short",
                   text: textY,
                   reply: textY,
                   ui: (outY as any)?.ui
                     ? { buttons: (outY as any).ui.buttons ?? [] }
                     : { buttons: [] },
+                  // 🔗 sempre sessionId verso il widget
+                  sessionId: session.id,
                 });
             }
           }
@@ -455,14 +543,18 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         if (cachedRaw) {
           try {
             const cached = JSON.parse(String(cachedRaw));
-           return reply
-  .header("X-NS-Source", "llm_cache")
-  .code(200)
-  .send({
-    ...cached,
-    source: (cached as any).source ?? "llm_cache",
-    cacheHit: true,
-  });
+
+            const resp = {
+              ...cached,
+              source: (cached as any).source ?? "llm_cache",
+              cacheHit: true,
+              sessionId: session.id,
+            };
+
+            return reply
+              .header("X-NS-Source", "llm_cache")
+              .code(200)
+              .send(resp);
           } catch {
             // se il parse fallisce, proseguiamo con la chiamata LLM normale
           }
@@ -480,10 +572,37 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           cacheSet(cacheKey, JSON.stringify(llmOut));
         }
 
-        return reply.code(200).send(llmOut);
+        // 💾 Salviamo il messaggio dell’assistente (se c’è testo)
+        const assistantText =
+          (llmOut as any)?.reply ?? (llmOut as any)?.text ?? "";
+        if (assistantText) {
+          await saveMessage({
+            sessionId: session.id,
+            role: "assistant",
+            content: String(assistantText),
+          });
+        }
+
+        const resp = {
+          ...(llmOut ?? {}),
+          sessionId: session.id,
+        };
+
+        return reply.code(200).send(resp);
       }
 
       // Risposta YAML “normale” proveniente dal motore
+      const replyText = out.text;
+
+      // 💾 Salviamo anche la risposta YAML come messaggio assistant
+      if (replyText) {
+        await saveMessage({
+          sessionId: session.id,
+          role: "assistant",
+          content: String(replyText),
+        });
+      }
+
       return reply
         .header("X-NS-Source", "yaml")
         .code(200)
@@ -494,15 +613,17 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           confidence: 1.0,
           lang: out.lang,
           mode: out.meta?.mode ?? "short",
-          text: out.text,
-          reply: out.text,
+          text: replyText,
+          reply: replyText,
           ui: { buttons: out.meta?.uiButtons ?? [] },
+          sessionId: session.id,
         });
     } catch (err: any) {
       const msg = err?.message || "Errore inatteso";
       return reply.code(500).send({ ok: false, error: msg, reply: msg });
     }
   });
+
 };
 
 // normalizza testo: minuscole, rimuovi accenti, togli punteggiatura,

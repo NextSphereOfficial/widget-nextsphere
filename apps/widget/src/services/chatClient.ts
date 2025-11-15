@@ -7,7 +7,11 @@ export type Ctx = {
   locale?: string;
 };
 
-export type ChatResponse = { reply: string };
+// 🔥 NEW: ora la risposta può contenere sessionId
+export type ChatResponse = { 
+  reply: string,
+  sessionId?: string,
+};
 
 // --- Base URL (senza /api) ---
 function resolveApiBase(): string {
@@ -33,6 +37,15 @@ function resolveApiBase(): string {
 
 const API_BASE = resolveApiBase();
 const DEFAULT_TIMEOUT_MS = 20_000;
+
+// 🔥 NEW: sessione mantenuta internamente dal widget
+let currentSessionId: string | null = null;
+export function resetChatSession() {
+  currentSessionId = null;
+}
+export function getCurrentSessionId() {
+  return currentSessionId;
+}
 
 // --- Utils ---
 function getParam(name: string): string | null {
@@ -65,9 +78,9 @@ export async function sendChat(
   ctx: Ctx = {},
   opts: { signal?: AbortSignal; timeoutMs?: number } = {}
 ): Promise<ChatResponse> {
-let structureId = getParam("structure") || ctx.hotel || "svapartments";
-if (structureId === "NS001") structureId = "svapartments";
 
+  let structureId = getParam("structure") || ctx.hotel || "svapartments";
+  if (structureId === "NS001") structureId = "svapartments";
 
   const room =
     getParam("room") ||
@@ -78,8 +91,12 @@ if (structureId === "NS001") structureId = "svapartments";
   const url = `${API_BASE}${path}`;
 
   const body: Record<string, any> = { message };
+
   if (room) body.room = room;
   if (ctx.locale) body.lang = ctx.locale;
+
+  // 🔥 NEW: inviamo sessionId se esiste
+  body.sessionId = currentSessionId;
 
   const controller =
     !opts.signal && typeof AbortController !== "undefined"
@@ -110,9 +127,16 @@ if (structureId === "NS001") structureId = "svapartments";
   }
 
   const data = (await res.json()) as unknown;
+
   if (!isChatResponse(data)) {
     throw new Error(`Invalid response shape: ${JSON.stringify(data).slice(0, 200)}…`);
   }
+
+  // 🔥 NEW: aggiorniamo la sessione interna al widget
+  if ((data as any).sessionId) {
+    currentSessionId = (data as any).sessionId;
+  }
+
   return data;
 }
 

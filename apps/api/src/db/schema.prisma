@@ -7,38 +7,151 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// -------------------- CORE HOTEL / GUEST --------------------
+
 model Hotel {
   id        String   @id @default(cuid())
   slug      String   @unique
   name      String
   apiKey    String   @unique
-  rooms     Room[]
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms    Room[]
+  events   Event[]
+  guests   Guest[]
+  bookings Booking[]
 }
 
 model Room {
-  id        String   @id @default(cuid())
-  hotelId   String
-  code      String
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id])
+
+  code   String // es: "101", "A12"
+  name   String?
+  floor  String?
+  type   String? // es: "double", "suite"
+  status String  @default("active")
+
   createdAt DateTime @default(now())
-  Hotel     Hotel    @relation(fields: [hotelId], references: [id])
-  Sessions  Session[]
+  updatedAt DateTime @updatedAt
+
+  bookings Booking[]
+  events   Event[]
 }
 
-model Session {
-  id        String   @id @default(cuid())
-  roomId    String
-  lang      String   @default("it")
+model Guest {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id])
+
+  externalId String? // id del PMS / canale esterno
+  name       String?
+  email      String?
+  phone      String?
+  lang       String? @default("it")
+  notes      String?
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings Booking[]
+  events   Event[]
+}
+
+// -------------------- BOOKING (base, per futuro mapping PMS) --------------------
+
+model Booking {
+  id      String @id @default(cuid())
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id])
+
+  guestId String?
+  guest   Guest?  @relation(fields: [guestId], references: [id])
+
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id])
+
+  code   String? // es: codice PMS / booking.com
+  source String? // booking.com, direct, expedia, …
+  status String  @default("confirmed")
+
+  checkIn  DateTime
+  checkOut DateTime
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -------------------- SESSIONI E MESSAGGI --------------------
+
+model Session {
+  id String @id @default(cuid())
+
+  // 👇 usiamo solo questo per ora: structureId/roomId generico
+  roomId String
+
+  channel        String  @default("web") // web, widget, ecc.
+  externalUserId String? // opzionale, per futuro
+  lang           String  @default("it")
+  status         String  @default("open") // open, closed
+
+  startedAt DateTime  @default(now())
+  closedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
   messages  Message[]
-  Room      Room     @relation(fields: [roomId], references: [id])
+  snapshots ContextSnapshot[]
+  events    Event[]
 }
 
 model Message {
-  id         String   @id @default(cuid())
-  sessionId  String
-  role       String
-  content    String
-  createdAt  DateTime @default(now())
-  Session    Session  @relation(fields: [sessionId], references: [id])
+  id String @id @default(cuid())
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  role    String // user | assistant | system
+  content String
+
+  createdAt DateTime @default(now())
+}
+
+// -------------------- CONTESTO E EVENTI --------------------
+
+model ContextSnapshot {
+  id String @id @default(cuid())
+
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  label String // es: "pre-llm", "post-routing"
+  data  String // JSON string (small)
+
+  createdAt DateTime @default(now())
+}
+
+model Event {
+  id String @id @default(cuid())
+
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id])
+
+  sessionId String?
+  session   Session? @relation(fields: [sessionId], references: [id])
+
+  guestId String?
+  guest   Guest?  @relation(fields: [guestId], references: [id])
+
+  roomId String?
+  room   Room?   @relation(fields: [roomId], references: [id])
+
+  type    String // es: "page_view", "click", "cta_request"
+  payload String? // JSON string (event details)
+
+  createdAt DateTime @default(now())
 }
