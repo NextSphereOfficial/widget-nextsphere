@@ -19,26 +19,48 @@ function keyHash(x: unknown) {
  * Orchestratore: unifica YAML + LLM.
  * Nota: qui assumiamo che il matcher YAML sia esterno alla route.
  * Se la route non ha un matcher, questo orchestratore può operare “LLM-only”.
+ *
+ * yamlProbe ora può contenere anche una mini-history della sessione:
+ *  - history: ultimi turni di conversazione (user/assistant)
  */
-export async function orchestrateChat(structureId: string, userMessage: string, yamlProbe?: {
-  matched: boolean; intent?: string; confidence?: number; replyText?: string; buttons?: any[];
-}) {
+export async function orchestrateChat(
+  structureId: string,
+  userMessage: string,
+  yamlProbe?: {
+    matched: boolean;
+    intent?: string;
+    confidence?: number;
+    replyText?: string;
+    buttons?: any[];
+    history?: { role: 'user' | 'assistant'; content: string }[];
+  },
+) {
   const ctx = await buildContext(structureId);
 
   // decisione (se non hai confidenza dal matcher, passa matched=false)
   const decision = decideResponse({
     matched: !!yamlProbe?.matched,
     intent: yamlProbe?.intent,
-    confidence: yamlProbe?.confidence
+    confidence: yamlProbe?.confidence,
   });
 
-  // Cache: include contesto (ctxVer) + sorgente
+  // Prepara una rappresentazione sintetica della history (se c'è)
+  const historySummary = yamlProbe?.history && Array.isArray(yamlProbe.history)
+    ? yamlProbe.history
+        .map((m) => `${m.role === 'assistant' ? 'A' : 'U'}:${normalize(m.content)}`)
+        .join('|')
+        .slice(0, 500)
+    : '';
+
+  // Cache: include contesto (ctxVer) + sorgente + (opzionale) history
   const cacheKey = keyHash({
     s: structureId,
     m: normalize(userMessage),
     v: ctx.contextVersion,
-    src: decision.source
+    src: decision.source,
+    h: historySummary || undefined,
   });
+
   const c = cacheGet(cacheKey);
   if (c.hit) {
     return {
@@ -48,7 +70,7 @@ export async function orchestrateChat(structureId: string, userMessage: string, 
       intent: decision.intent,
       confidence: decision.confidence,
       cacheHit: true,
-      ctxVer: ctx.contextVersion
+      ctxVer: ctx.contextVersion,
     };
   }
 
@@ -63,7 +85,7 @@ export async function orchestrateChat(structureId: string, userMessage: string, 
       confidence: decision.confidence,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
-      ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined
+      ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
     };
   }
 
@@ -78,7 +100,7 @@ export async function orchestrateChat(structureId: string, userMessage: string, 
       intent: decision.intent,
       confidence: decision.confidence,
       ctxVer: ctx.contextVersion,
-      snapshot: getRuntimeSnapshot()
+      snapshot: getRuntimeSnapshot(),
     };
   }
 
@@ -87,11 +109,33 @@ export async function orchestrateChat(structureId: string, userMessage: string, 
     `Sei il Concierge NextSphere. Rispondi in ${ctx.locale}.`,
     `Dati utili:`,
     `- Wi-Fi: ssid=${ctx.wifi?.ssid ?? 'n/d'}; password=${ctx.wifi?.password ?? 'n/d'}`,
-    ctx.rules?.length ? `- Regole: ${ctx.rules.slice(0,4).join(' | ')}` : '',
-    ctx.emergencies?.phone ? `- Emergenze: tel=${ctx.emergencies.phone}` : ''
-  ].filter(Boolean).join('\n');
+    ctx.rules?.length ? `- Regole: ${ctx.rules.slice(0, 4).join(' | ')}` : '',
+    ctx.emergencies?.phone ? `- Emergenze: tel=${ctx.emergencies.phone}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
-  const res = await callLlm(userMessage, { locale: ctx.locale, systemPrompt: system });
+  // 🔥 Costruiamo il testo per l'LLM includendo la mini-history (se presente)
+  const historyLines =
+    yamlProbe?.history && Array.isArray(yamlProbe.history)
+      ? yamlProbe.history
+          .map((m) =>
+            m.role === 'assistant'
+              ? `Assistente: ${m.content}`
+              : `Ospite: ${m.content}`,
+          )
+          .join('\n')
+      : '';
+
+  const finalUserMessage = historyLines
+    ? `${historyLines}\nOspite (ultimo messaggio): ${userMessage}`
+    : userMessage;
+
+  const res = await callLlm(finalUserMessage, {
+    locale: ctx.locale,
+    systemPrompt: system,
+  });
+
   if (res.ok && res.text) {
     registerLlmSuccess(res.costEur || 0);
     cacheSet(cacheKey, res.text);
@@ -107,7 +151,7 @@ export async function orchestrateChat(structureId: string, userMessage: string, 
       confidence: decision.confidence,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
-      snapshot: getRuntimeSnapshot()
+      snapshot: getRuntimeSnapshot(),
     };
   } else {
     registerLlmFailure();
@@ -119,14 +163,17 @@ export async function orchestrateChat(structureId: string, userMessage: string, 
       intent: decision.intent,
       confidence: decision.confidence,
       ctxVer: ctx.contextVersion,
-      snapshot: getRuntimeSnapshot()
+      snapshot: getRuntimeSnapshot(),
     };
   }
 }
 
-function normalize(s: string) { return s.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 200); }
+function normalize(s: string) {
+  return s.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 200);
+}
 function fallbackText(locale?: string) {
   return (locale || 'it').startsWith('it')
     ? 'Posso aiutarti con Wi-Fi, orari, regole o emergenze. Vuoi dirmi meglio cosa ti serve?'
     : 'I can help with Wi-Fi, hours, rules or emergencies. Could you specify what you need?';
 }
+

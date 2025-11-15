@@ -1,8 +1,8 @@
 // src/services/sessionService.ts
-import { prisma } from '../db/client.js';
+import { prisma } from "../db/client.js";
 
 export type EnsureSessionInput = {
-  structureId: string;      // userId / roomId / struttura – per ora lo mappiamo su roomId
+  structureId: string;      // usato come roomId per ora
   sessionId?: string;       // se esiste già, la riusiamo
   lang?: string;            // es: "it", "en"
 };
@@ -12,7 +12,7 @@ export type EnsureSessionInput = {
  * Per ora usiamo structureId direttamente come roomId nel modello Session esistente.
  */
 export async function ensureSessionForChat(input: EnsureSessionInput) {
-  const roomId = String(input.structureId || '').trim() || 'default';
+  const roomId = String(input.structureId || "").trim() || "default";
 
   // Se mi arriva una sessione già esistente, la validiamo e riusiamo
   if (input.sessionId) {
@@ -30,16 +30,18 @@ export async function ensureSessionForChat(input: EnsureSessionInput) {
   const session = await prisma.session.create({
     data: {
       roomId,
-      lang: input.lang ?? 'it',
+      lang: input.lang ?? "it",
+      // niente status: usa il default se esiste, altrimenti nessun campo
     },
   });
+
 
   return session;
 }
 
 export async function saveMessage(params: {
   sessionId: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
 }) {
   return prisma.message.create({
@@ -49,4 +51,20 @@ export async function saveMessage(params: {
       content: params.content,
     },
   });
+}
+
+// 🔥 NEW: leggi gli ultimi N messaggi della sessione (in ordine cronologico)
+export async function getRecentMessages(params: {
+  sessionId: string;
+  limit?: number;
+}) {
+  const limit = params.limit ?? 6; // ultimi 6 messaggi per il contesto
+
+  const rows = await prisma.message.findMany({
+    where: { sessionId: params.sessionId },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+  });
+
+  return rows;
 }

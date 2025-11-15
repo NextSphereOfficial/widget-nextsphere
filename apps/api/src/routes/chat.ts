@@ -6,7 +6,9 @@ import { cacheGet, cacheSet } from "../core/runtimeGuards.js";
 import {
   ensureSessionForChat,
   saveMessage,
+  getRecentMessages, // 👈 NEW
 } from "../services/sessionService.js";
+
 
 // -----------------------------------------------------
 // Cache
@@ -369,12 +371,28 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           }
         }
 
-        // 2) Nessun cache hit → chiama orchestratore
-        const llmOut = await orchestrateChat(defaultStructure, message, {
-          matched: false,
-          intent: out.intent,
-          confidence: 0.3,
-        });
+// 2) Nessun cache hit → prepara la history e chiama orchestratore
+const historyRows = await getRecentMessages({
+  sessionId: session.id,
+  limit: 6,
+});
+
+// convertiamo in [{ role, content }] per l'LLM
+const history = historyRows.map(
+  (m): { role: "assistant" | "user"; content: string } => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: m.content,
+  })
+);
+
+
+const llmOut = await orchestrateChat(defaultStructure, message, {
+  matched: false,
+  intent: out.intent,
+  confidence: 0.3,
+  history, // 👈 NEW
+});
+
 
         // 3) Se la risposta è valida, salviamo in cache (serializzata)
         if (llmOut && (llmOut as any).ok !== false) {
@@ -560,12 +578,27 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           }
         }
 
-        // 2) Nessun cache hit → chiama orchestratore
-        const llmOut = await orchestrateChat(structureId, message, {
-          matched: false,
-          intent: out.intent,
-          confidence: 0.0,
-        });
+   // 2) Nessun cache hit → prepara la history e chiama orchestratore
+const historyRows = await getRecentMessages({
+  sessionId: session.id,
+  limit: 6,
+});
+
+const history = historyRows.map(
+  (m): { role: "assistant" | "user"; content: string } => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: m.content,
+  })
+);
+
+
+const llmOut = await orchestrateChat(structureId, message, {
+  matched: false,
+  intent: out.intent,
+  confidence: 0.0,
+  history,
+});
+
 
         // 3) Se la risposta è valida, salviamo in cache (serializzata)
         if (llmOut && (llmOut as any).ok !== false) {
