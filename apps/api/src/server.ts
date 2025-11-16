@@ -88,9 +88,9 @@ await app.register(helmet, {
 
 // -------------------- CORS --------------------
 
-// Origin di default (widget svapartments)
+// Origin di default (widget nextsphere)
 // + eventuali origin extra da env: CORS_ORIGINS="https://foo.com,https://bar.com"
-const defaultOrigins = ['https://widget.svapartments.it'];
+const defaultOrigins = ['https://widget.nextsphere.it'];
 const extraOrigins =
   (process.env.CORS_ORIGINS || '')
     .split(',')

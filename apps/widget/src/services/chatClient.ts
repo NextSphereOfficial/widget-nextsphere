@@ -32,7 +32,7 @@ function resolveApiBase(): string {
   } catch {}
 
   // Fallback sicuro in prod
-  return "https://api.svapartments.it";
+  return "https://api.nextsphere.it";
 }
 
 const API_BASE = resolveApiBase();
@@ -69,7 +69,7 @@ async function safeReadText(res: Response): Promise<string> {
 /**
  * Invia un messaggio all'API:
  * - POST /chat/:structureId
- * - structureId: da ?structure=…, fallback ctx.hotel, poi "svapartments"
+ * - structureId: da ?structure=…, fallback ctx.hotel, poi "nextsphere"
  * - room: da ?room=…, fallback ctx.room
  * - locale: passato come "lang"
  */
@@ -79,8 +79,8 @@ export async function sendChat(
   opts: { signal?: AbortSignal; timeoutMs?: number } = {}
 ): Promise<ChatResponse> {
 
-  let structureId = getParam("structure") || ctx.hotel || "svapartments";
-  if (structureId === "NS001") structureId = "svapartments";
+  let structureId = getParam("structure") || ctx.hotel || "nextsphere";
+  if (structureId === "NS001") structureId = "nextsphere";
 
   const room =
     getParam("room") ||
