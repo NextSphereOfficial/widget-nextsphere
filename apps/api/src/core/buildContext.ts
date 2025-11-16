@@ -17,29 +17,117 @@ export interface StructureContext {
 }
 
 /**
- * v0 (stub sicuro): costruisce un contesto valido anche senza sorgente YAML.
- * In uno step successivo collegheremo il tuo vero loader YAML.
+ * Costruisce il contesto unificando:
+ * - vecchi YAML (wifi/rules/emergencies al root)
+ * - nuovi YAML "refined" (meta + content.*).
  */
 export async function buildContext(structureId: string): Promise<StructureContext> {
-  const y: any = await loadStructure(structureId); // <-- usa il loader vero
+  const y: any = await loadStructure(structureId);
 
-  const locale = y?.locale ?? ENV.DEFAULT_LOCALE;
+  // --- Locale ---
+  let locale: string | undefined = y?.locale;
+
+  if (!locale) {
+    const lang =
+      y?.meta?.language ||
+      y?.meta?.default_lang ||
+      y?.language;
+
+    if (lang) {
+      if (lang === 'it') locale = 'it-IT';
+      else if (lang === 'en') locale = 'en-US';
+      else locale = String(lang);
+    }
+  }
+
+  if (!locale) {
+    locale = ENV.DEFAULT_LOCALE;
+  }
+
+  // --- Brand / address ---
+  const brandName: string | undefined =
+    y?.brandName ?? y?.meta?.name ?? 'NextSphere';
+  const address: string | undefined = y?.address ?? y?.meta?.address;
+
+  // --- Content section (refined YAML) ---
+  const content = y?.content ?? {};
+
+  // Wi-Fi
+  const contentWifi = content?.wifi ?? {};
+  const rootWifi = y?.wifi ?? {};
+  const wifi = {
+    ssid: contentWifi.ssid ?? rootWifi.ssid,
+    password: contentWifi.password ?? rootWifi.password,
+    notes: contentWifi.notes ?? rootWifi.notes,
+  };
+
+  // Regole
+  const contentRules = Array.isArray(content?.rules) ? content.rules : undefined;
+  const rules =
+    contentRules ??
+    (Array.isArray(y?.rules) ? y.rules : []);
+
+  // Emergenze
+  const contentEmergency = content?.emergency ?? {};
+  const rootEmergencies = y?.emergencies ?? {};
+  const emergencies = {
+    phone: contentEmergency.phone ?? rootEmergencies.phone,
+    notes:
+      contentEmergency.note ??
+      contentEmergency.notes ??
+      rootEmergencies.notes,
+  };
+
+  // Check-in
+  const contentCheckin = content?.checkin ?? {};
+  const rootCheckin = y?.checkin ?? {};
+  const checkin = {
+    from: contentCheckin.from ?? rootCheckin.from,
+    latePolicy:
+      contentCheckin.late_policy ??
+      contentCheckin.latePolicy ??
+      rootCheckin.latePolicy,
+  };
+
+  // Check-out
+  const contentCheckout = content?.checkout ?? {};
+  const rootCheckout = y?.checkout ?? {};
+  const checkout = {
+    until: contentCheckout.until ?? rootCheckout.until,
+    latePolicy:
+      contentCheckout.late_policy ??
+      contentCheckout.latePolicy ??
+      rootCheckout.latePolicy,
+  };
+
+  // Surroundings
+  const contentSurroundings = Array.isArray(content?.surroundings)
+    ? content.surroundings
+    : undefined;
+  const surroundings =
+    contentSurroundings ??
+    (Array.isArray(y?.surroundings) ? y.surroundings : []);
+
   return {
     id: structureId,
     locale,
-    brandName: y?.brandName ?? 'NextSphere',
-    address: y?.address,
-    wifi: y?.wifi ?? {},
-    rules: Array.isArray(y?.rules) ? y.rules : [],
-    emergencies: y?.emergencies ?? {},
-    checkin: y?.checkin ?? {},
-    checkout: y?.checkout ?? {},
-    surroundings: Array.isArray(y?.surroundings) ? y.surroundings : [],
+    brandName,
+    address,
+    wifi,
+    rules,
+    emergencies,
+    checkin,
+    checkout,
+    surroundings,
     contextVersion: hashObject({
-      version: y?.version ?? 'v1',
-      wifi: y?.wifi, rules: y?.rules, emergencies: y?.emergencies,
-      checkin: y?.checkin, checkout: y?.checkout, surroundings: y?.surroundings,
-      locale
+      version: y?.version ?? y?.meta?.version ?? 'v1',
+      wifi,
+      rules,
+      emergencies,
+      checkin,
+      checkout,
+      surroundings,
+      locale,
     }),
   };
 }
@@ -48,3 +136,4 @@ function hashObject(obj: unknown): string {
   const s = JSON.stringify(obj);
   return crypto.createHash('sha256').update(s).digest('hex').slice(0, 12);
 }
+

@@ -15,54 +15,61 @@ import {
 
 const LLM_CACHE_PREFIX = "llm:chat:";
 
-/**
- * Chiave cache per LLM:
- * - struttura (es. "nextsphere")
- * - testo normalizzato (usa la stessa logica di resolveIntent -> norm)
- */
 function buildLlmCacheKey(structureId: string, message: string) {
-  return `${LLM_CACHE_PREFIX}${structureId}:${norm(message)}`;
+  const s = norm(message);
+  return `${LLM_CACHE_PREFIX}${structureId}:${s}`;
 }
 
 // -----------------------------------------------------
-// FS helpers
-function safeField(obj: any, path: string, def: string): string {
-  try {
-    const parts = path.split(".");
-    let cur: any = obj;
-    for (const p of parts) {
-      if (!cur || typeof cur !== "object") return def;
-      cur = cur[p];
-    }
-    return typeof cur === "string" ? cur : def;
-  } catch {
-    return def;
-  }
-}
-
-function safeArray(obj: any, path: string): any[] {
-  try {
-    const parts = path.split(".");
-    let cur: any = obj;
-    for (const p of parts) {
-      if (!cur || typeof cur !== "object") return [];
-      cur = cur[p];
-    }
-    return Array.isArray(cur) ? cur : [];
-  } catch {
-    return [];
-  }
-}
-
-// -----------------------------------------------------
-// Core helpers: scoring / matching
-// -----------------------------------------------------
+// Types
 
 type IntentMatch = {
   key: string;
   score: number;
   matched: boolean;
 };
+
+type EngineOutput = {
+  intent: string | null;
+  lang: string;
+  text: string;
+  meta: {
+    mode: "short" | "long";
+    uiButtons: any[];
+    isFallback: boolean;
+  };
+};
+
+// -----------------------------------------------------
+// Helpers
+
+function safeField(obj: any, path: string, defaultValue: any = undefined) {
+  try {
+    const parts = path.split(".");
+    let current = obj;
+    for (const p of parts) {
+      if (!current || typeof current !== "object") return defaultValue;
+      current = current[p];
+    }
+    return current ?? defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+function norm(s: string) {
+  return String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_\-]+/g, " ")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// -----------------------------------------------------
+// Intent scoring
 
 function scoreIntent(
   text: string,
@@ -123,11 +130,13 @@ function scoreIntent(
 function resolveIntent(userText: string, intentsCore: Record<string, any>) {
   const t = norm(userText);
 
-  const intents = Object.entries(intentsCore || {}).map(([key, value]) => {
-    const intent = value as any;
-    const { score, matched } = scoreIntent(t, intent);
-    return { key, score, matched } satisfies IntentMatch;
-  });
+  const intents: IntentMatch[] = Object.entries(intentsCore || {}).map(
+    ([key, value]) => {
+      const intent = value as any;
+      const { score, matched } = scoreIntent(t, intent);
+      return { key, score, matched };
+    }
+  );
 
   // override heuristico per intent base
 
@@ -177,47 +186,78 @@ function resolveIntent(userText: string, intentsCore: Record<string, any>) {
   return top;
 }
 
+// -----------------------------------------------------
+// Template & fallback (✅ aggiornati a intents + output)
+// -----------------------------------------------------
+
 function renderTemplate(
   structureYaml: any,
   intentKey: string,
   lang: string,
   mode: "short" | "long"
 ): { text: string; buttons: any[] } {
-  const responses = structureYaml?.responses || {};
-  const intentData = responses[intentKey];
-  if (!intentData) return { text: "", buttons: [] };
+  // Nuovo schema: structureYaml.intents[intentKey].output
+  const intents = structureYaml?.intents || {};
+  const intentDef = intents[intentKey];
 
-  const langObj = intentData[lang] || intentData["it"] || intentData["en"];
-  if (!langObj) return { text: "", buttons: [] };
+  if (!intentDef || typeof intentDef !== "object") {
+    return { text: "", buttons: [] };
+  }
 
-  const modeText =
-    typeof langObj[mode] === "string"
-      ? langObj[mode]
-      : typeof langObj["short"] === "string"
-      ? langObj["short"]
-      : typeof langObj["long"] === "string"
-      ? langObj["long"]
-      : "";
+  const output = intentDef.output || {};
+  let text = "";
 
-  const buttons = Array.isArray(langObj.buttons) ? langObj.buttons : [];
+  // 1) prova la variante richiesta (short/long)
+  if (mode === "short" && typeof output.short === "string") {
+    text = output.short;
+  } else if (mode === "long" && typeof output.long === "string") {
+    text = output.long;
+  }
 
-  return { text: modeText, buttons };
+  // 2) fallback su "default"
+  if (!text && typeof output.default === "string") {
+    text = output.default;
+  }
+
+  // 3) fallback ulteriori
+  if (!text && typeof output.short === "string") {
+    text = output.short;
+  }
+  if (!text && typeof output.long === "string") {
+    text = output.long;
+  }
+
+  // 4) UI buttons opzionali, da schema:
+  //    output.ui?.buttons: [{ id, label }, ...]
+  const buttons =
+    output?.ui && Array.isArray(output.ui.buttons)
+      ? output.ui.buttons
+      : [];
+
+  return { text, buttons };
 }
 
 function fallbackText(structureYaml: any, intentKey: string, lang: string) {
-  const responses = structureYaml?.responses || {};
-  const intentData = responses[intentKey];
-  if (!intentData) return "";
+  const intents = structureYaml?.intents || {};
+  const intentDef = intents[intentKey];
 
-  const langObj = intentData[lang] || intentData["it"] || intentData["en"];
-  if (!langObj) return "";
+  if (!intentDef || typeof intentDef !== "object") {
+    return "";
+  }
 
-  if (typeof langObj["fallback"] === "string") return langObj["fallback"];
-  if (typeof langObj["short"] === "string") return langObj["short"];
-  if (typeof langObj["long"] === "string") return langObj["long"];
+  const output = intentDef.output || {};
+
+  if (typeof output.fallback === "string") return output.fallback;
+  if (typeof output.default === "string") return output.default;
+  if (typeof output.short === "string") return output.short;
+  if (typeof output.long === "string") return output.long;
 
   return "";
 }
+
+// -----------------------------------------------------
+// Engine
+// -----------------------------------------------------
 
 function findResponse(intentsCore: any, structureYaml: any, message: string) {
   const lang = safeField(structureYaml, "meta.language", "it");
@@ -240,7 +280,8 @@ function findResponse(intentsCore: any, structureYaml: any, message: string) {
   //    - lo consideriamo "coperto da YAML",
   //    - anche se stiamo usando il suo campo fallback interno
   const rendered = renderTemplate(structureYaml, intentKey, lang, mode);
-  const baseText = rendered.text || fallbackText(structureYaml, intentKey, lang) || "";
+  const baseText =
+    rendered.text || fallbackText(structureYaml, intentKey, lang) || "";
 
   return {
     intent: intentKey,
@@ -250,14 +291,13 @@ function findResponse(intentsCore: any, structureYaml: any, message: string) {
   };
 }
 
-
 async function runEngine({
   structureId,
   message,
 }: {
   structureId: string;
   message: string;
-}) {
+}): Promise<EngineOutput> {
   const intentsCore = await loadIntentsCore();
   const structureYaml = await loadStructure(structureId);
   const resp = findResponse(intentsCore, structureYaml, message);
@@ -275,39 +315,44 @@ async function runEngine({
 }
 
 // -----------------------------------------------------
-// Fastify plugin
+// Routes
 // -----------------------------------------------------
 
 const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
-  // Debug: GET /_debug/chat/:structureId
-  app.get(
-    "/_debug/chat/:structureId",
-    async (req, reply): Promise<any> => {
-      try {
-        const { structureId } = req.params as { structureId: string };
-        const intentsCore = await loadIntentsCore();
-        const structureYaml = await loadStructure(structureId);
+  // Debug: GET /_debug/chat/:structureId?q=...
+  app.get("/_debug/chat/:structureId", async (req, reply) => {
+    try {
+      const { structureId } = req.params as { structureId: string };
+      const { q } = (req.query as any) || {};
 
-        return reply.code(200).send({
-          ok: true,
-          structureId,
-          meta: structureYaml?.meta || {},
-          intentsCoreKeys: Object.keys(intentsCore || {}),
+      const intentsCore = await loadIntentsCore();
+      const structureYaml = await loadStructure(structureId);
+      const intentMatch = resolveIntent(String(q ?? ""), intentsCore);
+
+      return reply.code(200).send({
+        ok: true,
+        structureId,
+        query: q,
+        intentMatch,
+        sampleYaml: {
+          meta: structureYaml?.meta,
+          hasIntents: !!structureYaml?.intents,
+          intentsKeys: Object.keys(structureYaml?.intents || {}),
           responsesKeys: Object.keys(structureYaml?.responses || {}),
           sampleIntents: Object.keys(intentsCore || {}).slice(0, 5),
           sampleResponses: Object.keys(structureYaml?.responses || {}).slice(
             0,
             5
           ),
-        });
-      } catch (err: any) {
-        const msg = err?.message || "Errore inatteso";
-        return reply.code(500).send({ ok: false, error: msg, reply: msg });
-      }
+        },
+      });
+    } catch (err: any) {
+      const msg = err?.message || "Errore inatteso";
+      return reply.code(500).send({ ok: false, error: msg, reply: msg });
     }
-  );
+  });
 
-    // Retrocompatibilità: POST /chat (default structure)
+  // Retrocompatibilità: POST /chat (default structure)
   app.post("/chat", async (req, reply) => {
     try {
       const body = (req.body as any) || {};
@@ -325,9 +370,9 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         });
       }
 
-      const defaultStructure = "nextsphere"; // retrocompat
+      const defaultStructure = "nextsphere";
 
-      // 🧠 1) Assicuriamo / creiamo la sessione per questo utente
+      // 1) Sessione
       const session = await ensureSessionForChat({
         structureId: defaultStructure,
         sessionId: clientSessionId,
@@ -362,37 +407,43 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
               sessionId: session.id,
             };
 
-            return reply
-              .header("X-NS-Source", "llm_cache")
-              .code(200)
-              .send(resp);
+            // 💾 salviamo anche la risposta cached come assistant
+            const assistantText =
+              (cached as any)?.reply ?? (cached as any)?.text ?? "";
+            if (assistantText) {
+              await saveMessage({
+                sessionId: session.id,
+                role: "assistant",
+                content: String(assistantText),
+              });
+            }
+
+            return reply.code(200).send(resp);
           } catch {
-            // se il parse fallisce, proseguiamo con la chiamata LLM normale
+            // se la cache è corrotta, proseguiamo senza
           }
         }
 
-// 2) Nessun cache hit → prepara la history e chiama orchestratore
-const historyRows = await getRecentMessages({
-  sessionId: session.id,
-  limit: 6,
-});
+        // 2) Se niente cache → chiamiamo LLM con history
+        const historyRows = await getRecentMessages({
+          sessionId: session.id,
+          limit: 6,
+        });
 
-// convertiamo in [{ role, content }] per l'LLM
-const history = historyRows.map(
-  (m): { role: "assistant" | "user"; content: string } => ({
-    role: m.role === "assistant" ? "assistant" : "user",
-    content: m.content,
-  })
-);
+        // convertiamo in [{ role, content }] per l'LLM
+        const history = historyRows.map(
+          (m): { role: "assistant" | "user"; content: string } => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: m.content,
+          })
+        );
 
-
-const llmOut = await orchestrateChat(defaultStructure, message, {
-  matched: false,
-  intent: out.intent,
-  confidence: 0.3,
-  history, // 👈 NEW
-});
-
+        const llmOut = await orchestrateChat(defaultStructure, message, {
+          matched: false,
+          intent: out.intent ?? undefined,
+          confidence: 0.3,
+          history, // 👈 NEW
+        });
 
         // 3) Se la risposta è valida, salviamo in cache (serializzata)
         if (llmOut && (llmOut as any).ok !== false) {
@@ -410,7 +461,6 @@ const llmOut = await orchestrateChat(defaultStructure, message, {
           });
         }
 
-        // 5) Risposta verso il widget con sessionId
         const resp = {
           ...(llmOut ?? {}),
           sessionId: session.id,
@@ -453,7 +503,6 @@ const llmOut = await orchestrateChat(defaultStructure, message, {
     }
   });
 
-
   // Multistruttura: POST /chat/:structureId
   app.post("/chat/:structureId", async (req, reply) => {
     try {
@@ -473,7 +522,7 @@ const llmOut = await orchestrateChat(defaultStructure, message, {
         });
       }
 
-      // 🧠 1) Assicuriamo / creiamo la sessione per questa struttura
+      // 1) Sessione
       const session = await ensureSessionForChat({
         structureId,
         sessionId: clientSessionId,
@@ -487,76 +536,13 @@ const llmOut = await orchestrateChat(defaultStructure, message, {
         content: message,
       });
 
-      // --- [CORTO-CIRCUITO YAML: intent wifi] ---------------------------------
-      // Normalizza testo: minuscole, dash unicode → '-', spazi compattati
-      const norm = message
-        .toLowerCase()
-        .normalize("NFKC")
-        .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, "-")
-        .replace(/\s+/g, " ")
-        .trim();
-
-      // Regex robuste per "password + wi-fi/wifi" in qualunque ordine
-      const wifiA = /\b(wi-?fi|wifi)\b.*\b(pass(?:word)?|pwd|chiave)\b/;
-      const wifiB = /\b(pass(?:word)?|pwd|chiave)\b.*\b(wi-?fi|wifi)\b/;
-      const wifiC = /qual\s*e'?\s*la\s*password.*wi-?fi/;
-
-      if (wifiA.test(norm) || wifiB.test(norm) || wifiC.test(norm)) {
-        const structure = await loadStructure(structureId || "nextsphere");
-        const outY = (structure?.responses as any)?.["wifi"];
-
-        if (outY) {
-          const sLang = (structure as any)?.meta?.language ?? "it";
-          const langObj = (outY as any)[sLang] || (outY as any)["it"];
-
-          if (langObj) {
-            const textY =
-              typeof langObj.short === "string"
-                ? langObj.short
-                : typeof langObj.long === "string"
-                ? langObj.long
-                : "";
-
-            if (textY) {
-              // 💾 Salviamo risposta assistant
-              await saveMessage({
-                sessionId: session.id,
-                role: "assistant",
-                content: String(textY),
-              });
-
-              return reply
-                .header("X-NS-Source", "yaml")
-                .code(200)
-                .send({
-                  ok: true,
-                  source: "yaml",
-                  intent: "wifi",
-                  confidence: 1.0,
-                  lang: sLang,
-                  mode: "short",
-                  text: textY,
-                  reply: textY,
-                  ui: (outY as any)?.ui
-                    ? { buttons: (outY as any).ui.buttons ?? [] }
-                    : { buttons: [] },
-                  // 🔗 sempre sessionId verso il widget
-                  sessionId: session.id,
-                });
-            }
-          }
-        }
-        // Se manca l'output YAML per wifi, proseguiamo con la pipeline normale
-      }
-      // ------------------------------------------------------------------------
-
+      // 🧠 3) Motore YAML
       const out = await runEngine({ structureId, message });
 
       // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
       if (out?.meta?.isFallback === true) {
         const cacheKey = buildLlmCacheKey(structureId, message);
 
-        // 1) Prova cache
         const cachedRaw: any = cacheGet(cacheKey);
         if (cachedRaw) {
           try {
@@ -569,43 +555,45 @@ const llmOut = await orchestrateChat(defaultStructure, message, {
               sessionId: session.id,
             };
 
-            return reply
-              .header("X-NS-Source", "llm_cache")
-              .code(200)
-              .send(resp);
+            const assistantText =
+              (cached as any)?.reply ?? (cached as any)?.text ?? "";
+            if (assistantText) {
+              await saveMessage({
+                sessionId: session.id,
+                role: "assistant",
+                content: String(assistantText),
+              });
+            }
+
+            return reply.code(200).send(resp);
           } catch {
-            // se il parse fallisce, proseguiamo con la chiamata LLM normale
+            // se cache corrotta → proseguiamo senza
           }
         }
 
-   // 2) Nessun cache hit → prepara la history e chiama orchestratore
-const historyRows = await getRecentMessages({
-  sessionId: session.id,
-  limit: 6,
-});
+        const historyRows = await getRecentMessages({
+          sessionId: session.id,
+          limit: 6,
+        });
 
-const history = historyRows.map(
-  (m): { role: "assistant" | "user"; content: string } => ({
-    role: m.role === "assistant" ? "assistant" : "user",
-    content: m.content,
-  })
-);
+        const history = historyRows.map(
+          (m): { role: "assistant" | "user"; content: string } => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: m.content,
+          })
+        );
 
+        const llmOut = await orchestrateChat(structureId, message, {
+          matched: false,
+          intent: out.intent ?? undefined,
+          confidence: 0.3,
+          history,
+        });
 
-const llmOut = await orchestrateChat(structureId, message, {
-  matched: false,
-  intent: out.intent,
-  confidence: 0.0,
-  history,
-});
-
-
-        // 3) Se la risposta è valida, salviamo in cache (serializzata)
         if (llmOut && (llmOut as any).ok !== false) {
           cacheSet(cacheKey, JSON.stringify(llmOut));
         }
 
-        // 💾 Salviamo il messaggio dell’assistente (se c’è testo)
         const assistantText =
           (llmOut as any)?.reply ?? (llmOut as any)?.text ?? "";
         if (assistantText) {
@@ -624,10 +612,8 @@ const llmOut = await orchestrateChat(structureId, message, {
         return reply.code(200).send(resp);
       }
 
-      // Risposta YAML “normale” proveniente dal motore
       const replyText = out.text;
 
-      // 💾 Salviamo anche la risposta YAML come messaggio assistant
       if (replyText) {
         await saveMessage({
           sessionId: session.id,
@@ -656,22 +642,7 @@ const llmOut = await orchestrateChat(structureId, message, {
       return reply.code(500).send({ ok: false, error: msg, reply: msg });
     }
   });
-
 };
 
-// normalizza testo: minuscole, rimuovi accenti, togli punteggiatura,
-// unifica trattini/spazi per far combaciare "wi-fi" == "wifi"
-function norm(s: string) {
-  return String(s || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[_\-]+/g, " ")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-// esporti entrambi i modi (default + named) per compatibilità con l'import
-export { chatRoutes };
 export default chatRoutes;
+export { chatRoutes };
