@@ -17,7 +17,7 @@ const LLM_CACHE_PREFIX = "llm:chat:";
 
 /**
  * Chiave cache per LLM:
- * - struttura (es. "svapartments")
+ * - struttura (es. "nextsphere")
  * - testo normalizzato (usa la stessa logica di resolveIntent -> norm)
  */
 function buildLlmCacheKey(structureId: string, message: string) {
@@ -325,7 +325,7 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         });
       }
 
-      const defaultStructure = "svapartments"; // retrocompat
+      const defaultStructure = "nextsphere"; // retrocompat
 
       // 🧠 1) Assicuriamo / creiamo la sessione per questo utente
       const session = await ensureSessionForChat({
@@ -502,7 +502,7 @@ const llmOut = await orchestrateChat(defaultStructure, message, {
       const wifiC = /qual\s*e'?\s*la\s*password.*wi-?fi/;
 
       if (wifiA.test(norm) || wifiB.test(norm) || wifiC.test(norm)) {
-        const structure = await loadStructure(structureId || "svapartments");
+        const structure = await loadStructure(structureId || "nextsphere");
         const outY = (structure?.responses as any)?.["wifi"];
 
         if (outY) {

@@ -3,8 +3,8 @@ import cors from '@fastify/cors';
 
 export default fp(async (app) => {
   const allowlist = new Set<string>([
-    'https://widget.svapartments.it',
-    'https://svapartments.it',
+    'https://widget.nextsphere.it',
+    'https://nextsphere.it',
     'http://localhost:5173', // dev vite
     'http://127.0.0.1:5173',
   ]);

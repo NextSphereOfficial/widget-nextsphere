@@ -11,7 +11,7 @@ export default fp(async (app) => {
         "img-src": ["'self'", "data:"],
         "style-src": ["'self'", "'unsafe-inline'"],
         "script-src": ["'self'"],
-        "connect-src": ["'self'", "https://api.svapartments.it"],
+        "connect-src": ["'self'", "https://api.nextsphere.it"],
       },
       reportOnly: true,
     },

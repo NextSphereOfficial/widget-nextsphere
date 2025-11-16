@@ -1,6 +1,6 @@
 // apps/widget/src/lib/api.ts
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'https://api.svapartments.it';
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'https://api.nextsphere.it';
 
 export async function chat(payload: { message: string }) {
   const res = await fetch(`${API_BASE}/chat`, {
