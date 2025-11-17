@@ -42,7 +42,7 @@ intents:
       - "password"
       - "internet"
     response:
-      use: content.services.wifi.info
+      text: "TEST WIFI RESPONSE"
 
   services:
     patterns:
