@@ -7,13 +7,13 @@ content:
     property_overview: ""
 
   house_rules:
-    general: "Vi preghiamo di tenere un tono basso tra le 23:00 e le 08:00"
+    general: "Vi preghiamo di tenere un tono basso tra le 23:00 e le 08:00."
     noise: ""
     smoking: ""
     pets: ""
 
   checkin:
-    instructions: "Potete fare il check-in in totale autonomia seguendo le istruzioni via mail"
+    instructions: "Potete fare il check-in in totale autonomia seguendo le istruzioni via mail."
     access_codes: ""
     parking: ""
 
@@ -23,7 +23,7 @@ content:
 
   services:
     wifi:
-      info: "La rete si chiama SV Apartments e la password è 12345"
+      info: "La rete si chiama SV Apartments e la password è 12345."
     cleaning:
       info: ""
     amenities:
