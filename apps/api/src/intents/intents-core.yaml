@@ -41,8 +41,8 @@ intents:
       - "wifi"
       - "password"
       - "internet"
-    response:
-      text: "TEST WIFI RESPONSE"
+    reply: "TEST WIFI RESPONSE"
+
 
   services:
     patterns:
