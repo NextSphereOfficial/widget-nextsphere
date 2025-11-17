@@ -1,33 +1,37 @@
 intents:
 
-  wifi:
+  welcome:
     output:
-      short: "[YAML WIFI] La rete si chiama SV Apartments e la password è 12345."
-
-  checkin:
-    output:
-      short: "[YAML CHECKIN] Potete fare il check-in in totale autonomia seguendo le istruzioni via mail."
+      short: "Benvenuto! Posso aiutarti con Wi-Fi, arrivo, regole della casa, servizi o emergenze."
 
   house_rules:
     output:
-      short: "[YAML REGOLE] Vi preghiamo di tenere un tono basso tra le 23:00 e le 08:00."
+      short: "Vi preghiamo di tenere un tono basso tra le 23:00 e le 08:00 e di rispettare le regole della casa durante il soggiorno."
+
+  checkin:
+    output:
+      short: "Potete fare il check-in in totale autonomia seguendo le istruzioni ricevute via mail prima dell'arrivo."
+
+  checkout:
+    output:
+      short: "L’orario di check-out è quello indicato nella prenotazione. Ti chiediamo di lasciare l’appartamento in ordine e chiudere bene la porta quando vai via."
+
+  wifi:
+    output:
+      short: "La rete Wi-Fi si chiama SV Apartments e la password è 12345."
 
   services:
     output:
-      short: "[YAML SERVIZI] Sono inclusi Wi-Fi, biancheria e pulizia finale."
+      short: "Sono inclusi Wi-Fi, biancheria e i servizi indicati nella tua prenotazione. Se vuoi ti posso dire qualcosa in più sui singoli servizi."
 
   faq:
     output:
-      short: "[YAML FAQ] Qui trovi le risposte alle domande più frequenti."
+      short: "Posso rispondere alle domande più frequenti su arrivo, soggiorno e partenza. Chiedimi pure quello che ti serve."
 
   emergency:
     output:
-      short: "[YAML EMERGENZA] In caso di emergenza chiama il 112."
+      short: "In caso di emergenza contatta subito il numero unico 112 e, se necessario, avvisa anche l’host."
 
   contact:
     output:
-      short: "[YAML CONTATTO] Puoi contattare l'host al numero indicato nelle informazioni di prenotazione."
-
-  welcome:
-    output:
-      short: "[YAML WELCOME] Benvenuto in struttura!"
+      short: "Per qualsiasi necessità puoi contattare direttamente l’host usando i recapiti ricevuti con la prenotazione."
