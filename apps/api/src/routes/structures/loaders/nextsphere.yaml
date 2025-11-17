@@ -1,70 +1,33 @@
-version: 1
+intents:
 
-content:
+  wifi:
+    output:
+      short: "[YAML WIFI] La rete si chiama SV Apartments e la password è 12345."
 
-  welcome:
-    intro: ""
-    property_overview: ""
+  checkin:
+    output:
+      short: "[YAML CHECKIN] Potete fare il check-in in totale autonomia seguendo le istruzioni via mail."
 
   house_rules:
-    general: "Vi preghiamo di tenere un tono basso tra le 23:00 e le 08:00."
-    noise: ""
-    smoking: ""
-    pets: ""
-
-  checkin:
-    instructions: "Potete fare il check-in in totale autonomia seguendo le istruzioni via mail."
-    access_codes: ""
-    parking: ""
-
-  checkout:
-    instructions: ""
-    reminders: ""
+    output:
+      short: "[YAML REGOLE] Vi preghiamo di tenere un tono basso tra le 23:00 e le 08:00."
 
   services:
-    wifi:
-      info: "La rete si chiama SV Apartments e la password è 12345."
-    cleaning:
-      info: ""
-    amenities:
-      list: ""
+    output:
+      short: "[YAML SERVIZI] Sono inclusi Wi-Fi, biancheria e pulizia finale."
 
   faq:
-    general: ""
-    transport: ""
-    payments: ""
+    output:
+      short: "[YAML FAQ] Qui trovi le risposte alle domande più frequenti."
 
   emergency:
-    contacts: ""
-    procedures: ""
+    output:
+      short: "[YAML EMERGENZA] In caso di emergenza chiama il 112."
 
   contact:
-    host: ""
-    support: ""
+    output:
+      short: "[YAML CONTATTO] Puoi contattare l'host al numero indicato nelle informazioni di prenotazione."
 
-fields:
-  host_name: ""
-  property_name: ""
-  checkin_time: ""
-  checkout_time: ""
-  wifi_name: ""
-  wifi_password: ""
-  phone_number: ""
-
-synonyms:
-  checkin:
-    - "arrivo"
-    - "come entrare"
-    - "check-in"
-  checkout:
-    - "partenza"
-    - "come uscire"
-    - "check-out"
-  wifi:
-    - "internet"
-    - "rete"
-  rules:
-    - "regole"
-    - "norme"
-
-intents: []
+  welcome:
+    output:
+      short: "[YAML WELCOME] Benvenuto in struttura!"
