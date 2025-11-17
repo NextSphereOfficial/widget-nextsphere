@@ -1,257 +1,77 @@
-intents:
-  wifi:
-    id: wifi
-    priority: 150
-    synonyms:
-      - wifi
-      - wi-fi
-      - wi-fi # U+2011 non-breaking hyphen
-      - wi‒fi # U+2012 figure dash
-      - wi–fi # U+2013 en dash
-      - wi—fi # U+2014 em dash
-      - wi ― fi # varianti eventuali
-      - wi fi
-      - internet
-      - rete
-      - connessione
-      - password wifi
-      - ssid
-      - hotspot
-      - rete wireless
-      - navigare
-    keywords:
-      - wifi
-      - wi-fi
-      - wi-fi
-      - wi‒fi
-      - wi–fi
-      - wi—fi
-      - wi fi
-      - password
-      - pass
-      - pwd
-      - chiave
-      - rete
-      - internet
-      - rete
-      - ssid
-      - internet
-      - connessione
-      - wireless
-    patterns:
-      # IT
-      - "(?i)qual\\s*e'?\\s*la\\s*password.*wi[-\\s]?fi"
-      - "(?i)\\b(wi[-\\s]?fi|wifi)\\b.*\\b(password|pass|pwd|chiave)\\b"
-      - "(?i)\\b(password|pass|pwd|chiave)\\b.*\\b(wi[-\\s]?fi|wifi)\\b"
-      - "(non funziona|problemi?).*(wi[- ]?fi|wifi|internet|connessione)"
-      - "come (mi|si) (connetto|collego).*(wi[- ]?fi|wifi|internet)"
-      - "(?i)\\b(wi[\\-\\u2010-\\u2015\\s]?fi)\\b.*\\b(pass(word)?|pwd|chiave)\\b"
-      - "(?i)\\b(pass(word)?|pwd|chiave)\\b.*\\b(wi[\\-\\u2010-\\u2015\\s]?fi)\\b"
-      # forma naturale più comune in italiano
-      - "(?i)qual\\s*e'?\\s*la\\s*password.*wi[\\-\\u2010-\\u2015\\s]?fi"
-      # EN
-      - "(^|\\b)wi[- ]?fi\\b"
-      - "(password).*(wi[- ]?fi)"
-      - "(internet|connection).*(issue|problem)"
-    negative:
-      - wife
-      - "wi fi (scritto 'wife')"
-      - wireless headphones
-      - hotspot personale
-    followups:
-      - "Vuoi vedere subito SSID e password?"
-      - "Serve una guida rapida se la rete non funziona?"
-    actions:
-      - show_wifi_credentials
-      - troubleshoot_wifi
-    output:
-      default: "Posso darti SSID e password del Wi-Fi o aiutarti con una diagnosi rapida se la rete non funziona."
-      short: "Vuoi SSID e password del Wi-Fi o una guida rapida?"
-      long: "Posso mostrarti subito SSID e password del Wi-Fi e, se la rete non dovesse funzionare, guidarti in una mini-diagnosi (riavvio router, verifica rete, ecc.). Dimmi se preferisci vedere le credenziali o ricevere assistenza."
-      ui:
-        buttons:
-          - "Mostra credenziali"
-          - "Non funziona il Wi-Fi"
-          - "Guida rapida"
+version: 1
 
-  supermarket:
-    id: supermarket
-    priority: 80
-    synonyms:
-      - supermercato
-      - ipermercato
-      - market
-      - minimarket
-      - alimentari
-      - negozio di alimentari
-      - drogheria
-      - fare la spesa
-      - discount
-      - grocery
-      - grocery store
-      - convenience store
-    keywords:
-      - supermercato
-      - spesa
-      - aperto
-      - vicino
-      - orari
-      - indirizzo
-      - mappa
-      - distanza
-      - supermarket
-      - groceries
-      - hours
-      - address
-      - map
-      - nearby
+intents:
+
+  welcome:
     patterns:
-      # IT
-      - "dove.*(supermercat\\w*|market|minimarket|alimentar\\w*|discount)"
-      - "(supermercat\\w*|market|minimarket|alimentar\\w*|discount)(.*vicin\\w*|.*apert\\w*)?"
-      - "spesa(.*dove|.*vicin\\w*|.*apert\\w*)?"
-      # EN
-      - "(closest|nearest).*(supermarket|grocery|convenience)"
-      - "where.*(supermarket|grocery)"
-    negative:
-      - supernatural
-      - superuser
-      - super mario
-      - market cap
-      - stock market
-    followups:
-      - "Preferisci che apra la mappa o vuoi indicarmi una via/una zona?"
-      - "Cerchi catene specifiche (es. Conad, Coop, Esselunga, Carrefour, Lidl, MD)?"
-    actions:
-      - "open_map:supermarket"
-      - ask_area
-      - show_hours
-    output:
-      default: "Posso cercare un supermercato vicino, aprire la mappa o filtrare per zona/brand."
-      short: "Vuoi che apra la mappa dei supermercati vicini?"
-      long: "Posso mostrarti i supermercati nelle vicinanze e gli orari di apertura. Se preferisci, cerco per indirizzo/zona o per catena (Conad, Coop, Esselunga, Carrefour, Lidl, MD). Dimmi come ti è più comodo."
-      ui:
-        buttons:
-          - "Apri mappa"
-          - "Orari di apertura"
-          - "Indicami una zona"
+      - "benvenuto"
+      - "ciao"
+      - "presentati"
+    response:
+      use: content.welcome.intro
+
+  house_rules:
+    patterns:
+      - "regole"
+      - "norme"
+      - "house rules"
+    response:
+      use: content.house_rules.general
 
   checkin:
-    id: checkin
-    priority: 120
-    synonyms:
-      - check-in
-      - check in
-      - arrivo
-      - accesso
-      - ingresso
-      - self check-in
-      - auto check-in
-      - ritiro chiavi
-      - consegna chiavi
-      - codice accesso
-      - serratura smart
-      - key box
-      - cassetta chiavi
-      - citofono
-    keywords:
-      - orario
-      - check-in
-      - documento
-      - codice
-      - smart lock
-      - keybox
-      - citofono
-      - porta
-      - indirizzo
-      - istruzioni
-      - arrivo
     patterns:
-      # IT
-      - "(^|\\b)check[- ]?in\\b"
-      - "orari?.*check[- ]?in"
-      - "(come|dove).*(accedere|entrare|ingress\\w*|ritirare.*chiavi)"
-      - "(codice|serratura|smart lock|key ?box|citofono).*"
-      # EN
-      - "(check[- ]?in|arrival|access).*"
-    negative:
-      - check engine
-      - check invoice
-      - "check-in online volo"
-      - boarding pass
-      - "hotel front desk"
-    followups:
-      - "Vuoi le istruzioni passo-passo oppure solo il codice d’accesso?"
-      - "Arrivi ora o vuoi pianificare l’orario?"
-    actions:
-      - show_checkin_instructions
-      - show_access_code
-      - contact_host
-      - "open_map:entrance"
-    output:
-      default: "Ti fornisco istruzioni per il check-in e, se previsto, il codice d’accesso/smart-lock."
-      short: "Preferisci il codice d’accesso o le istruzioni passo-passo?"
-      long: "Posso guidarti nel check-in con istruzioni dettagliate (ingresso, citofono, key box, smart-lock) e indicarti l’orario previsto. Se necessario, posso aprire la mappa dell’ingresso o contattare l’host."
-      ui:
-        buttons:
-          - "Mostra istruzioni"
-          - "Codice d’accesso"
-          - "Apri mappa ingresso"
+      - "check in"
+      - "check-in"
+      - "come entrare"
+      - "arrivo"
+    response:
+      use: content.checkin.instructions
+
+  checkout:
+    patterns:
+      - "check out"
+      - "check-out"
+      - "partenza"
+      - "uscire"
+    response:
+      use: content.checkout.instructions
+
+  wifi:
+    patterns:
+      - "wifi"
+      - "password"
+      - "internet"
+    response:
+      use: content.services.wifi.info
+
+  services:
+    patterns:
+      - "servizi"
+      - "cosa è incluso"
+    response:
+      use: content.services.amenities.list
+
+  faq:
+    patterns:
+      - "domanda"
+      - "faq"
+    response:
+      use: content.faq.general
 
   emergency:
-    id: emergency
-    priority: 200
-    synonyms:
-      - emergenza
-      - urgenza
-      - aiuto
-      - soccorso
-      - pronto intervento
-      - assistenza urgente
-      - problema grave
-      - incendio
-      - fuga di gas
-      - allagamento
-      - furto
-      - malore
-    keywords:
-      - centododici
-      - ambulanza
-      - polizia
-      - carabinieri
-      - vigili del fuoco
-      - incendio
-      - gas
-      - perdita
-      - allagamento
-      - emergenza
-      - primo soccorso
-      - pronto soccorso
     patterns:
-      # IT
-      - "emergen[zs]a"
-      - "(ho|c'è).*(un|una)?\\s*(emergenza|incendio|fuga.*gas|allagamento|furto|malore)"
-      - "chiama(re)?.*(112|ambulanza|polizia|vigili|carabinieri)"
-      # EN
-      - "(emergency|help|fire|gas leak|ambulance|police)"
-    negative:
-      - emergency exit
-      - prova di evacuazione
-      - esercitazione
-    followups:
-      - "È un’emergenza medica, di sicurezza o un guasto (incendio/gas/acqua)?"
-      - "Vuoi che ti mostri subito i numeri utili e le istruzioni principali?"
-    actions:
-      - call_112
-      - show_emergency_numbers
-      - show_emergency_instructions
-      - contact_host_urgent
-    output:
-      default: "Se è un’emergenza chiama subito il 112. Posso mostrarti numeri utili e istruzioni rapide (incendio, fuga di gas, acqua)."
-      short: "Se è urgente chiama 112. Vuoi numeri/istruzioni rapide?"
-      long: "In caso di emergenza chiama subito il 112. Posso mostrarti i numeri utili (ambulanza, polizia, vigili del fuoco) e le istruzioni principali: incendio (allontanati, non usare ascensori, chiama 115), fuga di gas (chiudi il gas, apri le finestre, non usare fiamme o interruttori), allagamento (chiudi l’acqua, scollega la corrente se sicuro). Posso anche avvisare rapidamente l’host."
-      ui:
-        buttons:
-          - "Chiama 112"
-          - "Numeri utili"
-          - "Istruzioni rapide"
+      - "emergenza"
+      - "aiuto"
+    response:
+      use: content.emergency.procedures
+
+  contact:
+    patterns:
+      - "contatto"
+      - "numero"
+      - "assistenza"
+    response:
+      use: content.contact.support
+
+fallback:
+  enabled: true

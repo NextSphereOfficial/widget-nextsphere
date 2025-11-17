@@ -1,37 +1,68 @@
-meta:
-  id: nextsphere
-  name: NextSphere
-  version: 1.0.0
-  language: it
+version: 1
 
 content:
-  wifi:
-    ssid: "SVA_Guest"
-    password: "12345678"
-  checkin:
-    from: "15:00"
-    early_policy: "Scrivici: se l’appartamento è pronto ti avvisiamo."
-  supermarket:
-    nearest: "Conad City — Via Roma 12 (300 m)"
-    hours: "8:00–20:00 (lun–sab)"
-  emergency:
-    phone: "112"
-    note: "Indica l’indirizzo dell’appartamento al centralino."
 
-intents:
-  wifi:
-    output:
-      short: "SSID: {content.wifi.ssid} — Password: {content.wifi.password}"
-      default: "SSID: {content.wifi.ssid} — Password: {content.wifi.password}"
+  welcome:
+    intro: ""
+    property_overview: ""
+
+  house_rules:
+    general: ""
+    noise: ""
+    smoking: ""
+    pets: ""
+
   checkin:
-    output:
-      short: "Check-in dalle {content.checkin.from}. {content.checkin.early_policy}"
-      default: "Check-in dalle {content.checkin.from}. {content.checkin.early_policy}"
-  supermarket:
-    output:
-      short: "{content.supermarket.nearest} — {content.supermarket.hours}"
-      default: "{content.supermarket.nearest} — {content.supermarket.hours}"
+    instructions: ""
+    access_codes: ""
+    parking: ""
+
+  checkout:
+    instructions: ""
+    reminders: ""
+
+  services:
+    wifi:
+      info: ""
+    cleaning:
+      info: ""
+    amenities:
+      list: ""
+
+  faq:
+    general: ""
+    transport: ""
+    payments: ""
+
   emergency:
-    output:
-      short: "Emergenze: {content.emergency.phone}"
-      default: "In caso d’emergenza chiama {content.emergency.phone}. {content.emergency.note}"
+    contacts: ""
+    procedures: ""
+
+  contact:
+    host: ""
+    support: ""
+
+fields:
+  host_name: ""
+  property_name: ""
+  checkin_time: ""
+  checkout_time: ""
+  wifi_name: ""
+  wifi_password: ""
+  phone_number: ""
+
+synonyms:
+  checkin:
+    - "arrivo"
+    - "come entrare"
+    - "check-in"
+  checkout:
+    - "partenza"
+    - "come uscire"
+    - "check-out"
+  wifi:
+    - "internet"
+    - "rete"
+  rules:
+    - "regole"
+    - "norme"
