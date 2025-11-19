@@ -221,22 +221,31 @@
   width: 56px;
   height: 56px;
   border: none;
+  padding: 0;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
-  color: var(--ns-text-on);
+  background: transparent; /* lasciamo che sia il logo a fare da sfondo */
   box-shadow: 0 10px 24px rgba(0,0,0,0.22);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, background-position 0.3s ease;
-  background-size: 100% auto;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
   z-index: 60;
 }
+
 .ns-launcher:hover {
   transform: translateY(-3px);
-  background-position: right center;
   box-shadow: 0 14px 32px rgba(0,0,0,0.25);
 }
+.ns-launcher__icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover; /* riempie bene il cerchio */
+  display: block;
+}
+
+
+
 .ns-launcher:focus-visible {
   outline: none;
   box-shadow: var(--ns-focus);

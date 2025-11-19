@@ -1,5 +1,5 @@
 import React from "react";
-import IconLumo from "./IconLumo";
+import logoLumo from "../assets/logo-lumo.png";
 
 type Props = {
   onOpen: () => void;
@@ -15,7 +15,11 @@ export default function Launcher({ onOpen, ariaLabel, showUnread = false }: Prop
       onClick={onOpen}
       aria-label={ariaLabel || "Apri chat"}
     >
-      <IconLumo size={24} />
+      <img
+        src={logoLumo}
+        alt={ariaLabel || "Lumo"}
+        className="ns-launcher__icon"
+      />
       {showUnread && <span className="ns-launcher__badge" aria-hidden />}
     </button>
   );
