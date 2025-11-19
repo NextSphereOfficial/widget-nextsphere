@@ -1,37 +1,153 @@
+version: 1
+
+content:
+
+  welcome:
+    intro: "Benvenuti in S&V Apartments!"
+    property_overview: ""
+    how_it_works: "Chietedemi quello di cui avete bisogno, vi risponderò al meglio delle mie capacità!"
+
+  house_rules:
+    general: "La nostra regola è: vi auguriamo uno splendido soggiorno con noi :)"
+    noise: "Vi preghiamo di mantenere un tono basso dalle 23:00 alle 08:00."
+    smoking: "E' vietato fumare all'interno dell'appartamento. Nel balcone sono già predisposti dei posacenere"
+    pets: ""
+    visitors: ""
+    kitchen: ""
+    bathroom: ""
+    garbage: ""
+    damage: ""
+    other: ""
+
+  checkin:
+    overview: ""
+    time: "Il check-in è disponibile dalle 15:00."
+    instructions: ""
+    access_codes: ""
+    parking: "L'appartamento ha un posto auto riservato davanti al garage."
+    transport: ""
+
+  checkout:
+    overview: ""
+    time: "Il check-out deve essere fatto entro le 11:00 del giorno di partenza."
+    instructions: ""
+    cleaning: ""
+    keys: "Dopo esservi assicurati di aver recuperato tutte le vostre cose, potete lasciare le chiavi sul tavolo."
+
+  services:
+    wifi:
+      info: "La rete Wi-Fi è SV Apartments e la password è SV12345"
+    cleaning:
+      info: ""
+    amenities:
+      list: ""
+    breakfast:
+      info: ""
+    parking:
+      info: ""
+    laundry:
+      info: ""
+    transfer:
+      info: ""
+    other:
+      info: ""
+
+  faq:
+    general: ""
+    transport: ""
+    payments: ""
+    booking_changes: ""
+    children: ""
+    pets: ""
+    parking: ""
+    city_tax: ""
+    other: ""
+
+  emergency:
+    contacts: "I contatti di emergenza sono:"
+    medical: "Ambulanza - 118"
+    fire: "Incendio - 115"
+    police: "Polizia - 113"
+    safety: ""
+    other: ""
+
+  contact:
+    host: ""
+    reception: ""
+    support: ""
+
+fields:
+  host_name: ""
+  property_name: ""
+  checkin_time: ""
+  checkout_time: ""
+  wifi_name: ""
+  wifi_password: ""
+  phone_number: ""
+
+synonyms:
+  checkin:
+    - "arrivo"
+    - "come entrare"
+    - "check-in"
+  checkout:
+    - "partenza"
+    - "come uscire"
+    - "check-out"
+  wifi:
+    - "internet"
+    - "rete"
+  rules:
+    - "regole"
+    - "norme"
+
 intents:
 
   welcome:
     output:
-      short: "Benvenuto! Posso aiutarti con Wi-Fi, arrivo, regole della casa, servizi o emergenze."
+      short: "{{content.welcome.intro}}"
 
   house_rules:
     output:
-      short: "Vi preghiamo di tenere un tono basso tra le 23:00 e le 08:00 e di rispettare le regole della casa durante il soggiorno."
+      short: "{{content.house_rules.general}}"
 
   checkin:
     output:
-      short: "Potete fare il check-in in totale autonomia seguendo le istruzioni ricevute via mail prima dell'arrivo."
+      short: "{{content.checkin.instructions}}"
 
   checkout:
     output:
-      short: "L’orario di check-out è quello indicato nella prenotazione. Ti chiediamo di lasciare l’appartamento in ordine e chiudere bene la porta quando vai via."
+      short: "{{content.checkout.instructions}}"
 
   wifi:
     output:
-      short: "La rete Wi-Fi si chiama SV Apartments e la password è 12345."
+      short: "{{content.services.wifi.info}}"
 
   services:
     output:
-      short: "Sono inclusi Wi-Fi, biancheria e i servizi indicati nella tua prenotazione. Se vuoi ti posso dire qualcosa in più sui singoli servizi."
+      short: "{{content.services.amenities.list}}"
 
   faq:
     output:
-      short: "Posso rispondere alle domande più frequenti su arrivo, soggiorno e partenza. Chiedimi pure quello che ti serve."
+      short: "{{content.faq.general}}"
 
   emergency:
     output:
-      short: "In caso di emergenza contatta subito il numero unico 112 e, se necessario, avvisa anche l’host."
+      short: "{{content.emergency.contacts}}"
 
+  emergency_medical:
+    output:
+      short: "{{content.emergency.medical}}"
+
+  emergency_fire:
+    output:
+      short: "{{content.emergency.fire}}"
+
+  emergency_police:
+    output:
+      short: "{{content.emergency.police}}"
+    
   contact:
     output:
-      short: "Per qualsiasi necessità puoi contattare direttamente l’host usando i recapiti ricevuti con la prenotazione."
+      short: "{{content.contact.host}}"
+

@@ -190,6 +190,37 @@ function resolveIntent(userText: string, intentsCore: Record<string, any>) {
 // Template & fallback (✅ aggiornati a intents + output)
 // -----------------------------------------------------
 
+// Piccolo sistema di template: {{path.to.value}} → structureYaml[path.to.value]
+function resolvePath(obj: any, path: string): any {
+  if (!obj || typeof path !== "string") return undefined;
+
+  return path.split(".").reduce((acc: any, key: string) => {
+    if (acc && Object.prototype.hasOwnProperty.call(acc, key)) {
+      return acc[key];
+    }
+    return undefined;
+  }, obj);
+}
+
+function applyTemplateToText(text: string, structureYaml: any): string {
+  if (typeof text !== "string" || text.indexOf("{{") === -1) {
+    return text;
+  }
+
+  return text.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, expr) => {
+    const path = (expr || "").trim();
+    if (!path) return "";
+
+    const value = resolvePath(structureYaml, path);
+    if (value === undefined || value === null) return "";
+
+    if (typeof value === "string") return value;
+    return String(value);
+  });
+}
+
+
+
 function renderTemplate(
   structureYaml: any,
   intentKey: string,
@@ -227,6 +258,9 @@ function renderTemplate(
     text = output.long;
   }
 
+  // 🔹 NUOVO: applica i template {{...}} usando structureYaml
+  text = applyTemplateToText(text, structureYaml);
+
   // 4) UI buttons opzionali, da schema:
   //    output.ui?.buttons: [{ id, label }, ...]
   const buttons =
@@ -237,6 +271,7 @@ function renderTemplate(
   return { text, buttons };
 }
 
+
 function fallbackText(structureYaml: any, intentKey: string, lang: string) {
   const intents = structureYaml?.intents || {};
   const intentDef = intents[intentKey];
@@ -246,14 +281,21 @@ function fallbackText(structureYaml: any, intentKey: string, lang: string) {
   }
 
   const output = intentDef.output || {};
+  let text = "";
 
-  if (typeof output.fallback === "string") return output.fallback;
-  if (typeof output.default === "string") return output.default;
-  if (typeof output.short === "string") return output.short;
-  if (typeof output.long === "string") return output.long;
+  if (typeof output.fallback === "string") {
+    text = output.fallback;
+  } else if (typeof output.default === "string") {
+    text = output.default;
+  } else if (typeof output.short === "string") {
+    text = output.short;
+  } else if (typeof output.long === "string") {
+    text = output.long;
+  }
 
-  return "";
+  return applyTemplateToText(text, structureYaml);
 }
+
 
 // -----------------------------------------------------
 // Engine
