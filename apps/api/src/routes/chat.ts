@@ -219,6 +219,21 @@ function applyTemplateToText(text: string, structureYaml: any): string {
   });
 }
 
+function applyYamlTemplate(text: string, yaml: any): string {
+  if (!text || typeof text !== "string") return text;
+
+  return text.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, path) => {
+    const parts = path.split(".");
+    let current = yaml;
+
+    for (const p of parts) {
+      if (!current || typeof current !== "object") return "";
+      current = current[p];
+    }
+
+    return typeof current === "string" ? current : "";
+  });
+}
 
 
 function renderTemplate(
@@ -268,7 +283,8 @@ function renderTemplate(
       ? output.ui.buttons
       : [];
 
-  return { text, buttons };
+const finalText = applyYamlTemplate(text, structureYaml.content || {});
+return { text: finalText, buttons };
 }
 
 

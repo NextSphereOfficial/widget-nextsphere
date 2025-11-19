@@ -119,6 +119,10 @@ intents:
     output:
       short: "{{content.checkout.instructions}}"
 
+  late_checkout:
+    output:
+      short: "{{content.checkout.overview}}"
+
   wifi:
     output:
       short: "{{content.services.wifi.info}}"
@@ -126,6 +130,18 @@ intents:
   services:
     output:
       short: "{{content.services.amenities.list}}"
+
+  parking:
+    output:
+      short: "{{content.services.parking.info}}"
+
+  garbage:
+    output:
+      short: "{{content.house_rules.garbage}}"
+
+  pets:
+    output:
+      short: "{{content.house_rules.pets}}"
 
   faq:
     output:
@@ -135,19 +151,10 @@ intents:
     output:
       short: "{{content.emergency.contacts}}"
 
-  emergency_medical:
-    output:
-      short: "{{content.emergency.medical}}"
-
-  emergency_fire:
-    output:
-      short: "{{content.emergency.fire}}"
-
-  emergency_police:
-    output:
-      short: "{{content.emergency.police}}"
-    
   contact:
     output:
       short: "{{content.contact.host}}"
 
+  fallback:
+    output:
+      short: "Mi dispiace, non ho capito bene. Puoi riformulare la domanda?"

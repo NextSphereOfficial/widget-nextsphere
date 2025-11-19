@@ -3,75 +3,201 @@ version: 1
 intents:
 
   welcome:
-    patterns:
+    synonyms:
       - "benvenuto"
+      - "benvenuta"
       - "ciao"
+      - "salve"
+    keywords:
       - "presentati"
-    response:
-      use: content.welcome.intro
+      - "chi sei"
+      - "cosa puoi fare"
+    patterns:
+      - "chi sei"
+      - "cosa puoi fare"
+    priority: 5
 
   house_rules:
+    synonyms:
+      - "regole"
+      - "regolamento"
+      - "norme"
+      - "house rules"
+    keywords:
+      - "silenzio"
+      - "rumore"
+      - "fumo"
+      - "fumare"
+      - "animali"
+      - "ospiti"
     patterns:
       - "regole"
       - "norme"
-      - "house rules"
-    response:
-      use: content.house_rules.general
+      - "regole della casa"
 
   checkin:
-    patterns:
+    synonyms:
       - "check in"
       - "check-in"
-      - "come entrare"
       - "arrivo"
-    response:
-      use: content.checkin.instructions
+      - "arrivare"
+      - "come entrare"
+      - "accedere"
+    keywords:
+      - "codice porta"
+      - "tastierino"
+      - "self check in"
+      - "self-checkin"
+    patterns:
+      - "come entro"
+      - "come si entra"
+      - "istruzioni check in"
 
   checkout:
-    patterns:
+    synonyms:
       - "check out"
       - "check-out"
+      - "uscita"
       - "partenza"
-      - "uscire"
-    response:
-      use: content.checkout.instructions
+      - "lasciare"
+    keywords:
+      - "orario checkout"
+      - "a che ora devo andare via"
+    patterns:
+      - "a che ora.*checkout"
+      - "quando devo lasciare"
+
+  late_checkout:
+    synonyms:
+      - "late checkout"
+    keywords:
+      - "più tardi"
+      - "ritardare"
+      - "uscire dopo"
+      - "restare di più"
+    patterns:
+      - "posso fare il checkout pi[uù] tardi"
+      - "posso restare di pi[uù]"
+    priority: 2
 
   wifi:
-    patterns:
+    synonyms:
       - "wifi"
-      - "password"
+      - "wi-fi"
       - "internet"
-    reply: "TEST WIFI RESPONSE"
-
+      - "rete"
+    keywords:
+      - "password"
+      - "connessione"
+      - "ssid"
+    patterns:
+      - "qual[ea] è la password"
+      - "come mi collego"
+      - "password del wifi"
 
   services:
-    patterns:
+    synonyms:
       - "servizi"
+      - "dotazioni"
       - "cosa è incluso"
-    response:
-      use: content.services.amenities.list
+      - "cosa è compreso"
+    keywords:
+      - "aria condizionata"
+      - "riscaldamento"
+      - "pulizie"
+      - "colazione"
+      - "biancheria"
+    patterns:
+      - "che servizi ci sono"
+      - "cosa è incluso"
+
+  parking:
+    synonyms:
+      - "parcheggio"
+      - "posto auto"
+      - "garage"
+    keywords:
+      - "auto"
+      - "macchina"
+      - "dove parcheggiare"
+    patterns:
+      - "dove posso parcheggiare"
+      - "c'è il parcheggio"
+
+  garbage:
+    synonyms:
+      - "spazzatura"
+      - "immondizia"
+      - "rifiuti"
+      - "raccolta differenziata"
+    keywords:
+      - "bidone"
+      - "cassonetto"
+      - "pattumiera"
+    patterns:
+      - "dove butto.*rifiuti"
+      - "come funziona.*spazzatura"
+      - "raccolta differenziata"
+
+  pets:
+    synonyms:
+      - "animali"
+      - "cane"
+      - "gatto"
+      - "pet friendly"
+    keywords:
+      - "posso portare"
+      - "sono ammessi animali"
+    patterns:
+      - "posso portare il mio cane"
+      - "sono ammessi animali"
 
   faq:
-    patterns:
-      - "domanda"
+    synonyms:
       - "faq"
-    response:
-      use: content.faq.general
+      - "domande frequenti"
+      - "domande"
+    keywords:
+      - "informazioni generali"
+      - "ho una domanda"
+    patterns:
+      - "domande frequenti"
+      - "ho un dubbio"
 
   emergency:
-    patterns:
+    synonyms:
       - "emergenza"
+      - "emergenze"
       - "aiuto"
-    response:
-      use: content.emergency.procedures
+    keywords:
+      - "ambulanza"
+      - "polizia"
+      - "incendio"
+      - "carabinieri"
+      - "fuoco"
+    patterns:
+      - "numero di emergenza"
+      - "chi devo chiamare"
 
   contact:
-    patterns:
+    synonyms:
       - "contatto"
-      - "numero"
+      - "contattare"
       - "assistenza"
-    response:
-      use: content.contact.support
+      - "supporto"
+    keywords:
+      - "telefono"
+      - "whatsapp"
+      - "email"
+      - "host"
+    patterns:
+      - "come contatto l'host"
+      - "numero dell'host"
+      - "come vi contatto"
 
-fallback:
-  enabled: true
+  fallback:
+    synonyms: []
+    keywords: []
+    negative: []
+    patterns: []
+    priority: -10
