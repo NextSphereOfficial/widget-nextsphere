@@ -11,7 +11,7 @@ export default function HeaderBar({ locale, onClose }: Props) {
     <header className="ns-header" role="banner">
         <div className="ns-header__brand">
             <span className="ns-header__icon">
-    <IconLumo size={18} />
+    <IconLumo size={22} />
   </span>
   <div className="ns-header__titles">
     <strong className="ns-header__title">Lumo</strong>

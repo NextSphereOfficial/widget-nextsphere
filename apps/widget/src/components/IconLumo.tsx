@@ -13,8 +13,10 @@ export default function IconLumo({ size = 20, title = "Lumo" }: Props) {
       style={{
         borderRadius: "999px",
         display: "block",
+        filter: "brightness(1.15) contrast(1.05)", // <— la magia
       }}
     />
   );
 }
+
 
