@@ -115,27 +115,51 @@
 /* ============================================================
    INPUT BAR – SEND BUTTON
    ============================================================ */
+/* Bottone invio – stile minimal, neutro */
 .ns-sendbtn {
-  width: 42px;
-  height: 42px;
-  border: none;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.08); /* bordo leggero */
+  background: #f5f5f7;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(to bottom, var(--ns-grad-start) 0%, var(--ns-grad-end) 100%);
-  color: var(--ns-text-on);
-  box-shadow: 0 6px 12px rgba(0,0,0,0.18);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  color: #374151; /* slate-700 */
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
 }
+
 .ns-sendbtn svg {
   width: 18px;
   height: 18px;
-  fill: var(--ns-text-on);
-  transition: transform 0.25s ease;
+  fill: currentColor;
+  transform: translateX(1px); /* leggero “avanti” */
+  transition: transform 0.2s ease;
 }
-.ns-sendbtn:hover svg { transform: rotate(35deg); }
-.ns-sendbtn[disabled] { opacity: .6; cursor: not-allowed; }
+
+.ns-sendbtn:hover:not(:disabled) {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+}
+
+.ns-sendbtn:hover:not(:disabled) svg {
+  transform: translateX(2px);
+}
+
+.ns-sendbtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+  box-shadow: none;
+  transform: none;
+}
+
 
 /* ============================================================
    TYPING LOADER
