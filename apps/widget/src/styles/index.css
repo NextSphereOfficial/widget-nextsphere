@@ -29,3 +29,28 @@
 .chat-scroll:hover::-webkit-scrollbar-thumb {
   background-color: rgba(0,0,0,0.28);
 }
+
+/* ====== NEXTSPHERE DEMO / GUEST BG ====== */
+
+html,
+body {
+  height: 100%;
+}
+
+body.nx-bg {
+  margin: 0;
+  /* colore base molto scuro */
+  background-color: #020617; /* slate-950 / quasi nero, ma non pieno */
+
+  /* gradiente morbido, un po' più chiaro verso il basso a destra
+     così il launcher scuro risalta invece di perdersi */
+  background-image:
+    radial-gradient(
+      circle at 85% 85%,
+      #374151 0,   /* slate-700, leggermente più chiaro vicino al launcher */
+      #020617 55%  /* torna scuro verso il resto della pagina */
+    );
+
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
