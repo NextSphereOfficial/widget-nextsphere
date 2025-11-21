@@ -99,7 +99,8 @@ export default function App() {
       )}
 
       {open && (
-        <div className="w-96 max-w-[92vw] h-96 rounded-2xl shadow-2xl bg-white/80 backdrop-blur-md border border-black/5 flex flex-col">
+        <div className="w-96 max-w-[92vw] h-96 rounded-2xl shadow-2xl ns-bg-soft border border-black/5 flex flex-col">
+
           {/* Header */}
           <HeaderBar
             locale={locale as 'it' | 'en'}

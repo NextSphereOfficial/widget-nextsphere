@@ -308,3 +308,17 @@
 }
 /* v8.6.1 sanity check */
 .ns-launcher { width: 60px; height: 60px; }
+
+
+/* ============================================================
+   SOFT BACKGROUND (Option A)
+   ============================================================ */
+
+.ns-bg-soft {
+  background: radial-gradient(
+    circle at 30% 20%,
+    rgba(255, 255, 255, 0.92),
+    rgba(245, 245, 245, 0.82)
+  );
+  backdrop-filter: blur(8px);
+}
