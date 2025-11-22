@@ -71,7 +71,7 @@ export default function App() {
             flex flex-col
             ns-bg-soft border border-black/10 shadow-2xl
             rounded-none md:rounded-2xl
-            overflow-hidden
+           
           "
           style={{
             // riduciamo un po' l'altezza così il footer non va sotto la barra di Safari
