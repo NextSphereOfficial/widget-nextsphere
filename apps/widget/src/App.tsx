@@ -101,14 +101,18 @@ export default function App() {
       {/* Chat aperta */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center md:justify-end">
-          {/* Container responsivo: full screen su mobile, card su desktop */}
+          {/* Overlay cliccabile in futuro se vuoi chiudere cliccando fuori */}
+          {/* <div className="absolute inset-0" onClick={() => setOpen(false)} /> */}
+
+          {/* Container: bottom sheet su mobile, card su desktop */}
           <div
             className="
-              w-full h-screen
-              max-w-full
+              relative
+              w-full max-w-full
+              h-[70vh] max-h-[70vh]
               md:w-[380px] md:h-[500px] md:max-h-[500px]
               md:mb-4 md:mr-4
-              rounded-none md:rounded-2xl
+              rounded-t-2xl md:rounded-2xl
               shadow-2xl ns-bg-soft border border-black/5
               flex flex-col
             "
