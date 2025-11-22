@@ -8,15 +8,7 @@ type Props = {
 
 export default function HeaderBar({ locale, onClose }: Props) {
   return (
-    <header
-      className="
-        ns-header
-        bg-white/95
-        border-b border-black/5
-        backdrop-blur-sm
-      "
-      role="banner"
-    >
+    <header className="ns-header" role="banner">
       <div className="ns-header__brand">
         <span className="ns-header__icon">
           <IconLumo size={22} />
@@ -45,4 +37,5 @@ export default function HeaderBar({ locale, onClose }: Props) {
     </header>
   );
 }
+
 
