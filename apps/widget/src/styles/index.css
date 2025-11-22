@@ -83,3 +83,21 @@ body.nx-bg {
 body.ns-demo-bg input {
   font-size: 16px;
 }
+
+
+/* ===== FIX HEADERBAR CHIARO SU MOBILE ===== */
+.ns-header {
+  background-color: #ffffff !important;   /* sfondo chiaro */
+  color: #0f172a !important;              /* testo scuro */
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+/* testi */
+.ns-header__title {
+  color: #0f172a !important;
+}
+
+.ns-header__subtitle {
+  color: #6b7280 !important;
+}
