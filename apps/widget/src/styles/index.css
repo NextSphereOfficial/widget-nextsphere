@@ -78,3 +78,8 @@ body.nx-bg {
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
+
+/* Solo per la demo/guest page, per evitare zoom iOS sugli input */
+body.ns-demo-bg input {
+  font-size: 16px;
+}

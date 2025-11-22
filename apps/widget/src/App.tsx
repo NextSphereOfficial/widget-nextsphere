@@ -116,7 +116,7 @@ export default function App() {
               <div className="sticky bottom-0 px-3 py-2 bg-white/90 border-t border-black/10 backdrop-blur">
                 <div className="flex items-center gap-2">
                   <input
-                    className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm bg-white"
+                    className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-[16px] bg-white"
                     placeholder="Scrivi un messaggio..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
