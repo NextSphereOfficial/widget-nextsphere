@@ -10,35 +10,14 @@ import Launcher from './components/Launcher';
 type Msg = { role: 'user' | 'assistant'; content: string };
 
 export default function App() {
-  // Contesto iniziale da URL (hotel, room, lang/locale)
   const ctx = getInitialContext();
-  const locale = useMemo(() => ctx.locale, []);
-  const conversationCtx = useMemo(
-    () => ({
-      hotel: ctx.hotel,
-      room: ctx.room,
-      locale: ctx.locale,
-    }),
-    [],
-  );
+  const locale = ctx.locale;
 
-  const t = useMemo(
-    () =>
-      locale === 'en'
-        ? {
-            title: 'NextSphere',
-            placeholder: 'Type a message...',
-            send: 'Send',
-            serverError: "Oops, I can't reach the server 😅",
-          }
-        : {
-            title: 'NextSphere',
-            placeholder: 'Scrivi un messaggio...',
-            send: 'Invia',
-            serverError: 'Ops, non riesco a contattare il server 😅',
-          },
-    [locale],
-  );
+  const conversationCtx = {
+    hotel: ctx.hotel,
+    room: ctx.room,
+    locale: ctx.locale,
+  };
 
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -46,31 +25,23 @@ export default function App() {
   const endRef = useRef<HTMLDivElement>(null);
   const [isSending, setIsSending] = useState(false);
 
-  // Autoscroll all'ultimo messaggio
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs]);
 
-  async function send(textOverride?: string) {
-    const value = (textOverride ?? text).trim();
+  async function sendMessageToBot(textToSend?: string) {
+    const value = (textToSend ?? text).trim();
     if (!value) return;
 
     const userMsg: Msg = { role: 'user', content: value };
-    setMsgs((prev) => [...prev, userMsg]);
+    setMsgs((p) => [...p, userMsg]);
     setText('');
     setIsSending(true);
 
     try {
       const res = await sendMessage(value, conversationCtx);
       const botMsg: Msg = { role: 'assistant', content: res.reply };
-      setMsgs((prev) => [...prev, botMsg]);
-    } catch (err: any) {
-      console.error(err);
-      const fallback: Msg = {
-        role: 'assistant',
-        content: t.serverError,
-      };
-      setMsgs((prev) => [...prev, fallback]);
+      setMsgs((p) => [...p, botMsg]);
     } finally {
       setIsSending(false);
     }
@@ -79,49 +50,42 @@ export default function App() {
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      send();
+      sendMessageToBot();
     }
   }
 
   return (
     <>
-      {/* Launcher quando la chat è chiusa */}
       {!open && (
         <div className="fixed bottom-4 right-4 z-50">
-          <Launcher
-            onOpen={() => setOpen(true)}
-            ariaLabel={locale === 'en' ? 'Open chat' : 'Apri chat'}
-            showUnread={false}
-          />
+          <Launcher onOpen={() => setOpen(true)} ariaLabel="Apri chat" />
         </div>
       )}
 
-      {/* Chat aperta */}
       {open && (
         <div className="fixed inset-0 z-50 overflow-hidden">
-          {/* Wrapper per centrare card su desktop */}
-          <div className="flex h-full w-full items-stretch justify-center md:justify-end">
+          <div className="flex h-full w-full justify-center md:justify-end">
+            
             <div
               className="
-                pt-safe pb-safe
-                w-full h-full
-                md:w-[380px] md:h-[500px]
-                md:mb-4 md:mr-4
-                rounded-none md:rounded-2xl
-                shadow-2xl ns-bg-soft border border-black/5
+                w-full h-[100dvh]
+                md:w-[380px] md:h-[500px] md:mb-4 md:mr-4
                 flex flex-col
+                ns-bg-soft border border-black/10 shadow-2xl
+                rounded-none md:rounded-2xl
               "
             >
-              {/* Header */}
-              <HeaderBar
-                locale={locale as 'it' | 'en'}
-                onClose={() => setOpen(false)}
-              />
 
-              {/* Area messaggi */}
-              <div className="flex-1 overflow-auto p-4 space-y-3 chat-scroll">
+              {/* HEADER STICKY */}
+              <div className="sticky top-0 z-10">
+                <HeaderBar locale={locale as any} onClose={() => setOpen(false)} />
+              </div>
+
+              {/* CHAT AREA SCROLLABILE */}
+              <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-3">
+
                 {!msgs.length && (
-                  <WelcomeCard locale={locale as 'it' | 'en'} />
+                  <WelcomeCard locale={locale as any} />
                 )}
 
                 {msgs.map((m, i) => (
@@ -134,8 +98,8 @@ export default function App() {
                     <div
                       className={
                         m.role === 'user'
-                          ? 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-black text-white shadow-sm'
-                          : 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-white border border-black/10 shadow-sm'
+                          ? 'max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-black text-white'
+                          : 'max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-white border border-black/10'
                       }
                     >
                       {m.content}
@@ -143,49 +107,33 @@ export default function App() {
                   </div>
                 ))}
 
-                {isSending && (
-                  <div>
-                    <TypingLoader />
-                  </div>
-                )}
+                {isSending && <TypingLoader />}
 
                 <div ref={endRef} />
               </div>
 
-              {/* Input area */}
-              <div className="border-t border-black/5 bg-white/80 px-3 py-2 space-y-2">
+              {/* FOOTER STICKY */}
+              <div className="sticky bottom-0 px-3 py-2 bg-white/90 border-t border-black/10 backdrop-blur">
                 <div className="flex items-center gap-2">
                   <input
-                    className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white/90"
-                    placeholder={t.placeholder}
+                    className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm bg-white"
+                    placeholder="Scrivi un messaggio..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     onKeyDown={onKeyDown}
                   />
                   <button
                     className="ns-sendbtn"
-                    onClick={() => send()}
                     disabled={!text.trim() || isSending}
-                    aria-label={
-                      locale === 'en' ? 'Send message' : 'Invia messaggio'
-                    }
-                    title={
-                      locale === 'en'
-                        ? 'Press Enter to send'
-                        : 'Premi Invio per inviare'
-                    }
-                    type="button"
+                    onClick={() => sendMessageToBot()}
                   >
-                    <svg
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                    <svg viewBox="0 0 24 24">
                       <path d="M3 11l18-8-8 18-2-8-8-2z" />
                     </svg>
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
