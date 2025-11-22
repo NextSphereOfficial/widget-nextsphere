@@ -89,7 +89,8 @@ export default function App() {
 
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed bottom-2 right-2 md:bottom-4 md:right-4 z-50">
+
       {!open && (
         <Launcher
           onOpen={() => setOpen(true)}
@@ -99,7 +100,13 @@ export default function App() {
       )}
 
       {open && (
-        <div className="w-96 max-w-[92vw] h-96 rounded-2xl shadow-2xl ns-bg-soft border border-black/5 flex flex-col">
+        <div
+          className="
+              w-[92vw] max-w-[380px]
+              h-[70vh] max-h-[70vh]
+              md:h-[500px] md:max-h-[500px]
+              rounded-2xl shadow-2xl ns-bg-soft border border-black/5 flex flex-col  "
+>
 
           {/* Header */}
           <HeaderBar
