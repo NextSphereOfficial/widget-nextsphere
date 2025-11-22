@@ -47,7 +47,6 @@ export default function App() {
   const endRef = useRef<HTMLDivElement>(null);
   const [isSending, setIsSending] = useState(false);
 
-  
   // Autoscroll all'ultimo messaggio
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -86,112 +85,113 @@ export default function App() {
     }
   }
 
-
-
   return (
-    <div className="fixed inset-x-2 bottom-3 md:inset-x-auto md:bottom-4 md:right-4 z-50 flex justify-end">
-
+    <>
+      {/* Launcher quando la chat è chiusa */}
       {!open && (
-        <Launcher
-          onOpen={() => setOpen(true)}
-          ariaLabel={locale === 'en' ? 'Open chat' : 'Apri chat'}
-          showUnread={false} // in futuro potrai usare un badge se vuoi
-        />
+        <div className="fixed bottom-4 right-4 z-50">
+          <Launcher
+            onOpen={() => setOpen(true)}
+            ariaLabel={locale === 'en' ? 'Open chat' : 'Apri chat'}
+            showUnread={false}
+          />
+        </div>
       )}
 
+      {/* Chat aperta */}
       {open && (
-        <div
-          className="
-      w-full max-w-[360px]
-      h-[60vh] max-h-[60vh]
-      md:w-[380px] md:h-[500px] md:max-h-[500px]
-      rounded-2xl shadow-2xl ns-bg-soft border border-black/5 flex flex-col
-    "
->
+        <div className="fixed inset-0 z-50 flex items-end justify-center md:justify-end">
+          {/* Container responsivo: full screen su mobile, card su desktop */}
+          <div
+            className="
+              w-full h-screen
+              max-w-full
+              md:w-[380px] md:h-[500px] md:max-h-[500px]
+              md:mb-4 md:mr-4
+              rounded-none md:rounded-2xl
+              shadow-2xl ns-bg-soft border border-black/5
+              flex flex-col
+            "
+          >
+            {/* Header */}
+            <HeaderBar
+              locale={locale as 'it' | 'en'}
+              onClose={() => setOpen(false)}
+            />
 
-          {/* Header */}
-          <HeaderBar
-            locale={locale as 'it' | 'en'}
-            onClose={() => setOpen(false)}
-          />
+            {/* Area messaggi */}
+            <div className="flex-1 overflow-auto p-4 space-y-3 chat-scroll">
+              {/* WelcomeCard quando non ci sono messaggi */}
+              {!msgs.length && (
+                <WelcomeCard locale={locale as 'it' | 'en'} />
+              )}
 
-          {/* Area messaggi */}
-          <div className="flex-1 overflow-auto p-4 space-y-3 chat-scroll">
-            {/* WelcomeCard quando non ci sono messaggi */}
-                        {!msgs.length && (
-              <WelcomeCard locale={locale as 'it' | 'en'} />
-            )}
-
-
-            {msgs.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  m.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
+              {msgs.map((m, i) => (
                 <div
-                  className={
-                    m.role === 'user'
-                      ? 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-black text-white shadow-sm'
-                      : 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-white border border-black/10 shadow-sm'
-                  }
+                  key={i}
+                  className={`flex ${
+                    m.role === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
                 >
-                  {m.content}
+                  <div
+                    className={
+                      m.role === 'user'
+                        ? 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-black text-white shadow-sm'
+                        : 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-white border border-black/10 shadow-sm'
+                    }
+                  >
+                    {m.content}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
 
-            {/* Loader durante invio */}
-            {isSending && (
-              <div>
-                <TypingLoader />
-              </div>
-            )}
+              {/* Loader durante invio */}
+              {isSending && (
+                <div>
+                  <TypingLoader />
+                </div>
+              )}
 
-            <div ref={endRef} />
-          </div>
+              <div ref={endRef} />
+            </div>
 
-          {/* Quick actions + input */}
-          <div className="border-t border-black/5 bg-white/80 px-3 py-2 space-y-2">
-          
-
-            <div className="flex items-center gap-2">
-              <input
-                className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white/90"
-                placeholder={t.placeholder}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={onKeyDown}
-              />
-                            <button
-                className="ns-sendbtn"
-                onClick={() => send()}
-                disabled={!text.trim() || isSending}
-                aria-label={
-                  locale === 'en' ? 'Send message' : 'Invia messaggio'
-                }
-                title={
-                  locale === 'en'
-                    ? 'Press Enter to send'
-                    : 'Premi Invio per inviare'
-                }
-                type="button"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
+            {/* Input area */}
+            <div className="border-t border-black/5 bg-white/80 px-3 py-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white/90"
+                  placeholder={t.placeholder}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  onKeyDown={onKeyDown}
+                />
+                <button
+                  className="ns-sendbtn"
+                  onClick={() => send()}
+                  disabled={!text.trim() || isSending}
+                  aria-label={
+                    locale === 'en' ? 'Send message' : 'Invia messaggio'
+                  }
+                  title={
+                    locale === 'en'
+                      ? 'Press Enter to send'
+                      : 'Premi Invio per inviare'
+                  }
+                  type="button"
                 >
-                  <path d="M3 11l18-8-8 18-2-8-8-2z" />
-                </svg>
-              </button>
-
-           
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M3 11l18-8-8 18-2-8-8-2z" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

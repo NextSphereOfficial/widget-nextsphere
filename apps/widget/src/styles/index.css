@@ -38,6 +38,20 @@ body {
   overflow-x: hidden;
 }
 
+body.ns-demo-bg {
+  margin: 0;
+  overflow: hidden; /* blocca scroll pagina, si scorre solo dentro la chat */
+  background-color: #020617;
+  background-image: radial-gradient(
+    circle at 85% 85%,
+    #4b5563 0,
+    #020617 55%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+
 body.nx-bg {
   margin: 0;
   /* colore base molto scuro */
