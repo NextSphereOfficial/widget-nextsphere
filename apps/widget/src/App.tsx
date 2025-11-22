@@ -54,6 +54,40 @@ export default function App() {
     }
   }
 
+
+// Hook per ancorare il widget alla tastiera
+useEffect(() => {
+  if (typeof window === "undefined" || !window.visualViewport) return;
+
+  const viewport = window.visualViewport;
+
+  function fixKeyboard() {
+    const chat = document.getElementById("ns-chat-panel");
+    if (!chat) return;
+
+    // quanto spazio la tastiera sta occupando
+    const offset = viewport.height < window.innerHeight
+      ? window.innerHeight - viewport.height
+      : 0;
+
+    // "solleva" la chat della quantità giusta
+    chat.style.transform = `translateY(-${offset}px)`;
+  }
+
+  viewport.addEventListener("resize", fixKeyboard);
+  viewport.addEventListener("scroll", fixKeyboard);
+
+  return () => {
+    viewport.removeEventListener("resize", fixKeyboard);
+    viewport.removeEventListener("scroll", fixKeyboard);
+  };
+}, []);
+
+
+
+
+
+
   return (
   <>
     {!open && (
@@ -65,6 +99,7 @@ export default function App() {
     {open && (
       <div className="fixed inset-0 z-50 flex items-stretch justify-center md:justify-end overflow-hidden">
         <div
+          id="ns-chat-panel" 
           className="
             w-full
             md:w-[380px] md:h-[500px] md:mb-4 md:mr-4
