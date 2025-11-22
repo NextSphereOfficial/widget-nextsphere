@@ -89,7 +89,7 @@ export default function App() {
 
 
   return (
-    <div className="fixed bottom-2 right-2 md:bottom-4 md:right-4 z-50">
+    <div className="fixed inset-x-2 bottom-3 md:inset-x-auto md:bottom-4 md:right-4 z-50 flex justify-end">
 
       {!open && (
         <Launcher
@@ -102,10 +102,11 @@ export default function App() {
       {open && (
         <div
           className="
-              w-[92vw] max-w-[380px]
-              h-[70vh] max-h-[70vh]
-              md:h-[500px] md:max-h-[500px]
-              rounded-2xl shadow-2xl ns-bg-soft border border-black/5 flex flex-col  "
+      w-full max-w-[360px]
+      h-[60vh] max-h-[60vh]
+      md:w-[380px] md:h-[500px] md:max-h-[500px]
+      rounded-2xl shadow-2xl ns-bg-soft border border-black/5 flex flex-col
+    "
 >
 
           {/* Header */}
