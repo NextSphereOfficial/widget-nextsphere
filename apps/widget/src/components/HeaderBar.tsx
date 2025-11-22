@@ -8,16 +8,24 @@ type Props = {
 
 export default function HeaderBar({ locale, onClose }: Props) {
   return (
-    <header className="ns-header" role="banner">
-        <div className="ns-header__brand">
-            <span className="ns-header__icon">
-    <IconLumo size={22} />
-  </span>
-  <div className="ns-header__titles">
-    <strong className="ns-header__title">Lumo</strong>
-    <span className="ns-header__subtitle">by NextSphere</span>
-  </div>
-</div>
+    <header
+      className="
+        ns-header
+        bg-white/95
+        border-b border-black/5
+        backdrop-blur-sm
+      "
+      role="banner"
+    >
+      <div className="ns-header__brand">
+        <span className="ns-header__icon">
+          <IconLumo size={22} />
+        </span>
+        <div className="ns-header__titles">
+          <strong className="ns-header__title">Lumo</strong>
+          <span className="ns-header__subtitle">by NextSphere</span>
+        </div>
+      </div>
 
       <button
         className="ns-header__close"
@@ -37,3 +45,4 @@ export default function HeaderBar({ locale, onClose }: Props) {
     </header>
   );
 }
+
