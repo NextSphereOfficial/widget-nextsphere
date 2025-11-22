@@ -73,11 +73,11 @@ export default function App() {
             rounded-none md:rounded-2xl
           "
           style={{
-            height:
-              'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+            // riduciamo un po' l'altezza così il footer non va sotto la barra di Safari
+            height: 'calc(100vh - 56px)',
           }}
         >
-          {/* HEADER (non sticky, fuori dall’area scrollabile) */}
+          {/* HEADER */}
           <div>
             <HeaderBar
               locale={locale as any}
@@ -113,7 +113,7 @@ export default function App() {
             <div ref={endRef} />
           </div>
 
-          {/* FOOTER (non sticky, niente “buco” sotto) */}
+          {/* FOOTER */}
           <div className="px-3 py-2 bg-white/90 border-t border-black/10 backdrop-blur">
             <div className="flex items-center gap-2">
               <input
