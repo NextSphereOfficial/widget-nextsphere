@@ -74,7 +74,7 @@ export default function App() {
           "
           style={{
             // riduciamo un po' l'altezza così il footer non va sotto la barra di Safari
-            height: 'calc(100vh - 56px)',
+            height: 'calc(100vh - 48px)',
           }}
         >
           {/* HEADER */}
