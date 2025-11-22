@@ -11,7 +11,7 @@ type Msg = { role: 'user' | 'assistant'; content: string };
 
 export default function App() {
   // Contesto iniziale da URL (hotel, room, lang/locale)
-  const ctx = getInitialContext(); // { hotel, room, langParam, locale }
+  const ctx = getInitialContext();
   const locale = useMemo(() => ctx.locale, []);
   const conversationCtx = useMemo(
     () => ({
@@ -22,7 +22,6 @@ export default function App() {
     [],
   );
 
-  // UI strings localizzate
   const t = useMemo(
     () =>
       locale === 'en'
@@ -52,7 +51,6 @@ export default function App() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [msgs]);
 
-  // Invio messaggio con gestione isSending
   async function send(textOverride?: string) {
     const value = (textOverride ?? text).trim();
     if (!value) return;
@@ -100,97 +98,93 @@ export default function App() {
 
       {/* Chat aperta */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center md:justify-end">
-          {/* Overlay cliccabile in futuro se vuoi chiudere cliccando fuori */}
-          {/* <div className="absolute inset-0" onClick={() => setOpen(false)} /> */}
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Wrapper per centrare card su desktop */}
+          <div className="flex h-full w-full items-stretch justify-center md:justify-end">
+            <div
+              className="
+                pt-safe pb-safe
+                w-full h-full
+                md:w-[380px] md:h-[500px]
+                md:mb-4 md:mr-4
+                rounded-none md:rounded-2xl
+                shadow-2xl ns-bg-soft border border-black/5
+                flex flex-col
+              "
+            >
+              {/* Header */}
+              <HeaderBar
+                locale={locale as 'it' | 'en'}
+                onClose={() => setOpen(false)}
+              />
 
-          {/* Container: bottom sheet su mobile, card su desktop */}
-          <div
-            className="
-              relative
-              w-full max-w-full
-              h-[70vh] max-h-[70vh]
-              md:w-[380px] md:h-[500px] md:max-h-[500px]
-              md:mb-4 md:mr-4
-              rounded-t-2xl md:rounded-2xl
-              shadow-2xl ns-bg-soft border border-black/5
-              flex flex-col
-            "
-          >
-            {/* Header */}
-            <HeaderBar
-              locale={locale as 'it' | 'en'}
-              onClose={() => setOpen(false)}
-            />
+              {/* Area messaggi */}
+              <div className="flex-1 overflow-auto p-4 space-y-3 chat-scroll">
+                {!msgs.length && (
+                  <WelcomeCard locale={locale as 'it' | 'en'} />
+                )}
 
-            {/* Area messaggi */}
-            <div className="flex-1 overflow-auto p-4 space-y-3 chat-scroll">
-              {/* WelcomeCard quando non ci sono messaggi */}
-              {!msgs.length && (
-                <WelcomeCard locale={locale as 'it' | 'en'} />
-              )}
-
-              {msgs.map((m, i) => (
-                <div
-                  key={i}
-                  className={`flex ${
-                    m.role === 'user' ? 'justify-end' : 'justify-start'
-                  }`}
-                >
+                {msgs.map((m, i) => (
                   <div
-                    className={
-                      m.role === 'user'
-                        ? 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-black text-white shadow-sm'
-                        : 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-white border border-black/10 shadow-sm'
-                    }
+                    key={i}
+                    className={`flex ${
+                      m.role === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
                   >
-                    {m.content}
+                    <div
+                      className={
+                        m.role === 'user'
+                          ? 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-black text-white shadow-sm'
+                          : 'max-w-[85%] rounded-2xl px-3 py-2 text-sm md:text-[0.95rem] leading-snug bg-white border border-black/10 shadow-sm'
+                      }
+                    >
+                      {m.content}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
 
-              {/* Loader durante invio */}
-              {isSending && (
-                <div>
-                  <TypingLoader />
-                </div>
-              )}
+                {isSending && (
+                  <div>
+                    <TypingLoader />
+                  </div>
+                )}
 
-              <div ref={endRef} />
-            </div>
+                <div ref={endRef} />
+              </div>
 
-            {/* Input area */}
-            <div className="border-t border-black/5 bg-white/80 px-3 py-2 space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white/90"
-                  placeholder={t.placeholder}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  onKeyDown={onKeyDown}
-                />
-                <button
-                  className="ns-sendbtn"
-                  onClick={() => send()}
-                  disabled={!text.trim() || isSending}
-                  aria-label={
-                    locale === 'en' ? 'Send message' : 'Invia messaggio'
-                  }
-                  title={
-                    locale === 'en'
-                      ? 'Press Enter to send'
-                      : 'Premi Invio per inviare'
-                  }
-                  type="button"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
+              {/* Input area */}
+              <div className="border-t border-black/5 bg-white/80 px-3 py-2 space-y-2">
+                <div className="flex items-center gap-2">
+                  <input
+                    className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/10 bg-white/90"
+                    placeholder={t.placeholder}
+                    value={text}
+                    onChange={(e) => setText(e.target.value)}
+                    onKeyDown={onKeyDown}
+                  />
+                  <button
+                    className="ns-sendbtn"
+                    onClick={() => send()}
+                    disabled={!text.trim() || isSending}
+                    aria-label={
+                      locale === 'en' ? 'Send message' : 'Invia messaggio'
+                    }
+                    title={
+                      locale === 'en'
+                        ? 'Press Enter to send'
+                        : 'Premi Invio per inviare'
+                    }
+                    type="button"
                   >
-                    <path d="M3 11l18-8-8 18-2-8-8-2z" />
-                  </svg>
-                </button>
+                    <svg
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path d="M3 11l18-8-8 18-2-8-8-2z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

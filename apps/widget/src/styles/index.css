@@ -51,6 +51,15 @@ body.ns-demo-bg {
   background-attachment: fixed;
 }
 
+/* Padding sicuro per notch / bottom bar iOS */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+/*----------------------------------------*/
 
 body.nx-bg {
   margin: 0;
