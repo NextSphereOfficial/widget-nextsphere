@@ -10,14 +10,16 @@ import Launcher from './components/Launcher';
 type Msg = { role: 'user' | 'assistant'; content: string };
 
 export default function App() {
-  const ctx = getInitialContext();
+    const ctx = getInitialContext();
   const locale = ctx.locale;
 
   const conversationCtx = {
     hotel: ctx.hotel,
     room: ctx.room,
     locale: ctx.locale,
+    mode: ctx.mode,      // 👈 nuovo
   };
+
 
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([]);

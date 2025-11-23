@@ -5,7 +5,9 @@ export type Ctx = {
   hotel?: string;   // legacy: usato come fallback per structureId
   room?: string;
   locale?: string;
+  mode?: 'default' | 'future';   // 👈 nuovo
 };
+
 
 // 🔥 NEW: ora la risposta può contenere sessionId
 export type ChatResponse = { 
@@ -13,50 +15,62 @@ export type ChatResponse = {
   sessionId?: string,
 };
 
-// --- Base URL (senza /api) ---
+// --- Costanti ---
+
+const DEFAULT_TIMEOUT_MS = 15000;
+
+// Inferisci l'API_BASE in modo robusto
+// - se hai una ENV VITE_API_BASE la usi
+// - altrimenti costruisci l'URL in base all'origin corrente
 function resolveApiBase(): string {
-  // Ordine robusto: window → import.meta.env → process.env → fallback
   try {
-    const winVal = (globalThis as any)?.VITE_API_URL;
-    if (typeof winVal === "string" && winVal.trim()) return winVal.replace(/\/+$/, "");
-  } catch {}
+    const win = window as any;
+    const envBase = win?.VITE_API_BASE || import.meta?.env?.VITE_API_BASE;
+    if (typeof envBase === "string" && envBase.trim().length > 0) {
+      return envBase.replace(/\/+$/, "");
+    }
+  } catch {
+    // siamo probabilmente in SSR, fallback dopo
+  }
 
   try {
-    const envVal = (import.meta as any)?.env?.VITE_API_URL;
-    if (typeof envVal === "string" && envVal.trim()) return envVal.replace(/\/+$/, "");
-  } catch {}
+    const loc = window.location;
+    const origin = loc.origin || `${loc.protocol}//${loc.host}`;
+    // 👇 qui punti all'API "ufficiale"
+    return origin.replace(/\/+$/, "") + "/api";
+  } catch {
+    // fallback estremo
+    return "https://api.nextsphere.it";
+  }
+}
 
+// Base URL dell'API:
+// - in dev: viene da .env.local → VITE_API_BASE=http://localhost:8081
+// - in prod: viene da .env o dalle env di Vercel/Render
+const API_BASE =
+  (import.meta as any).env?.VITE_API_BASE || "http://localhost:8081";
+
+
+
+// --- Utils interni ---
+
+/**
+ * Legge un parametro dalla query string (?foo=bar).
+ */
+function getParam(name: string): string | undefined {
+  if (typeof window === "undefined") return undefined;
   try {
-    const procVal = (globalThis as any)?.process?.env?.VITE_API_URL;
-    if (typeof procVal === "string" && procVal.trim()) return procVal.replace(/\/+$/, "");
-  } catch {}
-
-  // Fallback sicuro in prod
-  return "https://api.nextsphere.it";
+    const url = new URL(window.location.href);
+    const val = url.searchParams.get(name);
+    return val || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
-const API_BASE = resolveApiBase();
-const DEFAULT_TIMEOUT_MS = 20_000;
-
-// 🔥 NEW: sessione mantenuta internamente dal widget
-let currentSessionId: string | null = null;
-export function resetChatSession() {
-  currentSessionId = null;
-}
-export function getCurrentSessionId() {
-  return currentSessionId;
-}
-
-// --- Utils ---
-function getParam(name: string): string | null {
-  try { return new URLSearchParams(globalThis.location?.search ?? "").get(name); }
-  catch { return null; }
-}
-
-function isChatResponse(x: unknown): x is ChatResponse {
-  return !!x && typeof (x as any).reply === "string";
-}
-
+/**
+ * Legge in modo sicuro un testo da una Response (max 500 caratteri per sicurezza).
+ */
 async function safeReadText(res: Response): Promise<string> {
   try {
     const txt = await res.text();
@@ -94,6 +108,7 @@ export async function sendChat(
 
   if (room) body.room = room;
   if (ctx.locale) body.lang = ctx.locale;
+  if (ctx.mode) body.mode = ctx.mode;   // 👈 QUI aggiungiamo il mode
 
   // 🔥 NEW: inviamo sessionId se esiste
   body.sessionId = currentSessionId;
@@ -123,21 +138,40 @@ export async function sendChat(
 
   if (!res.ok) {
     const txt = await safeReadText(res);
-    throw new Error(`API ${res.status} ${res.statusText} @ ${url} – ${txt}`);
+    throw new Error(
+      `API error ${res.status} @ ${url} – body: ${txt || "<empty>"}`
+    );
   }
 
-  const data = (await res.json()) as unknown;
+  const json = (await res.json()) as any;
 
-  if (!isChatResponse(data)) {
-    throw new Error(`Invalid response shape: ${JSON.stringify(data).slice(0, 200)}…`);
+  // 🔥 NEW: salviamo eventuale sessionId restituito dall'API
+  if (json?.sessionId && typeof json.sessionId === "string") {
+    currentSessionId = json.sessionId;
   }
 
-  // 🔥 NEW: aggiorniamo la sessione interna al widget
-  if ((data as any).sessionId) {
-    currentSessionId = (data as any).sessionId;
-  }
+  const reply = String(json?.reply ?? "");
 
-  return data;
+  return { reply, sessionId: currentSessionId };
+}
+
+
+// --- Gestione sessionId lato widget ---
+
+let currentSessionId: string | undefined = undefined;
+
+/**
+ * Imposta manualmente una sessione (se vuoi forzarla da fuori).
+ */
+export function setSession(sessionId: string | undefined) {
+  currentSessionId = sessionId;
+}
+
+/**
+ * Restituisce la sessione corrente (se impostata).
+ */
+export function getSession(): string | undefined {
+  return currentSessionId;
 }
 
 /** Alias retro-compatibile per App.tsx */
