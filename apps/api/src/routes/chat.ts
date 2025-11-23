@@ -420,6 +420,12 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         : undefined;
       const lang = body?.lang ? String(body.lang) : undefined;
 
+      const modeRaw = (body?.mode ?? "default") as string;
+      const mode: "default" | "future" =
+      modeRaw === "future" ? "future" : "default";
+
+
+
       if (!message) {
         return reply.code(400).send({
           ok: false,
@@ -428,7 +434,9 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         });
       }
 
-      const defaultStructure = "nextsphere";
+        const defaultStructure =
+        mode === "future" ? "nextsphere-future" : "nextsphere";
+
 
       // 1) Sessione
       const session = await ensureSessionForChat({
@@ -561,45 +569,56 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     }
   });
 
-  // Multistruttura: POST /chat/:structureId
-  app.post("/chat/:structureId", async (req, reply) => {
-    try {
-      const { structureId } = req.params as { structureId: string };
-      const body = (req.body as any) || {};
-      const message = String(body?.message ?? "").trim();
-      const clientSessionId = body?.sessionId
-        ? String(body.sessionId)
-        : undefined;
-      const lang = body?.lang ? String(body.lang) : undefined;
+// Multistruttura: POST /chat/:structureId
+app.post("/chat/:structureId", async (req, reply) => {
+  try {
+    const { structureId } = req.params as { structureId: string };
+    const body = (req.body as any) || {};
+    const message = String(body?.message ?? "").trim();
+    const clientSessionId = body?.sessionId
+      ? String(body.sessionId)
+      : undefined;
+    const lang = body?.lang ? String(body.lang) : undefined;
 
-      if (!message) {
-        return reply.code(400).send({
-          ok: false,
-          error: "Missing message",
-          reply: "Missing message",
-        });
-      }
+    // 👇 nuovo: leggiamo il mode dal body ("default" | "future")
+    const modeRaw = (body?.mode ?? "default") as string;
+    const mode: "default" | "future" =
+      modeRaw === "future" ? "future" : "default";
 
-      // 1) Sessione
-      const session = await ensureSessionForChat({
-        structureId,
-        sessionId: clientSessionId,
-        lang,
+    // 👇 nuovo: se siamo in future, usiamo la struttura "-future"
+    const effectiveStructureId =
+      mode === "future" ? `${structureId}-future` : structureId;
+
+    if (!message) {
+      return reply.code(400).send({
+        ok: false,
+        error: "Missing message",
+        reply: "Missing message",
       });
+    }
 
-      // 💾 2) Salviamo il messaggio dell’utente
-      await saveMessage({
-        sessionId: session.id,
-        role: "user",
-        content: message,
-      });
+    // 1) Sessione
+    const session = await ensureSessionForChat({
+      structureId: effectiveStructureId,
+      sessionId: clientSessionId,
+      lang,
+    });
 
-      // 🧠 3) Motore YAML
-      const out = await runEngine({ structureId, message });
+    // 💾 2) Salviamo il messaggio dell’utente
+    await saveMessage({
+      sessionId: session.id,
+      role: "user",
+      content: message,
+    });
 
-      // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
-      if (out?.meta?.isFallback === true) {
-        const cacheKey = buildLlmCacheKey(structureId, message);
+    // 🧠 3) Motore YAML
+    const out = await runEngine({ structureId: effectiveStructureId, message });
+
+    // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
+    if (out?.meta?.isFallback === true) {
+      const cacheKey = buildLlmCacheKey(effectiveStructureId, message);
+      // ... il resto del blocco rimane identico
+
 
         const cachedRaw: any = cacheGet(cacheKey);
         if (cachedRaw) {

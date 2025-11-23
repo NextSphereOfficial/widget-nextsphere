@@ -1,0 +1,160 @@
+version: 1
+ 
+content:
+
+  welcome:
+    intro: "Benvenuti nella NextSphere Future Lab!"
+    property_overview: ""
+    how_it_works: "Qui proviamo funzionalità sperimentali del concierge."
+
+  house_rules:
+    general: "La nostra regola è: vi auguriamo uno splendido soggiorno con noi :)"
+    noise: "Vi preghiamo di mantenere un tono basso dalle 23:00 alle 08:00."
+    smoking: "E' vietato fumare all'interno dell'appartamento. Nel balcone sono già predisposti dei posacenere"
+    pets: ""
+    visitors: ""
+    kitchen: ""
+    bathroom: ""
+    garbage: ""
+    damage: ""
+    other: ""
+
+  checkin:
+    overview: ""
+    time: "Il check-in è disponibile dalle 15:00."
+    instructions: ""
+    access_codes: ""
+    parking: "L'appartamento ha un posto auto riservato davanti al garage."
+    transport: ""
+
+  checkout:
+    overview: ""
+    time: "Il check-out deve essere fatto entro le 11:00 del giorno di partenza."
+    instructions: ""
+    cleaning: ""
+    keys: "Dopo esservi assicurati di aver recuperato tutte le vostre cose, potete lasciare le chiavi sul tavolo."
+
+  services:
+    wifi:
+      info: "La rete Wi-Fi è SV Apartments e la password è SV12345"
+    cleaning:
+      info: ""
+    amenities:
+      list: ""
+    breakfast:
+      info: ""
+    parking:
+      info: "L'appartamento ha un posto auto riservato davanti al garage."
+    laundry:
+      info: ""
+    transfer:
+      info: ""
+    other:
+      info: ""
+
+  faq:
+    general: ""
+    transport: ""
+    payments: ""
+    booking_changes: ""
+    children: ""
+    pets: ""
+    parking: ""
+    city_tax: ""
+    other: ""
+
+  emergency:
+    contacts: "I contatti di emergenza sono:"
+    medical: "Ambulanza - 118"
+    fire: "Incendio - 115"
+    police: "Polizia - 113"
+    safety: ""
+    other: ""
+
+  contact:
+    host: ""
+    reception: ""
+    support: ""
+
+fields:
+  host_name: ""
+  property_name: ""
+  checkin_time: ""
+  checkout_time: ""
+  wifi_name: ""
+  wifi_password: ""
+  phone_number: ""
+
+synonyms:
+  checkin:
+    - "arrivo"
+    - "come entrare"
+    - "check-in"
+  checkout:
+    - "partenza"
+    - "come uscire"
+    - "check-out"
+  wifi:
+    - "internet"
+    - "rete"
+  rules:
+    - "regole"
+    - "norme"
+
+intents:
+
+  welcome:
+    output:
+      short: "{{content.welcome.intro}}"
+
+  house_rules:
+    output:
+      short: "{{content.house_rules.general}}"
+
+  checkin:
+    output:
+      short: "{{content.checkin.instructions}}"
+
+  checkout:
+    output:
+      short: "{{content.checkout.instructions}}"
+
+  late_checkout:
+    output:
+      short: "{{content.checkout.overview}}"
+
+  wifi:
+    output:
+      short: "{{content.services.wifi.info}}"
+
+  services:
+    output:
+      short: "{{content.services.amenities.list}}"
+
+  parking:
+    output:
+      short: "{{content.services.parking.info}}"
+
+  garbage:
+    output:
+      short: "{{content.house_rules.garbage}}"
+
+  pets:
+    output:
+      short: "{{content.house_rules.pets}}"
+
+  faq:
+    output:
+      short: "{{content.faq.general}}"
+
+  emergency:
+    output:
+      short: "{{content.emergency.contacts}}"
+
+  contact:
+    output:
+      short: "{{content.contact.host}}"
+
+  fallback:
+    output:
+      short: "Mi dispiace, non ho capito bene. Puoi riformulare la domanda?"

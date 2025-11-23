@@ -14,64 +14,29 @@ const APP_NAME = 'NextSphere API';
 const APP_ENV = process.env.NODE_ENV || 'development';
 const COMMIT_SHA =
   process.env.COMMIT_SHA ||
-  process.env.APP_COMMIT ||
-  'unknown';
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  'local-dev';
+
 const BOOT_TIME_ISO = new Date().toISOString();
 
-// -------------------- Fastify + Logger --------------------
+// -------------------- Fastify app --------------------
 
-const app = Fastify({
-  trustProxy: true,
+export const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info',
     transport:
-      APP_ENV === 'development'
+      process.env.NODE_ENV === 'development'
         ? {
             target: 'pino-pretty',
-            options: { singleLine: true, colorize: true },
+            options: {
+              colorize: true,
+              translateTime: 'SYS:standard',
+              ignore: 'pid,hostname',
+            },
           }
         : undefined,
   },
 });
-
-const log = app.log;
-
-// -------------------- Error handler globale --------------------
-
-app.setErrorHandler((err, req, reply) => {
-  log.error({ err }, 'unhandled_error');
-
-  const status =
-    err.statusCode && err.statusCode >= 400 ? err.statusCode : 500;
-
-  reply.status(status).send({
-    error: status === 500 ? 'Internal Server Error' : err.name || 'Error',
-    message: status === 500 ? 'Something went wrong' : err.message,
-    statusCode: status,
-  });
-});
-
-// -------------------- Sentry (opzionale) --------------------
-
-if (process.env.SENTRY_DSN) {
-  Sentry.init({
-    dsn: process.env.SENTRY_DSN,
-    tracesSampleRate: 0.1,
-    environment: APP_ENV,
-  });
-
-  app.addHook('onError', async (request, reply, error) => {
-    Sentry.captureException(error, {
-      tags: {
-        route: (request.routeConfig as any)?.url || request.url,
-      },
-      extra: {
-        method: request.method,
-        requestId: request.id,
-      },
-    });
-  });
-}
 
 // -------------------- Helmet --------------------
 
@@ -90,7 +55,11 @@ await app.register(helmet, {
 
 // Origin di default (widget nextsphere)
 // + eventuali origin extra da env: CORS_ORIGINS="https://foo.com,https://bar.com"
-const defaultOrigins = ['https://widget.nextsphere.it'];
+const defaultOrigins = [
+  'https://widget.nextsphere.it',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
 const extraOrigins =
   (process.env.CORS_ORIGINS || '')
     .split(',')
@@ -121,6 +90,29 @@ await app.register(cors, {
   credentials: true,
 });
 
+// -------------------- Sentry --------------------
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: APP_ENV,
+    release: `${APP_NAME}@${COMMIT_SHA}`,
+    tracesSampleRate: 0.1,
+  });
+
+  app.addHook('onError', async (request, reply, error) => {
+    Sentry.captureException(error, {
+      tags: {
+        route: (request.routeConfig as any)?.url || request.url,
+      },
+      extra: {
+        method: request.method,
+        requestId: request.id,
+      },
+    });
+  });
+}
+
 // -------------------- Plugin di sistema --------------------
 
 await app.register(systemPlugin);
@@ -140,10 +132,16 @@ app.get('/', async () => ({
   endpoints: {
     health: '/health',
     version: '/version',
-    chat: '/chat',
-    structures: '/structures',
+    chat: '/chat/:structureId',
+    debug: '/_debug/chat/:structureId',
   },
 }));
+
+// -------------------- Log routes --------------------
+
+app.ready().then(() => {
+  app.log.info('\n' + app.printRoutes());
+});
 
 // -------------------- Listen --------------------
 
@@ -155,9 +153,9 @@ const host = process.env.API_HOST || '0.0.0.0';
 async function start() {
   try {
     // Snapshot sintetico delle ENV LLM al boot
-    log.info(
+    app.log.info(
       {
-        use_llm: LLM.USE_LLM,
+       use_llm: LLM.USE_LLM,
         llm_provider: LLM.LLM_PROVIDER,
         model: LLM.LLM_MODEL,
         timeout_ms: LLM.LLM_TIMEOUT_MS,
@@ -166,13 +164,10 @@ async function start() {
       'llm_env_loaded',
     );
 
-    await app.ready();
-    log.info('\n' + app.printRoutes());
-
     await app.listen({ port, host });
-    log.info({ host, port }, 'api_listening');
+    app.log.info({ host, port }, 'api_listening');
   } catch (err) {
-    log.error({ err }, 'server_start_failed');
+    app.log.error({ err }, 'server_start_failed');
     process.exit(1);
   }
 }
