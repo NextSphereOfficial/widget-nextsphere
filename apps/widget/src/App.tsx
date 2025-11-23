@@ -78,7 +78,7 @@ export default function App() {
             w-full
             md:w-[380px] md:h-[500px] md:mb-4 md:mr-4
             flex flex-col
-            ns-bg-soft border border-black/10 shadow-2xl
+            bg-transparent
             rounded-none md:rounded-2xl
            
           "

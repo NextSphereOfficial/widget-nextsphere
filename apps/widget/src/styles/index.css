@@ -41,15 +41,14 @@ body {
 body.ns-demo-bg {
   margin: 0;
   overflow: hidden; /* blocca scroll pagina, si scorre solo dentro la chat */
-  background-color: #020617;
-  background-image: radial-gradient(
-    circle at 85% 85%,
-    #4b5563 0,
-    #020617 55%
-  );
+
+  /* 🔄 SFONDO TRASPARENTE (niente gradiente) */
+  background-color: transparent;
+  background-image: none;
   background-repeat: no-repeat;
-  background-attachment: fixed;
+  background-attachment: scroll;
 }
+
 
 /* Padding sicuro per notch / bottom bar iOS */
 .pt-safe {
@@ -61,23 +60,7 @@ body.ns-demo-bg {
 }
 /*----------------------------------------*/
 
-body.nx-bg {
-  margin: 0;
-  /* colore base molto scuro */
-  background-color: #020617; /* slate-950 / quasi nero, ma non pieno */
 
-  /* gradiente morbido, un po' più chiaro verso il basso a destra
-     così il launcher scuro risalta invece di perdersi */
-  background-image:
-    radial-gradient(
-      circle at 85% 85%,
-      #374151 0,   /* slate-700, leggermente più chiaro vicino al launcher */
-      #020617 55%  /* torna scuro verso il resto della pagina */
-    );
-
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-}
 
 /* Solo per la demo/guest page, per evitare zoom iOS sugli input */
 body.ns-demo-bg input {
