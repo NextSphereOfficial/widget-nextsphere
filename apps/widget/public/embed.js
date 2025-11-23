@@ -42,11 +42,11 @@
     // Stili fixed in basso a destra, sopra la pagina
     var s = iframe.style;
     s.position = "fixed";
-    s.bottom = "20px";
-    s.right = "20px";
-    s.width = "380px";
+    s.bottom = "16px";
+    s.right = "12px";
+    s.width = "360px";
+    s.maxWidth = "calc(100% - 24px)"; // 12px di margine per lato
     s.height = "520px";
-    s.maxWidth = "100%";
     s.border = "none";
     s.background = "transparent";
     s.zIndex = "2147483647"; // il più alto possibile

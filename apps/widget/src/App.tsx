@@ -75,13 +75,16 @@ export default function App() {
       <div className="fixed inset-0 z-50 flex items-stretch justify-center md:justify-end overflow-hidden">
         <div
           className="
-            w-full
-            md:w-[380px] md:h-[500px] md:mb-4 md:mr-4
-            flex flex-col
-            bg-transparent
-            rounded-none md:rounded-2xl
-           
-          "
+      w-full
+      md:w-[380px] md:h-[500px] md:mb-4 md:mr-4
+      flex flex-col
+
+      rounded-3xl
+      border border-black/10
+      bg-white/95
+      shadow-[0_18px_40px_rgba(15,23,42,0.18)]
+      backdrop-blur-sm
+    "
           style={{
             // riduciamo un po' l'altezza così il footer non va sotto la barra di Safari
             height: 'calc(100vh - 80px)',
@@ -96,7 +99,8 @@ export default function App() {
           </div>
 
           {/* CHAT AREA SCROLLABILE */}
-          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-3">
+          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-3 bg-white">
+
             {!msgs.length && <WelcomeCard locale={locale as any} />}
 
             {msgs.map((m, i) => (
