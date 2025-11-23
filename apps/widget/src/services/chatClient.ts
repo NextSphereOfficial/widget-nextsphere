@@ -106,12 +106,14 @@ export async function sendChat(
 
   const body: Record<string, any> = { message };
 
-  if (room) body.room = room;
-  if (ctx.locale) body.lang = ctx.locale;
-  if (ctx.mode) body.mode = ctx.mode;   // 👈 QUI aggiungiamo il mode
+    if (ctx.hotel) body.hotel = ctx.hotel;   // 👈 aggiunta
+    if (ctx.room)  body.room  = ctx.room;    // 👈 aggiunta
 
-  // 🔥 NEW: inviamo sessionId se esiste
-  body.sessionId = currentSessionId;
+    if (ctx.locale) body.lang = ctx.locale;
+    if (ctx.mode)   body.mode = ctx.mode;
+
+    body.sessionId = currentSessionId;
+
 
   const controller =
     !opts.signal && typeof AbortController !== "undefined"

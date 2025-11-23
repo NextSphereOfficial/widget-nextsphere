@@ -425,6 +425,9 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       modeRaw === "future" ? "future" : "default";
 
 
+  
+
+
 
       if (!message) {
         return reply.code(400).send({
@@ -437,12 +440,21 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
         const defaultStructure =
         mode === "future" ? "nextsphere-future" : "nextsphere";
 
+            const hotel = body?.hotel ? String(body.hotel) : undefined;
+      const room  = body?.room  ? String(body.room)  : undefined;
+
+      // Se hotel è passato dal widget, lo usiamo come structureId.
+      // Altrimenti manteniamo il comportamento attuale.
+      const structureId = hotel || defaultStructure;
+
 
       // 1) Sessione
       const session = await ensureSessionForChat({
-        structureId: defaultStructure,
+        structureId,
         sessionId: clientSessionId,
         lang,
+          // Se un domani vorrai salvare anche il room nella sessione:
+          // roomId: room,
       });
 
       // 💾 2) Salviamo il messaggio dell’utente
@@ -453,7 +465,7 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       });
 
       // 🧠 3) Motore YAML
-      const out = await runEngine({ structureId: defaultStructure, message });
+      const out = await runEngine({ structureId, message });
 
       // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
       if (out?.meta?.isFallback === true) {
