@@ -39,6 +39,7 @@ intents:
     synonyms:
       - "check in"
       - "check-in"
+      - "checkin"
       - "arrivo"
       - "arrivare"
       - "come entrare"
@@ -56,6 +57,7 @@ intents:
   checkout:
     synonyms:
       - "check out"
+      - "checkout"
       - "check-out"
       - "uscita"
       - "partenza"
@@ -89,11 +91,15 @@ intents:
     keywords:
       - "password"
       - "connessione"
-      - "ssid"
+      - "collegare"
     patterns:
-      - "qual[ea] è la password"
-      - "come mi collego"
-      - "password del wifi"
+      - "password wifi"
+      - "qual è la password"
+      - "mi dai la password"
+      - "come mi collego al wifi"
+      - "non funziona internet"
+      - "non si connette"
+
 
   services:
     synonyms:
@@ -115,14 +121,17 @@ intents:
     synonyms:
       - "parcheggio"
       - "posto auto"
-      - "garage"
+      - "posteggio"
     keywords:
       - "auto"
       - "macchina"
-      - "dove parcheggiare"
+      - "parcheggiare"
     patterns:
-      - "dove posso parcheggiare"
-      - "c'è il parcheggio"
+      - "dove parcheggio"
+      - "c'è parcheggio"
+      - "posso parcheggiare"
+      - "avete un posto auto"
+
 
   garbage:
     synonyms:
