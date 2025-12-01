@@ -7,6 +7,8 @@ import * as Sentry from '@sentry/node';
 import { ENV as LLM } from './core/env.js';
 import systemPlugin from './plugins/system.js';
 import chatRoutes from './routes/chat.js';
+import adminLogsRoutes from './routes/adminLogs.js';
+
 
 // -------------------- Costanti di base --------------------
 
@@ -59,6 +61,10 @@ const defaultOrigins = [
   'https://widget.nextsphere.it',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'https://nextsphere.it',
+  'https://www.nextsphere.it',
+  'https://nextsphere.it/',
+
 ];
 const extraOrigins =
   (process.env.CORS_ORIGINS || '')
@@ -120,6 +126,14 @@ await app.register(systemPlugin);
 // -------------------- Route chat --------------------
 
 await app.register(chatRoutes);
+
+
+// -------------------- Route admin logs --------------------
+
+await app.register(adminLogsRoutes, {
+  prefix: '/admin',
+});
+
 
 // -------------------- Root info --------------------
 
