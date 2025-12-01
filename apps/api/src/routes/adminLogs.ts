@@ -12,6 +12,22 @@ type LogsQuery = {
 };
 
 const adminLogsRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
+
+     app.addHook("preHandler", async (req, reply) => {
+    const adminKey = process.env.ADMIN_KEY;
+
+    if (!adminKey) {
+      app.log.error("ADMIN_KEY non impostata nelle env");
+      return reply.code(500).send({ ok: false, error: "Admin key mancante" });
+    }
+
+    const provided = req.headers["x-ns-admin-key"];
+
+    if (!provided || provided !== adminKey) {
+      return reply.code(401).send({ ok: false, error: "Unauthorized" });
+    }
+  });
+ 
   /**
    * GET /admin/logs/messages
    *
