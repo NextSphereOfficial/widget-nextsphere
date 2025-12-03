@@ -97,22 +97,29 @@ const adminLogsRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       ]);
 
       const items = rows.map((m) => ({
-        id: m.id,
-        sessionId: m.sessionId,
-        role: m.role,
-        content: m.content,
-        createdAt: m.createdAt,
-        session: m.session
-          ? {
-              id: m.session.id,
-              roomId: m.session.roomId,
-              lang: m.session.lang,
-              status: m.session.status,
-              startedAt: m.session.startedAt,
-              closedAt: m.session.closedAt,
-            }
-          : null,
-      }));
+              id: m.id,
+              sessionId: m.sessionId,
+              role: m.role,
+              content: m.content,
+              createdAt: m.createdAt,
+
+             // 🔥 nuovi campi per la dashboard
+             intent: m.intent,
+             source: m.source,
+             isFallback: m.isFallback,
+
+  session: m.session
+    ? {
+        id: m.session.id,
+        roomId: m.session.roomId,
+        lang: m.session.lang,
+        status: m.session.status,
+        startedAt: m.session.startedAt,
+        closedAt: m.session.closedAt,
+      }
+    : null,
+}));
+
 
       const hasNextPage = skip + rows.length < total;
 

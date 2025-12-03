@@ -458,11 +458,16 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       });
 
       // 💾 2) Salviamo il messaggio dell’utente
+     // 💾 2) Salviamo il messaggio dell’utente
       await saveMessage({
         sessionId: session.id,
         role: "user",
         content: message,
-      });
+        source: "user",
+        intent: null,
+        isFallback: null,
+        });
+
 
       // 🧠 3) Motore YAML
       const out = await runEngine({ structureId, message });
@@ -488,13 +493,17 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
             // 💾 salviamo anche la risposta cached come assistant
             const assistantText =
               (cached as any)?.reply ?? (cached as any)?.text ?? "";
-            if (assistantText) {
-              await saveMessage({
-                sessionId: session.id,
-                role: "assistant",
-                content: String(assistantText),
-              });
-            }
+           if (assistantText) {
+  await saveMessage({
+    sessionId: session.id,
+    role: "assistant",
+    content: String(assistantText),
+    intent: out.intent ?? null,
+    source: "llm",
+    isFallback: true,
+  });
+}
+
 
             return reply.code(200).send(resp);
           } catch {
@@ -551,13 +560,17 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
       const replyText = out.text;
 
       // 💾 Salviamo anche la risposta YAML come messaggio assistant
-      if (replyText) {
-        await saveMessage({
-          sessionId: session.id,
-          role: "assistant",
-          content: String(replyText),
-        });
-      }
+    if (replyText) {
+  await saveMessage({
+    sessionId: session.id,
+    role: "assistant",
+    content: String(replyText),
+    intent: out.intent ?? null,
+    source: "yaml",
+    isFallback: false,
+  });
+}
+
 
       return reply
         .header("X-NS-Source", "yaml")
@@ -617,11 +630,16 @@ app.post("/chat/:structureId", async (req, reply) => {
     });
 
     // 💾 2) Salviamo il messaggio dell’utente
+
     await saveMessage({
       sessionId: session.id,
       role: "user",
       content: message,
-    });
+      source: "user",
+      intent: null,
+      isFallback: null,
+      });
+
 
     // 🧠 3) Motore YAML
     const out = await runEngine({ structureId: effectiveStructureId, message });
@@ -646,13 +664,17 @@ app.post("/chat/:structureId", async (req, reply) => {
 
             const assistantText =
               (cached as any)?.reply ?? (cached as any)?.text ?? "";
-            if (assistantText) {
-              await saveMessage({
-                sessionId: session.id,
-                role: "assistant",
-                content: String(assistantText),
-              });
-            }
+           if (assistantText) {
+  await saveMessage({
+    sessionId: session.id,
+    role: "assistant",
+    content: String(assistantText),
+    intent: out.intent ?? null,
+    source: "llm",
+    isFallback: true,
+  });
+}
+
 
             return reply.code(200).send(resp);
           } catch {
@@ -704,12 +726,16 @@ app.post("/chat/:structureId", async (req, reply) => {
       const replyText = out.text;
 
       if (replyText) {
-        await saveMessage({
-          sessionId: session.id,
-          role: "assistant",
-          content: String(replyText),
-        });
-      }
+  await saveMessage({
+    sessionId: session.id,
+    role: "assistant",
+    content: String(replyText),
+    intent: out.intent ?? null,
+    source: "yaml",
+    isFallback: false,
+  });
+}
+
 
       return reply
         .header("X-NS-Source", "yaml")

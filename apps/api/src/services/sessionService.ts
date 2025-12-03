@@ -43,15 +43,23 @@ export async function saveMessage(params: {
   sessionId: string;
   role: "user" | "assistant" | "system";
   content: string;
+  intent?: string | null;
+  source?: string | null;
+  isFallback?: boolean | null;
 }) {
   return prisma.message.create({
     data: {
       sessionId: params.sessionId,
       role: params.role,
       content: params.content,
+      intent: params.intent ?? null,
+      source: params.source ?? null,
+      isFallback:
+        typeof params.isFallback === "boolean" ? params.isFallback : null,
     },
   });
 }
+
 
 // 🔥 NEW: leggi gli ultimi N messaggi della sessione (in ordine cronologico)
 export async function getRecentMessages(params: {

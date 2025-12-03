@@ -119,6 +119,11 @@ model Message {
   content String
 
   createdAt DateTime @default(now())
+
+    // 🔥 Nuovi campi per tracking
+  intent     String?      // es: "wifi_info", "checkin_info"
+  source     String?      // "yaml", "llm", "system"
+  isFallback Boolean?     // true = usato fallback LLM
 }
 
 // -------------------- CONTESTO E EVENTI --------------------
