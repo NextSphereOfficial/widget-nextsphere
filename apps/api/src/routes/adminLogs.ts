@@ -221,47 +221,50 @@ const adminLogsRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     const last7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     try {
-      const [
-        totalSessions,
-        openSessions,
-        closedSessions,
-        totalMessages,
-        messagesLast7,
-        sessionsLast7,
-        userMessages,
-        assistantMessages,
-        systemMessages,
-      ] = await Promise.all([
-        prisma.session.count(),
-        prisma.session.count({ where: { status: "open" } }),
-        prisma.session.count({ where: { status: "closed" } }),
-        prisma.message.count(),
-        prisma.message.count({
-          where: { createdAt: { gte: last7 } },
-        }),
-        prisma.session.count({
-          where: { startedAt: { gte: last7 } },
-        }),
-        prisma.message.count({ where: { role: "user" } }),
-        prisma.message.count({ where: { role: "assistant" } }),
-        prisma.message.count({ where: { role: "system" } }),
-      ]);
+const [
+  totalSessions,
+  openSessions,
+  closedSessions,
+  totalMessages,
+  messagesLast7,
+  sessionsLast7,
+  userMessages,
+  assistantMessages,
+  systemMessages,
+  yamlMessages,
+  llmMessages,
+] = await Promise.all([
+  prisma.session.count(),
+  prisma.session.count({ where: { status: "open" } }),
+  prisma.session.count({ where: { status: "closed" } }),
+  prisma.message.count(),
+  prisma.message.count({ where: { createdAt: { gte: last7 } } }),
+  prisma.session.count({ where: { startedAt: { gte: last7 } } }),
+  prisma.message.count({ where: { role: "user" } }),
+  prisma.message.count({ where: { role: "assistant" } }),
+  prisma.message.count({ where: { role: "system" } }),
+  prisma.message.count({ where: { source: "yaml" } }),
+  prisma.message.count({ where: { source: "llm" } }),
+]);
 
-      return reply.code(200).send({
-        ok: true,
-        data: {
-          generatedAt: now,
-          totalSessions,
-          openSessions,
-          closedSessions,
-          totalMessages,
-          sessionsLast7Days: sessionsLast7,
-          messagesLast7Days: messagesLast7,
-          userMessages,
-          assistantMessages,
-          systemMessages,
-        },
-      });
+return reply.code(200).send({
+  ok: true,
+  data: {
+    generatedAt: now,
+    totalSessions,
+    openSessions,
+    closedSessions,
+    totalMessages,
+    sessionsLast7Days: sessionsLast7,
+    messagesLast7Days: messagesLast7,
+    userMessages,
+    assistantMessages,
+    systemMessages,
+    yamlMessages,
+    llmMessages,
+  },
+});
+
     } catch (err: any) {
       app.log.error({ err }, "admin_stats_overview_error");
 
