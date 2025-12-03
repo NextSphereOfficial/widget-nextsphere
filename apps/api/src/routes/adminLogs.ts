@@ -144,6 +144,73 @@ const adminLogsRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   });
 
   /**
+   * GET /admin/logs/session/:sessionId
+   *
+   * Restituisce l'intera conversazione di una sessione,
+   * con i messaggi ordinati cronologicamente.
+   */
+  app.get("/logs/session/:sessionId", async (req, reply) => {
+    const params = req.params as { sessionId?: string };
+    const sessionId = params.sessionId;
+
+    if (!sessionId) {
+      return reply
+        .code(400)
+        .send({ ok: false, error: "sessionId mancante" });
+    }
+
+    try {
+      const session = await prisma.session.findUnique({
+        where: { id: sessionId },
+      });
+
+      if (!session) {
+        return reply
+          .code(404)
+          .send({ ok: false, error: "Sessione non trovata" });
+      }
+
+      const messages = await prisma.message.findMany({
+        where: { sessionId: sessionId },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return reply.code(200).send({
+        ok: true,
+        data: {
+          session: {
+            id: session.id,
+            roomId: session.roomId,
+            lang: session.lang,
+            status: session.status,
+            startedAt: session.startedAt,
+            closedAt: session.closedAt,
+          },
+          messages: messages.map(function (m) {
+            return {
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              createdAt: m.createdAt,
+              intent: m.intent,
+              source: m.source,
+              isFallback: m.isFallback,
+            };
+          }),
+        },
+      });
+    } catch (err: any) {
+      app.log.error({ err }, "admin_logs_session_error");
+
+      return reply.code(500).send({
+        ok: false,
+        error: err?.message || "Errore inatteso nel recupero della sessione",
+      });
+    }
+  });
+
+
+  /**
    * GET /admin/stats/overview
    *
    * Statistiche aggregate base su Session e Message.
@@ -216,6 +283,9 @@ const adminLogsRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     };
   });
 };
+
+
+
 
 export default adminLogsRoutes;
 export { adminLogsRoutes };
