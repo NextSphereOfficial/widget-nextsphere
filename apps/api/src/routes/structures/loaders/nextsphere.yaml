@@ -1,105 +1,135 @@
-version: 1
+version: 2
+
+meta:
+  structure:
+    id: nextsphere
+    name: "NextSphere Base Template"
+  default_locale: it
+
+############################################################
+# CONTENUTO BASE (GENERALE)
+############################################################
 
 content:
 
   welcome:
-    intro: "Benvenuti in S&V Apartments!"
-    property_overview: "S&V Apartments è un appartamento moderno e confortevole situato a Mestre, a pochi minuti da Venezia. È pensato per offrirvi un punto di partenza pratico e tranquillo per visitare la città e rientrare la sera in un ambiente rilassante."
-    how_it_works: "Sono il vostro concierge virtuale: potete chiedermi informazioni su check-in e check-out, regole della casa, Wi-Fi, parcheggio, trasporti per Venezia, ristoranti in zona ed emergenze."
+    intro: "Ciao! Sono il concierge digitale. Come posso aiutarti oggi?"
 
   house_rules:
-    general: "Vi auguriamo uno splendido soggiorno a S&V Apartments. Vi chiediamo solo di trattare la casa e il vicinato con rispetto, come se fosse casa vostra."
-    noise: "Per rispetto dei vicini, vi chiediamo di mantenere il silenzio dalle 23:00 alle 08:00 e dalle 12:00 alle 15:00. In tutti gli altri orari vi invitiamo comunque a tenere un volume moderato."
-    smoking: "È vietato fumare all’interno dell’appartamento. È consentito fumare solo sul balcone, utilizzando i posacenere messi a disposizione."
-    pets: "Sono ammessi piccoli animali domestici, purché tranquilli e rispettosi degli spazi comuni e dei vicini. Vi chiediamo di non lasciarli mai incustoditi per lunghi periodi e di evitare che sporchino nelle aree comuni."
-    visitors: "L’appartamento è riservato esclusivamente agli ospiti inclusi nella prenotazione. Non sono ammessi visitatori esterni né ospiti aggiuntivi senza autorizzazione preventiva."
-    kitchen: "La cucina è a uso libero degli ospiti. Vi chiediamo di utilizzarla con cura, di non lasciare fornelli accesi quando uscite e di pulire piani di lavoro, stoviglie ed elettrodomestici dopo l’uso."
-    bathroom: "Vi chiediamo di non gettare assorbenti, salviette o altri oggetti nel wc, ma di utilizzare gli appositi cestini. Tenete asciutti i pavimenti quando possibile per evitare scivolamenti."
-    garbage: "La raccolta rifiuti è differenziata in: plastica, carta, umido e indifferenziato. Vi chiediamo di separare correttamente i rifiuti utilizzando i contenitori indicati e di non lasciare sacchi di immondizia in casa o sulle scale."
-    damage: "Se dovesse verificarsi un danno o un malfunzionamento (elettrodomestici, arredi, impianti), vi chiediamo di segnalarcelo il prima possibile così possiamo intervenire rapidamente."
-    other: "Per qualsiasi dubbio sulle regole della casa potete chiedermelo in chat: vi aiuterò a capire cosa è consentito e come gestire al meglio il soggiorno."
+    general: "Ecco alcune regole generali dell'appartamento."
+
+  smoking:
+    general: "In genere non è consentito fumare negli appartamenti."
+
+  pets:
+    general: "La politica sugli animali può variare a seconda della struttura."
+
+  visitors:
+    general: "In alcune strutture non sono ammessi ospiti esterni senza autorizzazione."
+
+  noise:
+    general: "Si raccomanda di rispettare gli orari di silenzio."
+
+  kitchen:
+    general: "La cucina può essere utilizzata in base alle regole della struttura."
+
+  bathroom:
+    general: "Il bagno è condiviso o privato a seconda dell'appartamento."
+
+  garbage:
+    general: "La raccolta dei rifiuti segue le regole locali sulla differenziata."
+
+  damage:
+    general: "Se noti un danno, ti chiediamo di segnalarlo."
+
+  wifi:
+    info: "La rete Wi-Fi e la password saranno fornite dall'host."
+
+  heating:
+    info: "Il riscaldamento è regolabile in base alla stagione."
+
+  air_conditioning:
+    info: "Il condizionatore può avere modalità e limiti di utilizzo specifici."
+
+  water:
+    info: "Normalmente l'erogazione dell'acqua è autonoma e funzionante."
+
+  electricity:
+    info: "In caso di blackout, verifica il quadro elettrico o contatta l'host."
 
   checkin:
-    overview: "Il check-in avviene di persona presso l’appartamento, a Mestre."
-    time: "Il check-in è disponibile dalle 15:00 in poi. Eventuali eccezioni devono essere richieste e confermate in anticipo."
-    instructions: "All’arrivo ci sarà una persona ad accogliervi, mostrarvi l’appartamento e completare le formalità di check-in. Vi chiediamo di comunicarci in anticipo l’orario stimato di arrivo."
-    access_codes: ""
-    parking: "Al vostro arrivo troverete un posto auto riservato davanti al garage dell’appartamento."
-    transport: "Se arrivate con i mezzi pubblici, potete raggiungere Mestre in treno o in autobus e poi spostarvi verso l’appartamento con bus locali o taxi."
+    general: "Le istruzioni di check-in verranno fornite dall'host."
+
+  early_checkin:
+    general: "Il check-in anticipato dipende dalla disponibilità."
+
+  checkin_parking:
+    general: "È possibile che ci sia un parcheggio dedicato per il check-in."
 
   checkout:
-    overview: "Il check-out va effettuato con calma, rispettando gli orari e lasciando l’appartamento in condizioni ordinate."
-    time: "Il check-out deve essere effettuato entro le 10:00 del giorno di partenza, salvo diversi accordi presi in anticipo."
-    instructions: "Prima di lasciare l’appartamento, vi chiediamo di spegnere luci e climatizzazione, chiudere finestre e balconi, verificare di non aver dimenticato oggetti personali e lasciare le chiavi sul tavolo dell’ingresso o nel punto indicato all’arrivo."
-    cleaning: "Non è richiesto effettuare una pulizia profonda, ma vi chiediamo di lasciare la cucina in ordine, buttare i rifiuti nei contenitori previsti e non lasciare piatti sporchi."
-    keys: "Dopo esservi assicurati di aver recuperato tutte le vostre cose, potete lasciare le chiavi sul tavolo dell’ingresso o nel punto indicato al momento del check-in."
+    general: "Le istruzioni di check-out verranno fornite dall'host."
 
-  services:
-    wifi:
-      info: "La rete Wi-Fi dell’appartamento si chiama \"SVApartments\" e la password è \"SV2025\". L’uso è incluso nel soggiorno."
-    cleaning:
-      info: "La pulizia iniziale e finale dell’appartamento è inclusa. Per soggiorni più lunghi è possibile richiedere, se disponibile, una pulizia extra a pagamento."
-    amenities:
-      list: "L’appartamento è dotato di cucina attrezzata, lavatrice, aria condizionata, riscaldamento, TV e connessione Wi-Fi. Sono inclusi biancheria da letto e asciugamani."
-    breakfast:
-      info: "La colazione non è inclusa, ma nelle vicinanze trovate bar e pasticcerie dove poter fare colazione."
-    parking:
-      info: "Avete a disposizione un posto auto riservato davanti al garage dell’appartamento. Vi chiediamo di parcheggiare in modo da non ostacolare l’accesso ad altri box o passi carrai."
-    laundry:
-      info: "In appartamento è presente una lavatrice a vostra disposizione. Per qualsiasi dubbio su modalità d’uso o prodotti consigliati potete chiedere in chat."
-    transfer:
-      info: "Su richiesta possiamo aiutarvi con indicazioni per servizi taxi o transfer privati da e per aeroporti o stazioni."
-    other:
-      info: "Se avete bisogno di un servizio particolare (lettino aggiuntivo, late check-out, esigenze specifiche), scrivetemi in chat e verificheremo insieme la disponibilità."
+  late_checkout:
+    general: "Il late check-out dipende da disponibilità e regolamento della struttura."
 
-  faq:
-    general: "Posso aiutarvi con orari di check-in e check-out, regole della casa, Wi-Fi, parcheggio, trasporti per Venezia, consigli sui dintorni e contatti utili."
-    transport: "Per raggiungere Venezia potete utilizzare il bus 32, che collega Mestre con Venezia in modo diretto. In alternativa potete prendere un treno dalla stazione di Mestre e arrivare a Venezia Santa Lucia in pochi minuti."
-    payments: "Le condizioni di pagamento e le politiche di cancellazione dipendono dalla piattaforma o dall’agenzia con cui avete effettuato la prenotazione. Per dettagli specifici vi consigliamo di controllare la conferma di prenotazione."
-    booking_changes: "Per modifiche alla prenotazione (date, numero di ospiti, richieste particolari) vi chiediamo di contattarci tramite la stessa piattaforma con cui avete prenotato oppure tramite i canali indicati nella conferma."
-    children: "I bambini sono i benvenuti. Vi chiediamo solo di supervisionarli sempre, soprattutto su balconi, scale e vicino a porte e finestre."
-    pets: "Sono ammessi piccoli animali domestici; vi chiediamo però di fare attenzione a rumori, pulizia e rispetto degli spazi comuni. Eventuali danni causati dagli animali potranno essere addebitati."
-    parking: "È disponibile un posto auto riservato davanti al garage dell’appartamento, incluso nel soggiorno."
-    city_tax: "L’imposta di soggiorno, se prevista, viene applicata secondo il regolamento del Comune di Venezia e potrebbe essere richiesta al momento del check-in."
-    other: "Se avete dubbi che non rientrano tra queste domande frequenti, potete scrivermi direttamente in chat: cercherò di aiutarvi nel modo più rapido possibile."
+  checkout_keys:
+    general: "Le modalità di riconsegna delle chiavi possono variare."
+
+  restaurants:
+    generic: "Nelle vicinanze dovresti trovare diverse opzioni per mangiare."
+
+  supermarket:
+    generic: "In zona solitamente è presente almeno un supermercato."
+
+  pharmacy:
+    generic: "Una farmacia si trova di solito nei dintorni dell'appartamento."
+
+  activities:
+    generic: "Ci sono varie attività che potresti valutare in base alla zona."
+
+  parking:
+    general: "La disponibilità di parcheggio dipende dalla struttura."
+
+  transport:
+    general: "I trasporti locali includono bus, tram o metro a seconda della città."
+
+  venice:
+    general: "Per raggiungere Venezia solitamente si utilizzano bus, tram o treni."
 
   emergency:
-    contacts: "In caso di emergenza potete contattare i numeri di soccorso pubblico: Ambulanza 118, Vigili del Fuoco 115, Forze dell’Ordine 112 e Carabinieri 113. Per situazioni non urgenti potete comunque scriverci e vi aiuteremo a orientarvi."
-    medical: "Per emergenze sanitarie chiamate il 118. L’ospedale più vicino è l’Ospedale dell’Angelo, a Mestre."
-    fire: "In caso di incendio o sospetto incendio chiamate immediatamente il 115 (Vigili del Fuoco) e, se possibile, lasciate l’edificio in sicurezza."
-    police: "Per emergenze di polizia potete chiamare il 112. Per situazioni meno urgenti potete contattare le autorità locali o chiedere supporto in chat."
-    safety: "In qualsiasi situazione di pericolo personale o per gli altri, contattate subito i numeri di emergenza e seguite le indicazioni degli operatori."
-    other: "Per dubbi su farmacie di turno, guardia medica o altri servizi urgenti potete chiedere in chat e cercheremo di indicarvi le soluzioni più vicine."
+    general: "In caso di emergenza grave chiama immediatamente il 112."
+
+  emergency_medical:
+    general: "Per emergenze mediche serie chiama il 118 o 112."
+
+  fire:
+    general: "In caso di incendio esci dall'appartamento e chiama il 115."
+
+  safety:
+    general: "Segui le indicazioni di sicurezza fornite dall'host."
 
   contact:
-    host: "Per richieste durante il soggiorno potete contattarci tramite la piattaforma di prenotazione o scrivermi qui in chat. Stiamo lavorando per integrare un contatto WhatsApp Business dedicato, che sarà indicato non appena disponibile."
-    reception: "Non è presente una reception fisica aperta 24 ore su 24, ma cerchiamo di rispondere ai messaggi il prima possibile."
-    support: "Per qualsiasi problema riguardante l’appartamento, l’accesso o i servizi, segnalatelo in chat: vi aiuterò a inoltrare la richiesta alla persona di riferimento."
+    generic: "Puoi contattare l'host tramite i recapiti forniti."
 
-  fields:
-    host_name: "S&V Apartments"
-    property_name: "S&V Apartments"
-    checkin_time: "dalle 15:00 in poi"
-    checkout_time: "entro le 10:00"
-    wifi_name: "SVApartments"
-    wifi_password: "SV2025"
-    phone_number: ""
+  reception:
+    generic: "Non tutte le strutture dispongono di una reception fisica."
 
-  synonyms:
-    checkin:
-      - "arrivo"
-      - "come entrare"
-      - "check-in"
-    checkout:
-      - "partenza"
-      - "come uscire"
-      - "check-out"
-    wifi:
-      - "internet"
-      - "rete"
-    rules:
-      - "regole"
-      - "norme"
+  support:
+    generic: "Sono qui per aiutarti. Descrivimi il problema."
+
+  help_issue:
+    generic: "Puoi segnalarmi qualsiasi problema e ti assisterò."
+
+  faq:
+    generic: "Ecco alcune domande frequenti che possono esserti utili."
+
+  fallback:
+    text: "Mi dispiace, non ho capito bene. Puoi riformulare la domanda?"
+
+
+############################################################
+# INTENTS → OUTPUT
+############################################################
 
 intents:
 
@@ -107,54 +137,162 @@ intents:
     output:
       short: "{{content.welcome.intro}}"
 
+  fallback:
+    output:
+      short: "{{content.fallback.text}}"
+
+
+  # CHECK-IN / CHECK-OUT
+  checkin:
+    output:
+      short: "{{content.checkin.general}}"
+
+  early_checkin:
+    output:
+      short: "{{content.early_checkin.general}}"
+
+  checkin_parking:
+    output:
+      short: "{{content.checkin_parking.general}}"
+
+  checkout:
+    output:
+      short: "{{content.checkout.general}}"
+
+  late_checkout:
+    output:
+      short: "{{content.late_checkout.general}}"
+
+  checkout_keys:
+    output:
+      short: "{{content.checkout_keys.general}}"
+
+
+  # DOTAZIONI
+  wifi:
+    output:
+      short: "{{content.wifi.info}}"
+
+  heating:
+    output:
+      short: "{{content.heating.info}}"
+
+  air_conditioning:
+    output:
+      short: "{{content.air_conditioning.info}}"
+
+  water:
+    output:
+      short: "{{content.water.info}}"
+
+  electricity:
+    output:
+      short: "{{content.electricity.info}}"
+
+
+  # REGOLE
   house_rules:
     output:
       short: "{{content.house_rules.general}}"
 
-  checkin:
+  smoking:
     output:
-      short: "{{content.checkin.instructions}}"
-
-  checkout:
-    output:
-      short: "{{content.checkout.instructions}}"
-
-  late_checkout:
-    output:
-      short: "{{content.checkout.overview}}"
-
-  wifi:
-    output:
-      short: "{{content.services.wifi.info}}"
-
-  services:
-    output:
-      short: "{{content.services.amenities.list}}"
-
-  parking:
-    output:
-      short: "{{content.services.parking.info}}"
-
-  garbage:
-    output:
-      short: "{{content.house_rules.garbage}}"
+      short: "{{content.smoking.general}}"
 
   pets:
     output:
-      short: "{{content.house_rules.pets}}"
+      short: "{{content.pets.general}}"
+
+  visitors:
+    output:
+      short: "{{content.visitors.general}}"
+
+  noise:
+    output:
+      short: "{{content.noise.general}}"
+
+  kitchen_rules:
+    output:
+      short: "{{content.kitchen.general}}"
+
+  bathroom_rules:
+    output:
+      short: "{{content.bathroom.general}}"
+
+  garbage:
+    output:
+      short: "{{content.garbage.general}}"
+
+  damage_reporting:
+    output:
+      short: "{{content.damage.general}}"
+
+
+  # SERVIZI ESTERNI
+  restaurants:
+    output:
+      short: "{{content.restaurants.generic}}"
+
+  supermarket:
+    output:
+      short: "{{content.supermarket.generic}}"
+
+  pharmacy:
+    output:
+      short: "{{content.pharmacy.generic}}"
+
+  what_to_do:
+    output:
+      short: "{{content.activities.generic}}"
+
+  parking:
+    output:
+      short: "{{content.parking.general}}"
+
+  transport:
+    output:
+      short: "{{content.transport.general}}"
+
+  transport_to_venice:
+    output:
+      short: "{{content.venice.general}}"
+
+
+  # EMERGENZE
+  emergency:
+    output:
+      short: "{{content.emergency.general}}"
+
+  emergency_medical:
+    output:
+      short: "{{content.emergency_medical.general}}"
+
+  fire_emergency:
+    output:
+      short: "{{content.fire.general}}"
+
+  safety_advice:
+    output:
+      short: "{{content.safety.general}}"
+
+
+  # SUPPORTO & CONTATTI
+  contact:
+    output:
+      short: "{{content.contact.generic}}"
+
+  reception:
+    output:
+      short: "{{content.reception.generic}}"
+
+  support:
+    output:
+      short: "{{content.support.generic}}"
+
+  help_issue:
+    output:
+      short: "{{content.help_issue.generic}}"
 
   faq:
     output:
-      short: "{{content.faq.general}}"
-
-  emergency:
-    output:
-      short: "{{content.emergency.contacts}}"
-
-  contact:
-    output:
-      short: "{{content.contact.host}}"
-
-  fallback:
-    output:
-      short: "Mi dispiace, non ho capito bene. Puoi riformulare la domanda?"
+      short: "{{content.faq.generic}}"

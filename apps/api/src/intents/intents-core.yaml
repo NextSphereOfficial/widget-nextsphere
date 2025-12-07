@@ -1,574 +1,352 @@
-version: 1
+version: 2
 
 intents:
 
-  # --------------------------------------------------
-  #  WELCOME / PRESENTAZIONE
-  # --------------------------------------------------
+  ############################################################
+  # A. META / SYSTEM
+  ############################################################
+
   welcome:
-    synonyms:
-      - "ciao"
-      - "buongiorno"
-      - "buonasera"
-      - "salve"
-      - "hey"
-      - "benvenuto"
-    keywords:
-      - "chi sei"
-      - "cosa sei"
-      - "presentati"
-      - "concierge"
-    patterns:
-      - "chi sei"
-      - "cos'è questo servizio"
-      - "presentati"
-      - "come funziona questo assistente"
+    synonyms: ["benvenuto", "ciao", "salve"]
+    keywords: ["welcome"]
+    patterns: ["ciao", "buongiorno", "buonasera", "salve"]
 
-  # --------------------------------------------------
-  #  REGOLE DELLA CASA
-  # --------------------------------------------------
-  house_rules:
-    synonyms:
-      - "regole"
-      - "norme"
-      - "rules"
-    keywords:
-      - "casa"
-      - "appartamento"
-      - "comportarsi"
-    patterns:
-      - "quali sono le regole"
-      - "regole della casa"
-      - "ci sono regole"
-      - "cosa posso fare"
-      - "cosa non posso fare"
+  fallback:
+    synonyms: []
+    keywords: []
+    patterns: []
 
-  smoking:
-    synonyms:
-      - "fumo"
-      - "fumare"
-    keywords:
-      - "fumare"
-      - "sigarette"
-      - "balcone"
-    patterns:
-      - "posso fumare"
-      - "è permesso fumare"
-      - "posso fumare sul balcone"
-      - "posso fumare in casa"
 
-  pets:
-    synonyms:
-      - "animali"
-      - "cani"
-      - "gatti"
-    keywords:
-      - "animali"
-      - "cane"
-      - "gatto"
-      - "pet"
-    patterns:
-      - "posso portare animali"
-      - "sono ammessi animali"
-      - "posso portare il cane"
-      - "posso portare il gatto"
+  ############################################################
+  # B. CHECK-IN / CHECK-OUT
+  ############################################################
 
-  visitors:
-    synonyms:
-      - "ospiti"
-      - "visitatori"
-    keywords:
-      - "ospiti esterni"
-      - "visitatori"
-      - "inviti"
-    patterns:
-      - "posso portare ospiti"
-      - "posso invitare amici"
-      - "posso far venire qualcuno"
-      - "sono ammessi ospiti esterni"
-
-  noise:
-    synonyms:
-      - "rumore"
-      - "silenzio"
-    keywords:
-      - "orari silenzio"
-      - "rumori"
-      - "disturbo"
-    patterns:
-      - "ci sono orari di silenzio"
-      - "posso fare rumore"
-      - "fino a che ora posso fare rumore"
-
-  kitchen_rules:
-    synonyms:
-      - "cucina"
-    keywords:
-      - "fornelli"
-      - "angolo cottura"
-      - "cucinare"
-    patterns:
-      - "posso usare la cucina"
-      - "ci sono regole per la cucina"
-      - "come funziona la cucina"
-
-  bathroom_rules:
-    synonyms:
-      - "bagno"
-      - "wc"
-    keywords:
-      - "wc"
-      - "toilette"
-      - "scarico"
-      - "getto"
-    patterns:
-      - "cosa posso buttare nel wc"
-      - "ci sono regole per il bagno"
-      - "posso buttare assorbenti nel wc"
-
-  garbage:
-    synonyms:
-      - "rifiuti"
-      - "spazzatura"
-      - "immondizia"
-    keywords:
-      - "differenziata"
-      - "buttare"
-      - "raccolta"
-    patterns:
-      - "come funziona la spazzatura"
-      - "come si fa la raccolta differenziata"
-      - "dove butto la spazzatura"
-      - "dove butto i rifiuti"
-
-  damage_reporting:
-    synonyms:
-      - "danni"
-      - "rotto"
-    keywords:
-      - "ho rotto"
-      - "si è rotto"
-      - "danneggiato"
-    patterns:
-      - "ho rotto qualcosa"
-      - "si è rotto qualcosa"
-      - "come segnalo un danno"
-
-  # --------------------------------------------------
-  #  CHECK-IN / CHECK-OUT
-  # --------------------------------------------------
   checkin:
-    synonyms:
-      - "check in"
-      - "check-in"
-      - "arrivo"
-    keywords:
-      - "entrare"
-      - "accesso"
-      - "orario"
-    patterns:
-      - "come funziona il check in"
-      - "come entro"
-      - "a che ora posso entrare"
-      - "orario di arrivo"
-      - "istruzioni check in"
+    synonyms: ["checkin", "check-in"]
+    keywords: ["checkin", "check-in", "arrivo", "entrata"]
+    patterns: [
+      "come funziona il check in",
+      "a che ora posso entrare",
+      "quando posso arrivare",
+      "orario check in"
+    ]
+    priority: 1
 
   early_checkin:
-    synonyms:
-      - "early check in"
-      - "check in anticipato"
-    keywords:
-      - "anticipare"
-      - "prima"
-    patterns:
-      - "posso entrare prima"
-      - "posso fare il check in prima"
-      - "arrivo in anticipo"
-      - "posso arrivare prima dell'orario"
+    synonyms: ["early checkin", "checkin anticipato"]
+    keywords: ["early", "anticipato"]
+    patterns: [
+      "posso fare check in prima",
+      "posso entrare prima",
+      "arrivare prima è possibile"
+    ]
 
   checkin_parking:
-    synonyms:
-      - "parcheggio check in"
-    keywords:
-      - "parcheggiare prima"
-      - "auto"
-    patterns:
-      - "posso parcheggiare prima del check in"
-      - "posso lasciare l'auto prima dell'orario"
-      - "parcheggio prima di entrare"
+    synonyms: ["parcheggio check in"]
+    keywords: ["parcheggio checkin", "parking checkin"]
+    patterns: [
+      "posso parcheggiare prima del check in",
+      "dove parcheggio per il check in"
+    ]
 
   checkout:
-    synonyms:
-      - "check out"
-      - "check-out"
-      - "partenza"
-    keywords:
-      - "uscire"
-      - "lasciare"
-    patterns:
-      - "come funziona il check out"
-      - "a che ora devo lasciare l'appartamento"
-      - "quando devo fare il check out"
-      - "come devo lasciare la casa"
+    synonyms: ["checkout", "check-out"]
+    keywords: ["checkout", "partenza"]
+    patterns: [
+      "a che ora devo lasciare",
+      "quando devo uscire",
+      "orario check out"
+    ]
 
   late_checkout:
-    synonyms:
-      - "late check out"
-      - "checkout tardivo"
-    keywords:
-      - "più tardi"
-      - "ritardare"
-      - "uscire dopo"
-    patterns:
-      - "posso fare il check out più tardi"
-      - "posso uscire più tardi"
-      - "posso restare di più"
+    synonyms: ["late checkout", "late check-out"]
+    keywords: ["late", "checkout tardi"]
+    patterns: [
+      "posso lasciare più tardi",
+      "è possibile il late checkout",
+      "vorrei uscire dopo"
+    ]
     priority: 2
 
   checkout_keys:
-    synonyms:
-      - "chiavi checkout"
-    keywords:
-      - "chiavi"
-      - "dove lascio le chiavi"
-    patterns:
-      - "dove lascio le chiavi"
-      - "come devo lasciare le chiavi"
-      - "cosa faccio con le chiavi alla partenza"
+    synonyms: ["chiavi checkout"]
+    keywords: ["chiavi", "consegna chiavi"]
+    patterns: [
+      "dove lascio le chiavi",
+      "come devo lasciare le chiavi"
+    ]
 
-  # --------------------------------------------------
-  #  WIFI / INTERNET
-  # --------------------------------------------------
+
+  ############################################################
+  # C. DOTAZIONI / PROBLEMI TECNICI
+  ############################################################
+
   wifi:
-    synonyms:
-      - "wifi"
-      - "wi-fi"
-      - "internet"
-      - "rete"
-    keywords:
-      - "password"
-      - "connessione"
-      - "collegare"
-    patterns:
-      - "password wifi"
-      - "qual è la password"
-      - "mi dai la password"
-      - "come mi collego al wifi"
-      - "non funziona internet"
-      - "non si connette"
+    synonyms: ["wifi", "wi-fi", "internet", "rete"]
+    keywords: ["password wifi", "rete wifi", "internet"]
+    patterns: [
+      "qual è la password del wifi",
+      "come mi collego al wifi",
+      "non funziona internet"
+    ]
 
-  # --------------------------------------------------
-  #  SERVIZI (cleaning, amenities, breakfast, laundry, transfer…)
-  # --------------------------------------------------
-  services:
-    synonyms:
-      - "servizi"
-    keywords:
-      - "servizio"
-      - "cosa offrite"
-    patterns:
-      - "quali servizi offrite"
-      - "cosa è incluso"
-      - "che servizi ci sono"
+  heating:
+    synonyms: ["riscaldamento", "termosifoni"]
+    keywords: ["riscaldamento"]
+    patterns: [
+      "non funziona il riscaldamento",
+      "come si accende il riscaldamento",
+      "fa freddo"
+    ]
 
-  cleaning_service:
-    synonyms:
-      - "pulizie"
-    keywords:
-      - "pulizia"
-      - "extra"
-    patterns:
-      - "posso avere pulizie extra"
-      - "fate pulizie aggiuntive"
-      - "pulizia extra"
-      - "come funzionano le pulizie"
+  air_conditioning:
+    synonyms: ["aria condizionata", "condizionatore", "clima"]
+    keywords: ["clima", "aria condizionata"]
+    patterns: [
+      "non funziona il clima",
+      "come accendo il condizionatore",
+      "fa caldo"
+    ]
 
-  amenities:
-    synonyms:
-      - "dotazioni"
-      - "servizi in appartamento"
-    keywords:
-      - "cosa c'è in casa"
-      - "cosa trovo in appartamento"
-    patterns:
-      - "cosa c'è in appartamento"
-      - "quali dotazioni avete"
-      - "cosa trovo in casa"
+  water:
+    synonyms: ["acqua"]
+    keywords: ["acqua", "rubinetto"]
+    patterns: [
+      "non esce acqua",
+      "acqua fredda",
+      "l'acqua non funziona"
+    ]
 
-  breakfast:
-    synonyms:
-      - "colazione"
-    keywords:
-      - "breakfast"
-      - "mangiare la mattina"
-    patterns:
-      - "la colazione è inclusa"
-      - "fate colazione"
-      - "c'è la colazione"
+  electricity:
+    synonyms: ["corrente", "elettricità", "luce"]
+    keywords: ["energia", "elettricità"]
+    patterns: [
+      "è saltata la corrente",
+      "non funziona la luce",
+      "problema elettrico"
+    ]
 
-  laundry:
-    synonyms:
-      - "lavatrice"
-      - "lavanderia"
-    keywords:
-      - "lavare i vestiti"
-      - "lavaggio"
-    patterns:
-      - "c'è la lavatrice"
-      - "posso lavare i vestiti"
-      - "avete un servizio lavanderia"
 
-  transfer:
-    synonyms:
-      - "transfer"
-      - "navetta"
-    keywords:
-      - "aeroporto"
-      - "stazione"
-      - "trasferimento"
-    patterns:
-      - "avete un transfer per l'aeroporto"
-      - "potete organizzare un transfer"
-      - "c'è una navetta"
-      - "transfer da e per l'aeroporto"
+  ############################################################
+  # D. REGOLE DELLA CASA
+  ############################################################
 
-  other_services:
-    synonyms:
-      - "altri servizi"
-    keywords:
-      - "extra"
-      - "aggiuntivi"
-    patterns:
-      - "avete altri servizi"
-      - "ci sono servizi extra"
-      - "offrite altri servizi"
+  house_rules:
+    synonyms: ["regole", "regolamento"]
+    keywords: ["regole casa", "regole appartamento"]
+    patterns: [
+      "quali sono le regole",
+      "cosa posso fare",
+      "cosa non posso fare",
+      "regole dell'appartamento"
+    ]
 
-  # --------------------------------------------------
-  #  PARCHEGGIO
-  # --------------------------------------------------
-  parking:
-    synonyms:
-      - "parcheggio"
-      - "posto auto"
-      - "posteggio"
-    keywords:
-      - "auto"
-      - "macchina"
-      - "parcheggiare"
-    patterns:
-      - "dove parcheggio"
-      - "c'è parcheggio"
-      - "posso parcheggiare"
-      - "avete un posto auto"
-      - "è incluso il parcheggio"
+  smoking:
+    synonyms: ["fumo", "fumare"]
+    keywords: ["fumare"]
+    patterns: [
+      "posso fumare",
+      "è permesso fumare"
+    ]
 
-  # --------------------------------------------------
-  #  TRASPORTI / VENEZIA
-  # --------------------------------------------------
-  transport_to_venice:
-    synonyms:
-      - "venezia"
-    keywords:
-      - "bus"
-      - "mezzi"
-      - "raggiungere"
-    patterns:
-      - "come vado a venezia"
-      - "bus per venezia"
-      - "come raggiungo venezia"
-      - "mezzi per venezia"
-      - "andare a venezia"
+  pets:
+    synonyms: ["animali", "cani", "gatti"]
+    keywords: ["animali ammessi", "pet"]
+    patterns: [
+      "posso portare un cane",
+      "accettate animali"
+    ]
 
-  transport:
-    synonyms:
-      - "trasporti"
-    keywords:
-      - "bus"
-      - "mezzi pubblici"
-      - "taxi"
-    patterns:
-      - "come mi sposto"
-      - "come posso muovermi"
-      - "ci sono autobus"
-      - "posso prendere un taxi"
-      - "come raggiungo la stazione"
+  visitors:
+    synonyms: ["ospiti", "visitatori"]
+    keywords: ["ospiti esterni"]
+    patterns: [
+      "posso avere ospiti",
+      "posso far entrare amici"
+    ]
 
-  # --------------------------------------------------
-  #  DINTORNI: RISTORANTI, SUPERMERCATO, FARMACIA, COSA FARE
-  # --------------------------------------------------
+  noise:
+    synonyms: ["rumore", "silenzio"]
+    keywords: ["orari silenzio"]
+    patterns: [
+      "a che ora bisogna fare silenzio",
+      "regole rumore"
+    ]
+
+  kitchen_rules:
+    synonyms: ["cucina"]
+    keywords: ["regole cucina"]
+    patterns: [
+      "come funziona la cucina",
+      "posso usare la cucina"
+    ]
+
+  bathroom_rules:
+    synonyms: ["bagno"]
+    keywords: ["regole bagno"]
+    patterns: [
+      "come funziona il bagno",
+      "regole del bagno"
+    ]
+
+  garbage:
+    synonyms: ["spazzatura", "immondizia", "rifiuti"]
+    keywords: ["raccolta differenziata", "bidoni"]
+    patterns: [
+      "dove butto la spazzatura",
+      "come funziona la raccolta"
+    ]
+
+  damage_reporting:
+    synonyms: ["danni", "problemi"]
+    keywords: ["segnalare danni"]
+    patterns: [
+      "ho rotto qualcosa",
+      "devo segnalare un danno"
+    ]
+
+
+  ############################################################
+  # E. SERVIZI ESTERNI / INDICAZIONI
+  ############################################################
+
   restaurants:
-    synonyms:
-      - "ristoranti"
-      - "dove mangiare"
-    keywords:
-      - "cena"
-      - "pranzo"
-      - "mangiare"
-    patterns:
-      - "dove posso mangiare"
-      - "ristoranti consigliati"
-      - "dove cenare"
-      - "mi consigli un ristorante"
+    synonyms: ["ristoranti", "mangiare"]
+    keywords: ["ristorante", "cibo"]
+    patterns: [
+      "dove posso mangiare",
+      "ristoranti consigliati"
+    ]
 
   supermarket:
-    synonyms:
-      - "supermercato"
-      - "supermarket"
-    keywords:
-      - "spesa"
-      - "cibo"
-    patterns:
-      - "dove faccio la spesa"
-      - "supermercato vicino"
-      - "c'è un supermercato"
-      - "dove posso comprare da mangiare"
+    synonyms: ["supermercato", "spesa"]
+    keywords: ["market", "spesa"]
+    patterns: [
+      "dove trovo un supermercato",
+      "devo fare la spesa"
+    ]
 
   pharmacy:
-    synonyms:
-      - "farmacia"
-    keywords:
-      - "medicinali"
-      - "medicine"
-    patterns:
-      - "c'è una farmacia vicino"
-      - "dove trovo una farmacia"
-      - "farmacia aperta"
-      - "farmacia più vicina"
+    synonyms: ["farmacia"]
+    keywords: ["medicinali"]
+    patterns: [
+      "c'è una farmacia",
+      "farmacia vicina"
+    ]
 
   what_to_do:
-    synonyms:
-      - "cosa fare"
-      - "cosa vedere"
-    keywords:
-      - "attività"
-      - "attrazioni"
-      - "visitare"
-    patterns:
-      - "cosa posso fare qui"
-      - "cosa c'è da vedere"
-      - "cosa posso visitare"
-      - "attrazioni in zona"
+    synonyms: ["consigli", "cosa fare"]
+    keywords: ["attività", "visitare"]
+    patterns: [
+      "cosa posso visitare",
+      "cosa fare nei dintorni"
+    ]
 
-  # --------------------------------------------------
-  #  EMERGENZE
-  # --------------------------------------------------
+  parking:
+    synonyms: ["parcheggio", "parking"]
+    keywords: ["posto auto"]
+    patterns: [
+      "dove parcheggio",
+      "c'è un parcheggio"
+    ]
+
+  transport:
+    synonyms: ["trasporti", "bus", "mezzi"]
+    keywords: ["bus", "tram", "trasporto"]
+    patterns: [
+      "come mi muovo",
+      "come arrivo al centro"
+    ]
+
+  transport_to_venice:
+    synonyms: ["venezia", "andare venezia"]
+    keywords: ["vaporetto", "bus venezia"]
+    patterns: [
+      "come vado a venezia",
+      "trasporti per venezia"
+    ]
+
+
+  ############################################################
+  # F. EMERGENZE
+  ############################################################
+
   emergency:
-    synonyms:
-      - "emergenza"
-      - "aiuto"
-    keywords:
-      - "ambulanza"
-      - "polizia"
-      - "carabinieri"
-    patterns:
-      - "chi chiamo in caso di emergenza"
-      - "numero di emergenza"
-      - "ho un'emergenza"
-      - "ho bisogno di aiuto urgente"
+    synonyms: ["emergenza", "emergenza generale"]
+    keywords: ["soccorso", "aiuto urgente"]
+    patterns: [
+      "aiuto è un'emergenza",
+      "ho bisogno di aiuto subito",
+      "c'è un'emergenza"
+    ]
+    priority: 3
 
   emergency_medical:
-    synonyms:
-      - "emergenza medica"
-    keywords:
-      - "ospedale"
-      - "pronto soccorso"
-      - "medico"
-    patterns:
-      - "ho bisogno di un medico"
-      - "dove si trova l'ospedale"
-      - "dove vado per il pronto soccorso"
+    synonyms: ["emergenza medica"]
+    keywords: ["medico", "ambulanza"]
+    patterns: [
+      "ho bisogno di un medico",
+      "serve un'ambulanza",
+      "sta male qualcuno"
+    ]
 
   fire_emergency:
-    synonyms:
-      - "incendio"
-    keywords:
-      - "fuoco"
-      - "vigili del fuoco"
-    patterns:
-      - "c'è un incendio"
-      - "cosa faccio se c'è un incendio"
-      - "devo chiamare i vigili del fuoco"
+    synonyms: ["incendio", "fuoco"]
+    keywords: ["incendio"]
+    patterns: [
+      "c'è un incendio",
+      "odore di bruciato"
+    ]
 
   safety_advice:
-    synonyms:
-      - "sicurezza"
-    keywords:
-      - "pericolo"
-      - "mi sento in pericolo"
-    patterns:
-      - "mi sento in pericolo"
-      - "cosa devo fare se non mi sento al sicuro"
-      - "indicazioni di sicurezza"
+    synonyms: ["sicurezza"]
+    keywords: ["sicuro", "pericolo"]
+    patterns: [
+      "è sicuro",
+      "consigli di sicurezza"
+    ]
 
-  # --------------------------------------------------
-  #  CONTATTI / SUPPORTO
-  # --------------------------------------------------
+
+  ############################################################
+  # G. SUPPORTO / CONTATTI
+  ############################################################
+
   contact:
-    synonyms:
-      - "contatto"
-      - "contatti"
-    keywords:
-      - "numero"
-      - "telefono"
-      - "scrivere"
-    patterns:
-      - "come vi contatto"
-      - "contattare l'host"
-      - "posso parlare con qualcuno"
-      - "avete un numero di telefono"
+    synonyms: ["contatti"]
+    keywords: ["numero", "telefono", "contattare"]
+    patterns: [
+      "come vi contatto",
+      "avete un numero"
+    ]
 
   reception:
-    synonyms:
-      - "reception"
-    keywords:
-      - "portineria"
-      - "banco"
-    patterns:
-      - "avete una reception"
-      - "c'è una reception"
-      - "posso venire in reception"
+    synonyms: ["reception"]
+    keywords: ["accoglienza"]
+    patterns: [
+      "c'è una reception",
+      "reception aperta"
+    ]
 
   support:
-    synonyms:
-      - "supporto"
-      - "assistenza"
-    keywords:
-      - "problema"
-      - "aiuto"
-    patterns:
-      - "ho bisogno di assistenza"
-      - "serve supporto"
-      - "mi aiutate con un problema"
+    synonyms: ["aiuto", "supporto"]
+    keywords: ["assistenza"]
+    patterns: [
+      "ho bisogno di aiuto",
+      "potete aiutarmi"
+    ]
 
   help_issue:
-    synonyms:
-      - "problema"
-    keywords:
-      - "non funziona"
-      - "si è rotto"
-    patterns:
-      - "c'è un problema"
-      - "qualcosa non funziona"
-      - "si è rotto qualcosa"
-      - "ho un problema in appartamento"
+    synonyms: ["problema", "issue"]
+    keywords: ["problema appartamento"]
+    patterns: [
+      "c'è un problema",
+      "ho un problema"
+    ]
 
-  # --------------------------------------------------
-  #  FAQ GENERALI
-  # --------------------------------------------------
   faq:
-    synonyms:
-      - "faq"
-      - "domande frequenti"
-    keywords:
-      - "informazioni"
-      - "aiuto"
-    patterns:
-      - "ho bisogno di informazioni"
-      - "domande frequenti"
-      - "mi spieghi come funziona tutto"
-
-  # --------------------------------------------------
-  #  FALLBACK
-  # --------------------------------------------------
-  fallback:
-    patterns: []
+    synonyms: ["faq", "domande frequenti"]
+    keywords: ["informazioni"]
+    patterns: [
+      "domande frequenti",
+      "info generali"
+    ]
