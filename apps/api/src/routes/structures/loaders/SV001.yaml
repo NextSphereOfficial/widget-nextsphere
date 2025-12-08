@@ -13,11 +13,11 @@ meta:
 content:
 
   welcome:
-    intro: "Ciao! Benvenuto in appartamento 😊 Se hai bisogno di qualcosa, sono qui per aiutarti."
+    intro: "Ciao! Benvenuto in S&V Apartments 😊 Se hai bisogno di qualcosa, sono qui per aiutarti."
 
   house_rules:
     general: "Ecco le regole principali dell'appartamento: rispetta i vicini, mantieni pulito e segnala eventuali problemi."
-    smoking: "Non è permesso fumare all’interno dell’appartamento."
+    smoking: "Non è permesso fumare all’interno dell’appartamento. In balcone è predisposto un posacenere."
     pets: "Sono ammessi solo animali di piccole dimensioni e tranquilli."
     visitors: "Non sono ammessi ospiti esterni non registrati."
     quiet_hours: "Si prega di mantenere il silenzio dopo le 22:00."
@@ -25,8 +25,8 @@ content:
     damage: "Se noti un danno o qualcosa che non funziona, avvisaci il prima possibile."
 
   wifi:
-    ssid: "La rete Wi-Fi è indicata nel foglio informazioni in casa."
-    password: "La password è riportata nella stessa pagina, vicino alla TV."
+    ssid: "La rete Wi-Fi si chiama S&V."
+    password: "La password è: sv2026!."
     info: "Se la connessione non funziona, prova a spegnere e riaccendere il modem (dietro la TV)."
 
   checkin:
@@ -52,15 +52,15 @@ content:
     electricity: "Il quadro elettrico è vicino all’ingresso, sulla sinistra."
 
   local_area:
-    supermarket: "Il supermercato più vicino è a 5 minuti a piedi."
+    supermarket: "Il supermercato più vicino è appena fuori la via, dall'altro lato della strada."
     pharmacy: "La farmacia si trova in fondo alla strada, sulla sinistra."
-    restaurants: "In zona ci sono vari ristoranti e pizzerie raggiungibili a piedi."
+    restaurants: "Nel centro di Mestre ti consigliamo: Barroca - per un aperitivo con ottimi panini. Fermenti - ristorante e pizzeria. Ca di Mat per un buon drink."
     activities: "A Mestre puoi trovare parchi, cinema e aree pedonali. Per Venezia c’è il tram."
     parking: "Il parcheggio in strada è gratuito nelle zone bianche. Controlla i cartelli prima di lasciare l’auto."
     transport: "Il tram T1 per Venezia si prende a pochi minuti a piedi. Passa ogni 7–10 minuti."
 
   venice:
-    info: "Per andare a Venezia, prendi il tram T1 o l’autobus 4L. I biglietti si acquistano nei tabaccai o alle macchinette ACTV."
+    info: "Per andare a Venezia, prendi il tram T1 o l’autobus 4L. I biglietti si acquistano nei tabaccai, alle macchinette ACTV o tramite app."
 
   emergencies:
     general: "In caso di emergenza chiama il 112."
