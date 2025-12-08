@@ -16,32 +16,61 @@ export function runtimeResetIfNewDay() {
   }
 }
 
-export function cacheGet(key: string): { hit: boolean; value?: string } {
-  const e = cache.get(key);
-  if (!e) return { hit: false };
-  if (Date.now() > e.expiresAt) { cache.delete(key); return { hit: false }; }
-  return { hit: true, value: e.value };
+export function cacheGet(key: string): string | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
 }
 
-export function cacheSet(key: string, value: string, ttlSec = ENV.CACHE_TTL_S) {
-  cache.set(key, { value, expiresAt: Date.now() + ttlSec * 1000 });
+export function cacheSet(key: string, value: string, ttlMs = 5 * 60 * 1000) {
+  cache.set(key, {
+    value,
+    expiresAt: Date.now() + ttlMs,
+  });
 }
 
-export function canCallLlm(): { ok: boolean; reason?: string } {
+export function canCallLlm() {
   runtimeResetIfNewDay();
-  if (!ENV.USE_LLM) return { ok: false, reason: 'USE_LLM=false' };
-  if (consecutiveLlmFailures >= ENV.CB_FAILURE_THRESHOLD) return { ok: false, reason: 'circuit_open' };
-  if (spentTodayEur >= ENV.LLM_DAILY_BUDGET_EUR) return { ok: false, reason: 'budget_reached' };
-  return { ok: true };
+
+  if (!ENV.USE_LLM) {
+    return { ok: false as const, reason: 'disabled' as const };
+  }
+
+  if (spentTodayEur >= ENV.LLM_DAILY_BUDGET_EUR) {
+    return { ok: false as const, reason: 'budget' as const };
+  }
+
+  if (consecutiveLlmFailures >= ENV.CB_FAILURE_THRESHOLD) {
+    return { ok: false as const, reason: 'circuit-breaker' as const };
+  }
+
+  return { ok: true as const };
 }
 
-export function registerLlmSuccess(costEur: number) {
+/**
+ * Registra un successo della chiamata LLM.
+ * costEur è opzionale: se non lo passi, non incrementa il budget.
+ */
+export function registerLlmSuccess(costEur?: number) {
   consecutiveLlmFailures = 0;
-  spentTodayEur += Math.max(0, costEur || 0);
+  if (typeof costEur === 'number' && isFinite(costEur) && costEur > 0) {
+    spentTodayEur += costEur;
+  }
 }
 
-export function registerLlmFailure() {
+/**
+ * Registra un fallimento della chiamata LLM.
+ * costEur è opzionale: se non lo passi, non incrementa il budget.
+ */
+export function registerLlmFailure(costEur?: number) {
   consecutiveLlmFailures++;
+  if (typeof costEur === 'number' && isFinite(costEur) && costEur > 0) {
+    spentTodayEur += costEur;
+  }
 }
 
 export function getRuntimeSnapshot() {
