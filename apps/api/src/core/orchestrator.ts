@@ -182,16 +182,27 @@ export async function orchestrateChat(
     .filter(Boolean)
     .join('\n');
 
-  // 🔥 Costruiamo il testo per l'LLM usando SOLO il contesto più recente
-  const lastUserMessage =
-    yamlProbe?.history && Array.isArray(yamlProbe.history)
-      ? [...yamlProbe.history].reverse().find((m) => m.role === 'user')?.content ?? ''
-      : '';
+    // 🔥 Costruiamo il testo per l'LLM usando SOLO il contesto più recente
+  let lastUserMessage = '';
+  let lastAssistantMessage = '';
 
-  const lastAssistantMessage =
-    yamlProbe?.history && Array.isArray(yamlProbe.history)
-      ? [...yamlProbe.history].reverse().find((m) => m.role === 'assistant')?.content ?? ''
-      : '';
+  // Se yamlProbe.history è presente, prova a prendere da lì
+  if (yamlProbe?.history && Array.isArray(yamlProbe.history)) {
+    lastUserMessage =
+      [...yamlProbe.history].reverse().find((m) => m.role === 'user')?.content || '';
+    lastAssistantMessage =
+      [...yamlProbe.history].reverse().find((m) => m.role === 'assistant')?.content || '';
+  }
+
+  // Se manca l'ultima risposta dell’assistente, usa la risposta YAML corrente (replyText)
+  if (!lastAssistantMessage && yamlProbe?.replyText) {
+    lastAssistantMessage = yamlProbe.replyText;
+  }
+
+  // L'ultima domanda dell’utente, in mancanza di meglio, è SEMPRE l'userMessage attuale
+  if (!lastUserMessage) {
+    lastUserMessage = userMessage;
+  }
 
   const finalUserMessage = `
 CONTESTO RECENTE DELLA CONVERSAZIONE:
