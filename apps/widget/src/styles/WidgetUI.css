@@ -200,8 +200,11 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 0.75rem 0 0.6rem;
-  background: #fff;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+    background: #ffffff;
+  border-bottom: 1px solid var(--ns-warm-border);
+
+  /* niente border-radius qui, ci pensa la shell */
+  border-radius: 0;
 }
 .ns-header__brand {
   display: flex;
@@ -373,6 +376,7 @@
   background: rgba(255, 251, 247, 0.96);
   box-shadow: var(--ns-widget-shadow);
   backdrop-filter: blur(10px);
+  overflow: hidden; /* fondamentale: fa seguire gli angoli anche a header/body/footer */
 }
 
 /* area scrollabile dei messaggi */
