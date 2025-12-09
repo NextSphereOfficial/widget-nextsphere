@@ -14,6 +14,18 @@
   --ns-text-muted: #6b7280; /* zinc-500 */
   --ns-bg-ghost: rgba(0,0,0,.03);
   --ns-border-ghost: rgba(0,0,0,.10);
+
+  --ns-warm-bg: #fff8f2;           /* sfondo area chat */
+  --ns-warm-card: #fffbf7;         /* card/welcome */
+  --ns-warm-border: #e7d7c5;       /* bordi soft */
+  --ns-warm-user: #5b3521;         /* bubble utente */
+  --ns-warm-user-text: #fff7ec;    /* testo nella bubble utente */
+  --ns-warm-bot: #ffffff;          /* bubble bot */
+  --ns-warm-bot-border: #e7d7c5;   /* bordo bubble bot */
+
+  --ns-widget-shadow: 0 18px 40px rgba(84, 45, 24, 0.3);
+  --ns-launcher-shadow: 0 10px 25px rgba(84, 45, 24, 0.35);
+
 }
 
 .dark {
@@ -261,6 +273,8 @@
   border-radius: 999px;
   object-fit: cover; /* riempie bene il cerchio */
   display: block;
+  box-shadow: var(--ns-launcher-shadow);
+  background-color: transparent; /* il logo PNG gestisce il gradiente */
 }
 
 
@@ -341,3 +355,55 @@
 }
 
 
+/* ===========================
+   Widget warm shell + chat
+   =========================== */
+
+.ns-widget-shell {
+  border-radius: 22px;
+  border: 1px solid var(--ns-warm-border);
+  background: rgba(255, 251, 247, 0.96);
+  box-shadow: var(--ns-widget-shadow);
+  backdrop-filter: blur(10px);
+}
+
+/* area scrollabile dei messaggi */
+.ns-chat-area {
+  background: var(--ns-warm-bg);
+}
+
+/* footer (input) */
+.ns-widget-footer {
+  background: rgba(255, 250, 246, 0.96);
+  border-top: 1px solid var(--ns-warm-border);
+}
+
+/* input testo */
+.ns-widget-footer input {
+  border-color: var(--ns-warm-border);
+}
+
+/* ===========================
+   Bubbles
+   =========================== */
+
+.ns-bubble {
+  max-width: 80%;
+  border-radius: 18px;
+  padding: 8px 12px;
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.35;
+}
+
+/* Utente: bolla scura calda */
+.ns-bubble--user {
+  background: var(--ns-warm-user);
+  color: var(--ns-warm-user-text);
+}
+
+/* Bot: bolla chiara con bordo caldo */
+.ns-bubble--bot {
+  background: var(--ns-warm-bot);
+  border: 1px solid var(--ns-warm-bot-border);
+  box-shadow: 0 4px 14px rgba(84, 45, 24, 0.12);
+}

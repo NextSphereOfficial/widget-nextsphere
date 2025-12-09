@@ -74,16 +74,11 @@ export default function App() {
     {open && (
       <div className="fixed inset-0 z-50 flex items-stretch justify-center md:justify-end overflow-hidden">
         <div
-          className="
+   className="
+      ns-widget-shell
       w-full
       md:w-[380px] md:h-[500px] md:mb-4 md:mr-4
       flex flex-col
-
-      rounded-3xl
-      border border-black/10
-      bg-white/95
-      shadow-[0_18px_40px_rgba(15,23,42,0.18)]
-      backdrop-blur-sm
     "
           style={{
             // riduciamo un po' l'altezza così il footer non va sotto la barra di Safari
@@ -99,28 +94,30 @@ export default function App() {
           </div>
 
           {/* CHAT AREA SCROLLABILE */}
-          <div className="flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-3 bg-white">
+          <div className="ns-chat-area flex-1 overflow-y-auto px-4 pt-3 pb-4 space-y-3">
+
 
             {!msgs.length && <WelcomeCard locale={locale as any} />}
 
             {msgs.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${
-                  m.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                <div
-                  className={
-                    m.role === 'user'
-                      ? 'max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-black text-white'
-                      : 'max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-white border border-black/10'
-                  }
-                >
-                  {m.content}
-                </div>
-              </div>
-            ))}
+             <div
+              key={i}
+                 className={`flex ${
+                          m.role === 'user' ? 'justify-end' : 'justify-start'
+                          }`}
+                             >
+                           <div
+                                className={
+                                  m.role === 'user'
+                                               ? 'ns-bubble ns-bubble--user'
+                                                : 'ns-bubble ns-bubble--bot'
+                                          }
+    >
+      {m.content}
+    </div>
+  </div>
+))}
+
 
             {isSending && <TypingLoader />}
 
@@ -128,11 +125,11 @@ export default function App() {
           </div>
 
           {/* FOOTER */}
-          <div className="px-3 py-2 bg-white/90 border-t border-black/10 backdrop-blur">
-            <div className="flex items-center gap-2">
-              <input
-                className="flex-1 rounded-xl border border-black/10 px-3 py-2 text-[16px] bg-white"
-                placeholder="Scrivi un messaggio..."
+          <div className="ns-widget-footer px-3 py-2 backdrop-blur">
+              <div className="flex items-center gap-2">
+                  <input
+                    className="flex-1 rounded-xl border px-3 py-2 text-[16px] bg-white"
+                    placeholder="Scrivi un messaggio..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={onKeyDown}
