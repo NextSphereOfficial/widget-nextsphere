@@ -248,43 +248,46 @@
 /* ============================================================
    LAUNCHER (CHAT CHIUSA)
    ============================================================ */
+/* ============================================================
+   LAUNCHER (RESET TOTALE)
+   ============================================================ */
+
 .ns-launcher {
-  padding: 0 !important;
-  border: none !important;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
   border-radius: 999px;
-  background: transparent !important;
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
   box-shadow: none;
+  outline: none;
 }
 
 .ns-launcher:hover {
-  transform: translateY(-3px);
+  transform: none;
   box-shadow: none;
 }
+
+/* wrapper tondo */
 .ns-launcher__icon {
   width: 100%;
   height: 100%;
   border-radius: 999px;
-  padding: 0 !important;
-  background: transparent; /* niente disco bianco sotto */
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-  overflow: hidden;        /* il logo riempie il cerchio senza sbordare */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
 }
 
-/* Assicuriamoci che il PNG riempia davvero il cerchio */
+/* il PNG riempie completamente il wrapper */
 .ns-launcher__icon img {
+  display: block;
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  display: block;
-  object-fit: cover;
 }
 
 
