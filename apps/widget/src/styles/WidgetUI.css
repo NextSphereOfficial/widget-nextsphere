@@ -246,21 +246,16 @@
    LAUNCHER (CHAT CHIUSA)
    ============================================================ */
 .ns-launcher {
-  position: fixed;
-  right: 18px;
-  bottom: 18px;
   width: 56px;
   height: 56px;
-  border: none;
-  padding: 0;
   border-radius: 999px;
+  padding: 0;
+  border: none;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: transparent; /* lasciamo che sia il logo a fare da sfondo */
-  box-shadow: 0 10px 24px rgba(0,0,0,0.22);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  z-index: 60;
+  cursor: pointer;
 }
 
 .ns-launcher:hover {
@@ -268,13 +263,23 @@
   box-shadow: none;
 }
 .ns-launcher__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  background: transparent; /* niente disco bianco sotto */
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+  overflow: hidden;        /* il logo riempie il cerchio senza sbordare */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Assicuriamoci che il PNG riempia davvero il cerchio */
+.ns-launcher__icon img {
   width: 100%;
   height: 100%;
   border-radius: 999px;
-  object-fit: cover; /* riempie bene il cerchio */
   display: block;
-  box-shadow: var(--ns-launcher-shadow);
-  background-color: transparent; /* il logo PNG gestisce il gradiente */
 }
 
 
@@ -369,7 +374,7 @@
 
 /* area scrollabile dei messaggi */
 .ns-chat-area {
-  background: var(--ns-warm-bg);
+  background: #ffffff;
 }
 
 /* footer (input) */
