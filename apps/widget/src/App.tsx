@@ -72,7 +72,7 @@ export default function App() {
     )}
 
     {open && (
-      <div className="fixed inset-0 z-50 flex items-stretch justify-center md:justify-end overflow-hidden">
+      <div className="fixed inset-0 z-50 flex items-end justify-center md:justify-end overflow-hidden">
         <div
    className="
       ns-widget-shell
