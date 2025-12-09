@@ -18,8 +18,8 @@
   --ns-warm-bg: #fff8f2;           /* sfondo area chat */
   --ns-warm-card: #fffbf7;         /* card/welcome */
   --ns-warm-border: #e7d7c5;       /* bordi soft */
-  --ns-warm-user: #e28b34da;         /* bubble utente */
-  --ns-warm-user-text: #e2dbd0;    /* testo nella bubble utente */
+  --ns-warm-user: #d8ad82da;         /* bubble utente */
+  --ns-warm-user-text: #181107;    /* testo nella bubble utente */
   --ns-warm-bot: #ffffff;          /* bubble bot */
   --ns-warm-bot-border: #e7d7c5;   /* bordo bubble bot */
 
