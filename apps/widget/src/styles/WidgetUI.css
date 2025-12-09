@@ -375,7 +375,7 @@
   border-radius: 22px;
   border: 1px solid var(--ns-warm-border);
   background: #ffffff;
-  box-shadow: var(--ns-widget-shadow);
+  box-shadow: none;
   backdrop-filter: blur(10px);
   overflow: hidden; /* importantissimo per avere angoli puliti */
 }
@@ -394,9 +394,10 @@
 }
 
 
-/* input testo */
+/* forza il bordo dell’input a caldo, non nero */
 .ns-widget-footer input {
-  border-color: var(--ns-warm-border);
+  border: 1px solid var(--ns-warm-border) !important;
+  outline: none;
 }
 
 /* ===========================
