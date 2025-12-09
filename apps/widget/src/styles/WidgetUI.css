@@ -23,7 +23,7 @@
   --ns-warm-bot: #ffffff;          /* bubble bot */
   --ns-warm-bot-border: #e7d7c5;   /* bordo bubble bot */
 
-  --ns-widget-shadow: 0 18px 40px rgba(84, 45, 24, 0.3);
+  --ns-widget-shadow: 10px 24px 32px rgba(84, 45, 24, 0.18);
   --ns-launcher-shadow: 0 10px 25px rgba(84, 45, 24, 0.35);
 
 }
@@ -371,13 +371,15 @@
    =========================== */
 
 .ns-widget-shell {
+  position: relative;
   border-radius: 22px;
   border: 1px solid var(--ns-warm-border);
-  background: rgba(255, 251, 247, 0.96);
+  background: #ffffff;
   box-shadow: var(--ns-widget-shadow);
   backdrop-filter: blur(10px);
-  overflow: hidden; /* fondamentale: fa seguire gli angoli anche a header/body/footer */
+  overflow: hidden; /* importantissimo per avere angoli puliti */
 }
+
 
 /* area scrollabile dei messaggi */
 .ns-chat-area {
@@ -386,9 +388,11 @@
 
 /* footer (input) */
 .ns-widget-footer {
-  background: rgba(255, 250, 246, 0.96);
-  border-top: 1px solid var(--ns-warm-border);
+  background: #ffffff;        /* come la shell */
+  border-top: none;           /* togliamo il bordo interno */
+  backdrop-filter: blur(10px);
 }
+
 
 /* input testo */
 .ns-widget-footer input {
