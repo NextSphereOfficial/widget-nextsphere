@@ -258,7 +258,7 @@
   align-items: center;
   justify-content: center;
 
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  box-shadow: none;
 }
 
 .ns-launcher:hover {
@@ -266,8 +266,8 @@
   box-shadow: none;
 }
 .ns-launcher__icon {
-  width: 56px;
-  height: 56px;
+  width: 100%;
+  height: 100%;
   border-radius: 999px;
   padding: 0 !important;
   background: transparent; /* niente disco bianco sotto */
@@ -284,7 +284,9 @@
   height: 100%;
   border-radius: inherit;
   display: block;
+  object-fit: cover;
 }
+
 
 
 
@@ -342,9 +344,6 @@
   }
 }
 
-
-/* v8.6.1 sanity check */
-.ns-launcher { width: 60px; height: 60px; }
 
 
 /* ============================================================
