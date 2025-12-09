@@ -200,8 +200,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 0.75rem 0 0.6rem;
-    background: #ffffff;
-  border-bottom: 1px solid var(--ns-warm-border);
+  background: #ffffff;
+  border-bottom: 1px solid rgba(190, 160, 130, 0.28);
+
 
   /* niente border-radius qui, ci pensa la shell */
   border-radius: 0;
@@ -282,10 +283,13 @@
 
   box-shadow: none;
   outline: none;
+  
+  transition: transform 0.15s ease;
+
 }
 
 .ns-launcher:hover {
-  transform: none;
+  transform: scale(0.96);
   box-shadow: none;
 }
 
@@ -403,10 +407,16 @@
 
 /* footer (input) */
 .ns-widget-footer {
-  background: #ffffff;        /* come la shell */
-  border-top: none;           /* togliamo il bordo interno */
+  background: linear-gradient(
+    to top,
+    rgba(255,255,255,1) 0%,
+    rgba(255,255,255,0.96) 45%,
+    rgba(255,255,255,0.94) 100%
+  );
+  border-top: none;
   backdrop-filter: blur(10px);
 }
+
 
 
 /* forza il bordo dell’input a caldo, non nero */
@@ -425,18 +435,33 @@
   padding: 8px 12px;
   font-size: 0.875rem; /* 14px */
   line-height: 1.35;
+
+  /* animazione ingresso morbida */
+  opacity: 0;
+  transform: translateY(4px);
+  animation: fadeInBubble 0.25s ease forwards;
 }
+@keyframes fadeInBubble {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 /* Utente: bolla scura calda */
 .ns-bubble--user {
   background: var(--ns-warm-user);
   color: var(--ns-warm-user-text);
   border: 1px solid var(--ns-warm-border);
+  border-radius: 20px; /* leggermente più morbida */
 }
 
 /* Bot: bolla chiara con bordo caldo */
 .ns-bubble--bot {
   background: var(--ns-warm-bot);
   border: 1px solid var(--ns-warm-bot-border);
-  box-shadow: 0 4px 14px rgba(84, 45, 24, 0.12);
+  box-shadow:
+    inset 0 0 0.5px rgba(255,255,255,0.9),
+    0 4px 14px rgba(84, 45, 24, 0.12);
 }
