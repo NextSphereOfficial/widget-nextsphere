@@ -27,11 +27,9 @@ content:
   wifi:
     ssid: "La rete Wi-Fi si chiama S&V."
     password: "La password è: sv2026!."
-    info: "Se la connessione non funziona, prova a spegnere e riaccendere il modem (dietro la TV)."
 
   checkin:
     instructions: "Il check-in viene fatto di persona. L’orario standard è dalle 15:00 in poi."
-    manual: "Una persona dello staff ti accoglierà per il check-in."
 
   early_checkin:
     info: "Il check-in anticipato non è garantito. Contattaci per verificare la disponibilità."

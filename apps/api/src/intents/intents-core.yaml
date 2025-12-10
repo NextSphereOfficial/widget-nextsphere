@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 
 intents:
 
@@ -7,11 +7,13 @@ intents:
   ############################################################
 
   welcome:
-    synonyms: ["benvenuto", "ciao", "salve"]
+    category: system
+    synonyms: ["benvenuto", "ciao", "salve", "hey"]
     keywords: ["welcome"]
     patterns: ["ciao", "buongiorno", "buonasera", "salve"]
 
   fallback:
+    category: system
     synonyms: []
     keywords: []
     patterns: []
@@ -22,6 +24,7 @@ intents:
   ############################################################
 
   checkin:
+    category: checkin
     synonyms: ["checkin", "check-in"]
     keywords: ["checkin", "check-in", "arrivo", "entrata"]
     patterns: [
@@ -33,6 +36,7 @@ intents:
     priority: 1
 
   early_checkin:
+    category: checkin
     synonyms: ["early checkin", "checkin anticipato"]
     keywords: ["early", "anticipato"]
     patterns: [
@@ -42,6 +46,7 @@ intents:
     ]
 
   checkin_parking:
+    category: checkin
     synonyms: ["parcheggio check in"]
     keywords: ["parcheggio checkin", "parking checkin"]
     patterns: [
@@ -50,30 +55,32 @@ intents:
     ]
 
   checkout:
+    category: checkout
     synonyms: ["checkout", "check-out"]
     keywords: ["checkout", "partenza"]
     patterns: [
       "a che ora devo lasciare",
-      "quando devo uscire",
-      "orario check out"
+      "quando devo andare via",
+      "orario checkout"
     ]
 
   late_checkout:
-    synonyms: ["late checkout", "late check-out"]
-    keywords: ["late", "checkout tardi"]
+    category: checkout
+    synonyms: ["late checkout", "check out posticipato"]
+    keywords: ["tardi", "posticipato"]
     patterns: [
-      "posso lasciare più tardi",
-      "è possibile il late checkout",
-      "vorrei uscire dopo"
+      "posso fare checkout più tardi",
+      "posso andare via dopo",
+      "posso restare di più"
     ]
-    priority: 2
 
   checkout_keys:
-    synonyms: ["chiavi checkout"]
-    keywords: ["chiavi", "consegna chiavi"]
+    category: checkout
+    synonyms: ["chiavi checkout", "consegna chiavi"]
+    keywords: ["lasciare chiavi", "dove lascio le chiavi"]
     patterns: [
       "dove lascio le chiavi",
-      "come devo lasciare le chiavi"
+      "come funziona per le chiavi"
     ]
 
 
@@ -82,15 +89,17 @@ intents:
   ############################################################
 
   wifi:
-    synonyms: ["wifi", "wi-fi", "internet", "rete"]
-    keywords: ["password wifi", "rete wifi", "internet"]
+    category: utilities
+    synonyms: ["wifi", "internet", "wi-fi"]
+    keywords: ["password wifi", "rete wifi", "internet non funziona"]
     patterns: [
       "qual è la password del wifi",
-      "come mi collego al wifi",
+      "come si chiama la rete wifi",
       "non funziona internet"
     ]
 
   heating:
+    category: utilities
     synonyms: ["riscaldamento", "termosifoni"]
     keywords: ["riscaldamento"]
     patterns: [
@@ -100,6 +109,7 @@ intents:
     ]
 
   air_conditioning:
+    category: utilities
     synonyms: ["aria condizionata", "condizionatore", "clima"]
     keywords: ["clima", "aria condizionata"]
     patterns: [
@@ -109,6 +119,7 @@ intents:
     ]
 
   water:
+    category: utilities
     synonyms: ["acqua"]
     keywords: ["acqua", "rubinetto"]
     patterns: [
@@ -118,12 +129,12 @@ intents:
     ]
 
   electricity:
-    synonyms: ["corrente", "elettricità", "luce"]
-    keywords: ["energia", "elettricità"]
+    category: utilities
+    synonyms: ["elettricità", "corrente"]
+    keywords: ["luce", "corrente"]
     patterns: [
-      "è saltata la corrente",
-      "non funziona la luce",
-      "problema elettrico"
+      "non c'è corrente",
+      "si è staccata la luce"
     ]
 
 
@@ -132,24 +143,25 @@ intents:
   ############################################################
 
   house_rules:
-    synonyms: ["regole", "regolamento"]
-    keywords: ["regole casa", "regole appartamento"]
+    category: rules
+    synonyms: ["regole", "regole casa"]
+    keywords: ["regolamento", "norme"]
     patterns: [
       "quali sono le regole",
-      "cosa posso fare",
-      "cosa non posso fare",
-      "regole dell'appartamento"
+      "regole della casa"
     ]
 
   smoking:
-    synonyms: ["fumo", "fumare"]
-    keywords: ["fumare"]
+    category: rules
+    synonyms: ["fumare", "fumo"]
+    keywords: ["sigaretta", "sigarette"]
     patterns: [
       "posso fumare",
-      "è permesso fumare"
+      "è vietato fumare"
     ]
 
   pets:
+    category: rules
     synonyms: ["animali", "cani", "gatti"]
     keywords: ["animali ammessi", "pet"]
     patterns: [
@@ -158,6 +170,7 @@ intents:
     ]
 
   visitors:
+    category: rules
     synonyms: ["ospiti", "visitatori"]
     keywords: ["ospiti esterni"]
     patterns: [
@@ -166,6 +179,7 @@ intents:
     ]
 
   noise:
+    category: rules
     synonyms: ["rumore", "silenzio"]
     keywords: ["orari silenzio"]
     patterns: [
@@ -174,6 +188,7 @@ intents:
     ]
 
   kitchen_rules:
+    category: rules
     synonyms: ["cucina"]
     keywords: ["regole cucina"]
     patterns: [
@@ -182,6 +197,7 @@ intents:
     ]
 
   bathroom_rules:
+    category: rules
     synonyms: ["bagno"]
     keywords: ["regole bagno"]
     patterns: [
@@ -190,6 +206,7 @@ intents:
     ]
 
   garbage:
+    category: rules
     synonyms: ["spazzatura", "immondizia", "rifiuti"]
     keywords: ["raccolta differenziata", "bidoni"]
     patterns: [
@@ -198,6 +215,7 @@ intents:
     ]
 
   damage_reporting:
+    category: support
     synonyms: ["danni", "problemi"]
     keywords: ["segnalare danni"]
     patterns: [
@@ -211,6 +229,7 @@ intents:
   ############################################################
 
   restaurants:
+    category: local_area
     synonyms: ["ristoranti", "mangiare"]
     keywords: ["ristorante", "cibo"]
     patterns: [
@@ -219,6 +238,7 @@ intents:
     ]
 
   supermarket:
+    category: local_area
     synonyms: ["supermercato", "spesa"]
     keywords: ["market", "spesa"]
     patterns: [
@@ -227,6 +247,7 @@ intents:
     ]
 
   pharmacy:
+    category: local_area
     synonyms: ["farmacia"]
     keywords: ["medicinali"]
     patterns: [
@@ -235,6 +256,7 @@ intents:
     ]
 
   what_to_do:
+    category: local_area
     synonyms: ["consigli", "cosa fare"]
     keywords: ["attività", "visitare"]
     patterns: [
@@ -243,6 +265,7 @@ intents:
     ]
 
   parking:
+    category: transport
     synonyms: ["parcheggio", "parking"]
     keywords: ["posto auto"]
     patterns: [
@@ -251,6 +274,7 @@ intents:
     ]
 
   transport:
+    category: transport
     synonyms: ["trasporti", "bus", "mezzi"]
     keywords: ["bus", "tram", "trasporto"]
     patterns: [
@@ -259,19 +283,23 @@ intents:
     ]
 
   transport_to_venice:
-    synonyms: ["venezia", "andare venezia"]
-    keywords: ["vaporetto", "bus venezia"]
+    category: transport
+    synonyms: ["raggiungere venezia", "andare a venezia", "mezzi per venezia"]
+    keywords: ["vaporetto", "bus venezia", "trasporti venezia"]
     patterns: [
       "come vado a venezia",
-      "trasporti per venezia"
+      "come raggiungo venezia",
+      "trasporti per venezia",
+      "che mezzi ci sono per venezia"
     ]
 
 
   ############################################################
-  # F. EMERGENZE
+  # F. EMERGENZE / SICUREZZA
   ############################################################
 
   emergency:
+    category: emergencies
     synonyms: ["emergenza", "emergenza generale"]
     keywords: ["soccorso", "aiuto urgente"]
     patterns: [
@@ -282,6 +310,7 @@ intents:
     priority: 3
 
   emergency_medical:
+    category: emergencies
     synonyms: ["emergenza medica"]
     keywords: ["medico", "ambulanza"]
     patterns: [
@@ -291,6 +320,7 @@ intents:
     ]
 
   fire_emergency:
+    category: emergencies
     synonyms: ["incendio", "fuoco"]
     keywords: ["incendio"]
     patterns: [
@@ -299,19 +329,21 @@ intents:
     ]
 
   safety_advice:
-    synonyms: ["sicurezza"]
-    keywords: ["sicuro", "pericolo"]
+    category: emergencies
+    synonyms: ["sicurezza", "consigli sicurezza"]
+    keywords: ["sicurezza appartamento", "comportamento sicuro"]
     patterns: [
-      "è sicuro",
+      "come mi comporto in caso di emergenza",
       "consigli di sicurezza"
     ]
 
 
   ############################################################
-  # G. SUPPORTO / CONTATTI
+  # G. SUPPORTO / CONTATTO
   ############################################################
 
   contact:
+    category: support
     synonyms: ["contatti"]
     keywords: ["numero", "telefono", "contattare"]
     patterns: [
@@ -320,6 +352,7 @@ intents:
     ]
 
   reception:
+    category: support
     synonyms: ["reception"]
     keywords: ["accoglienza"]
     patterns: [
@@ -328,14 +361,16 @@ intents:
     ]
 
   support:
+    category: support
     synonyms: ["aiuto", "supporto"]
-    keywords: ["assistenza"]
+    keywords: ["aiuto", "supporto"]
     patterns: [
       "ho bisogno di aiuto",
       "potete aiutarmi"
     ]
 
   help_issue:
+    category: support
     synonyms: ["problema", "issue"]
     keywords: ["problema appartamento"]
     patterns: [
@@ -344,6 +379,7 @@ intents:
     ]
 
   faq:
+    category: support
     synonyms: ["faq", "domande frequenti"]
     keywords: ["informazioni"]
     patterns: [

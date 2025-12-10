@@ -45,17 +45,11 @@ content:
   wifi:
     info: "La rete Wi-Fi e la password saranno fornite dall'host."
 
-  heating:
-    info: "Il riscaldamento è regolabile in base alla stagione."
-
-  air_conditioning:
-    info: "Il condizionatore può avere modalità e limiti di utilizzo specifici."
-
-  water:
-    info: "Normalmente l'erogazione dell'acqua è autonoma e funzionante."
-
-  electricity:
-    info: "In caso di blackout, verifica il quadro elettrico o contatta l'host."
+  appliances:
+    heating: "Il riscaldamento è regolabile in base alla stagione."
+    air_conditioning: "Il condizionatore può avere modalità e limiti di utilizzo specifici."
+    water: "Normalmente l'erogazione dell'acqua è autonoma e funzionante."
+    electricity: "In caso di blackout, verifica il quadro elettrico o contatta l'host."
 
   checkin:
     general: "Le istruzioni di check-in verranno fornite dall'host."
@@ -175,19 +169,19 @@ intents:
 
   heating:
     output:
-      short: "{{content.heating.info}}"
+      short: "{{content.appliances.heating}}"
 
   air_conditioning:
     output:
-      short: "{{content.air_conditioning.info}}"
+      short: "{{content.appliances.air_conditioning}}"
 
   water:
     output:
-      short: "{{content.water.info}}"
+      short: "{{content.appliances.water}}"
 
   electricity:
     output:
-      short: "{{content.electricity.info}}"
+      short: "{{content.appliances.electricity}}""
 
 
   # REGOLE
