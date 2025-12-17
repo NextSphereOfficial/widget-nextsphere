@@ -89,6 +89,7 @@ export async function orchestrateChat(
     replyText?: string;
     buttons?: any[];
     history?: { role: 'user' | 'assistant'; content: string }[];
+    lang?: string;
   },
 ) {
   const ctx = await buildContext(structureId);
@@ -169,9 +170,27 @@ export async function orchestrateChat(
     };
   }
 
+    const replyLang = String(yamlProbe?.lang ?? 'it').toLowerCase();
+
+      const langName =
+    replyLang.startsWith('en') ? 'inglese' :
+    replyLang.startsWith('de') ? 'tedesco' :
+    replyLang.startsWith('fr') ? 'francese' :
+    'italiano';
+
+      const LANGUAGE_RULE = `
+        LINGUA DI RISPOSTA (OBBLIGATORIA):
+        - Rispondi SEMPRE in ${langName} (lang="${replyLang}").
+        - Anche se l’utente scrive in un’altra lingua, mantieni ${langName}.
+        `.trim();
+
+
+
   // Prompt: includi un riassunto minimo del contesto utile, unito alle regole rigide
   const system = [
     FALLBACK_SYSTEM_PROMPT,
+    '',
+      LANGUAGE_RULE,
     '',
     'CONTESTO STRUTTURA:',
     `- Lingua: ${ctx.locale}`,

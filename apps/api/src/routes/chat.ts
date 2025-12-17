@@ -349,20 +349,26 @@ function findResponse(intentsCore: any, structureYaml: any, message: string) {
   };
 }
 
-async function runEngine({
+  async function runEngine({
   structureId,
   message,
-}: {
+  lang,
+  }: {
   structureId: string;
   message: string;
-}): Promise<EngineOutput> {
+  lang?: string;
+  }): Promise<EngineOutput> {
+
   const intentsCore = await loadIntentsCore();
   const structureYaml = await loadStructure(structureId);
   const resp = findResponse(intentsCore, structureYaml, message);
+  const effectiveLang =
+    lang ?? String(safeField(structureYaml, "meta.language", "it"));
+
 
   return {
     intent: resp.intent,
-    lang: "it",
+    lang: effectiveLang,
     meta: {
       mode: "short",
       uiButtons: resp.buttons,
@@ -470,7 +476,7 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
 
       // 🧠 3) Motore YAML
-      const out = await runEngine({ structureId, message });
+      const out = await runEngine({ structureId, message, lang });
 
       // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
       if (out?.meta?.isFallback === true) {
@@ -530,6 +536,7 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           intent: out.intent ?? undefined,
           confidence: 0.3,
           history, // 👈 NEW
+          lang: out.lang ?? lang ?? "it",
         });
 
         // 3) Se la risposta è valida, salviamo in cache (serializzata)
@@ -642,7 +649,7 @@ app.post("/chat/:structureId", async (req, reply) => {
 
 
     // 🧠 3) Motore YAML
-    const out = await runEngine({ structureId: effectiveStructureId, message });
+    const out = await runEngine({ structureId: effectiveStructureId, message, lang });
 
     // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
     if (out?.meta?.isFallback === true) {
@@ -699,6 +706,7 @@ app.post("/chat/:structureId", async (req, reply) => {
           intent: out.intent ?? undefined,
           confidence: 0.3,
           history,
+          lang: out.lang ?? lang ?? "it",
         });
 
         if (llmOut && (llmOut as any).ok !== false) {
