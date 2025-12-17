@@ -59,14 +59,29 @@ const API_BASE =
  */
 function getParam(name: string): string | undefined {
   if (typeof window === "undefined") return undefined;
-  try {
-    const url = new URL(window.location.href);
-    const val = url.searchParams.get(name);
-    return val || undefined;
-  } catch {
-    return undefined;
-  }
+
+  const readFrom = (href: string | undefined) => {
+    if (!href) return undefined;
+    try {
+      const url = new URL(href);
+      const val = url.searchParams.get(name);
+      return val || undefined;
+    } catch {
+      return undefined;
+    }
+  };
+
+  // 1) prima prova l’URL “locale” (ok se il widget non è in iframe)
+  const fromSelf = readFrom(window.location.href);
+  if (fromSelf) return fromSelf;
+
+  // 2) se siamo in iframe, spesso il parent URL è in document.referrer
+  const fromReferrer = readFrom(document.referrer);
+  if (fromReferrer) return fromReferrer;
+
+  return undefined;
 }
+
 
 /**
  * Legge in modo sicuro un testo da una Response (max 500 caratteri per sicurezza).
