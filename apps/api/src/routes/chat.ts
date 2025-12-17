@@ -15,10 +15,12 @@ import {
 
 const LLM_CACHE_PREFIX = "llm:chat:";
 
-function buildLlmCacheKey(structureId: string, message: string) {
+function buildLlmCacheKey(structureId: string, message: string, lang: string) {
   const s = norm(message);
-  return `${LLM_CACHE_PREFIX}${structureId}:${s}`;
+  const l = (lang ?? "it").toLowerCase();
+  return `${LLM_CACHE_PREFIX}${structureId}:${l}:${s}`;
 }
+
 
 // -----------------------------------------------------
 // Types
@@ -480,7 +482,7 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
 
       // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
       if (out?.meta?.isFallback === true) {
-        const cacheKey = buildLlmCacheKey(defaultStructure, message);
+        const cacheKey = buildLlmCacheKey(defaultStructure, message, out.lang ?? lang ?? "it");
 
         // 1) Prova cache
         const cachedRaw: any = cacheGet(cacheKey);
@@ -653,7 +655,7 @@ app.post("/chat/:structureId", async (req, reply) => {
 
     // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
     if (out?.meta?.isFallback === true) {
-      const cacheKey = buildLlmCacheKey(effectiveStructureId, message);
+      const cacheKey = buildLlmCacheKey(effectiveStructureId, message, out.lang ?? lang ?? "it");
       // ... il resto del blocco rimane identico
 
 
