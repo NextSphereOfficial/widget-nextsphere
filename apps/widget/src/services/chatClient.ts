@@ -106,13 +106,27 @@ export async function sendChat(
 
   const body: Record<string, any> = { message };
 
-    if (ctx.hotel) body.hotel = ctx.hotel;   // 👈 aggiunta
-    if (ctx.room)  body.room  = ctx.room;    // 👈 aggiunta
+if (ctx.hotel) body.hotel = ctx.hotel;
+if (ctx.room)  body.room  = ctx.room;
 
-    if (ctx.locale) body.lang = ctx.locale;
-    if (ctx.mode)   body.mode = ctx.mode;
+// --- lingua: URL (?lang=en) -> ctx.locale -> navigator.language -> "it"
+const urlLang =
+  (getParam("lang") || getParam("locale")) ?? undefined;
 
-    body.sessionId = currentSessionId;
+const uiLang =
+  (urlLang ||
+    ctx.locale ||
+    (typeof navigator !== "undefined" ? navigator.language : undefined) ||
+    "it")
+    .slice(0, 2)
+    .toLowerCase();
+
+body.lang = uiLang;
+
+if (ctx.mode) body.mode = ctx.mode;
+
+body.sessionId = currentSessionId;
+
 
 
   const controller =
