@@ -2,26 +2,22 @@
 
 // --- Tipi ---
 export type Ctx = {
-  hotel?: string;   // legacy: usato come fallback per structureId
+  hotel?: string; // legacy: usato come fallback per structureId
   room?: string;
-  locale?: string;
-  mode?: 'default' | 'future';   // 👈 nuovo
+  locale?: string; // può essere "it", "en", "auto", "en-GB", ecc.
+  mode?: "default" | "future";
 };
 
-
 // 🔥 NEW: ora la risposta può contenere sessionId
-export type ChatResponse = { 
-  reply: string,
-  sessionId?: string,
+export type ChatResponse = {
+  reply: string;
+  sessionId?: string;
 };
 
 // --- Costanti ---
-
 const DEFAULT_TIMEOUT_MS = 15000;
 
 // Inferisci l'API_BASE in modo robusto
-// - se hai una ENV VITE_API_BASE la usi
-// - altrimenti costruisci l'URL in base all'origin corrente
 function resolveApiBase(): string {
   try {
     const win = window as any;
@@ -30,13 +26,13 @@ function resolveApiBase(): string {
       return envBase.replace(/\/+$/, "");
     }
   } catch {
-    // siamo probabilmente in SSR, fallback dopo
+    // ignore
   }
 
   try {
     const loc = window.location;
     const origin = loc.origin || `${loc.protocol}//${loc.host}`;
-    // 👇 qui punti all'API "ufficiale"
+    // in prod: stessa origin + /api
     return origin.replace(/\/+$/, "") + "/api";
   } catch {
     // fallback estremo
@@ -44,47 +40,47 @@ function resolveApiBase(): string {
   }
 }
 
-// Base URL dell'API:
-// - in dev: viene da .env.local → VITE_API_BASE=http://localhost:8081
-// - in prod: viene da .env o dalle env di Vercel/Render
-const API_BASE =
-  (import.meta as any).env?.VITE_API_BASE || "http://localhost:8081";
-
-
+// Base URL dell'API
+const API_BASE = resolveApiBase();
 
 // --- Utils interni ---
 
 /**
  * Legge un parametro dalla query string (?foo=bar).
+ * Nota: qui leggiamo SOLO l'URL dell'iframe/widget.
+ * In questo progetto la configurazione principale passa via data-* (ctx.locale).
  */
 function getParam(name: string): string | undefined {
   if (typeof window === "undefined") return undefined;
-
-  const readFrom = (href: string | undefined) => {
-    if (!href) return undefined;
-    try {
-      const url = new URL(href);
-      const val = url.searchParams.get(name);
-      return val || undefined;
-    } catch {
-      return undefined;
-    }
-  };
-
-  // 1) prima prova l’URL “locale” (ok se il widget non è in iframe)
-  const fromSelf = readFrom(window.location.href);
-  if (fromSelf) return fromSelf;
-
-  // 2) se siamo in iframe, spesso il parent URL è in document.referrer
-  const fromReferrer = readFrom(document.referrer);
-  if (fromReferrer) return fromReferrer;
-
-  return undefined;
+  try {
+    const url = new URL(window.location.href);
+    const val = url.searchParams.get(name);
+    return val && val.trim() ? val.trim() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
+/**
+ * Normalizza la lingua in formato ISO-2 (it/en/fr/de/...).
+ * Gestisce "auto" e protegge dal vecchio bug "au".
+ */
+function resolveLang(input?: string): string {
+  const raw = String(input ?? "").trim().toLowerCase();
+
+  // "auto" (o vuoto) → usa la lingua del browser
+  if (!raw || raw === "auto" || raw === "au") {
+    const nav = typeof navigator !== "undefined" ? navigator.language : "it";
+    return (nav || "it").slice(0, 2).toLowerCase();
+  }
+
+  // Supporta "en", "en-GB", "it_IT", ecc.: prendiamo la prima coppia di lettere
+  const m = raw.match(/[a-z]{2}/);
+  return (m?.[0] ?? "it").toLowerCase();
+}
 
 /**
- * Legge in modo sicuro un testo da una Response (max 500 caratteri per sicurezza).
+ * Legge in modo sicuro un testo da una Response (max 500 caratteri).
  */
 async function safeReadText(res: Response): Promise<string> {
   try {
@@ -100,49 +96,34 @@ async function safeReadText(res: Response): Promise<string> {
  * - POST /chat/:structureId
  * - structureId: da ?structure=…, fallback ctx.hotel, poi "nextsphere"
  * - room: da ?room=…, fallback ctx.room
- * - locale: passato come "lang"
+ * - lang: da ?lang=… (se presente) altrimenti ctx.locale (data-lang), poi navigator.language
  */
 export async function sendChat(
   message: string,
   ctx: Ctx = {},
   opts: { signal?: AbortSignal; timeoutMs?: number } = {}
 ): Promise<ChatResponse> {
-
   let structureId = getParam("structure") || ctx.hotel || "nextsphere";
   if (structureId === "NS001") structureId = "nextsphere";
 
-  const room =
-    getParam("room") ||
-    ctx.room ||
-    undefined;
+  const room = getParam("room") || ctx.room || undefined;
 
   const path = `/chat/${encodeURIComponent(structureId)}`;
   const url = `${API_BASE}${path}`;
 
   const body: Record<string, any> = { message };
 
-if (ctx.hotel) body.hotel = ctx.hotel;
-if (ctx.room)  body.room  = ctx.room;
+  // per retro-compat / analytics lato API
+  if (ctx.hotel) body.hotel = ctx.hotel;
+  if (room) body.room = room;
 
-// --- lingua: URL (?lang=en) -> ctx.locale -> navigator.language -> "it"
-const urlLang =
-  (getParam("lang") || getParam("locale")) ?? undefined;
+  // lingua: URL (?lang=xx) -> ctx.locale (data-lang) -> navigator.language -> "it"
+  const urlLang = getParam("lang") || getParam("locale");
+  body.lang = resolveLang(urlLang || ctx.locale);
 
-const uiLang =
-  (urlLang ||
-    ctx.locale ||
-    (typeof navigator !== "undefined" ? navigator.language : undefined) ||
-    "it")
-    .slice(0, 2)
-    .toLowerCase();
+  if (ctx.mode) body.mode = ctx.mode;
 
-body.lang = uiLang;
-
-if (ctx.mode) body.mode = ctx.mode;
-
-body.sessionId = currentSessionId;
-
-
+  body.sessionId = currentSessionId;
 
   const controller =
     !opts.signal && typeof AbortController !== "undefined"
@@ -159,7 +140,7 @@ body.sessionId = currentSessionId;
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
-      signal: opts.signal ?? controller?.signal
+      signal: opts.signal ?? controller?.signal,
     });
   } catch (e: any) {
     if (timer) clearTimeout(timer);
@@ -169,9 +150,7 @@ body.sessionId = currentSessionId;
 
   if (!res.ok) {
     const txt = await safeReadText(res);
-    throw new Error(
-      `API error ${res.status} @ ${url} – body: ${txt || "<empty>"}`
-    );
+    throw new Error(`API error ${res.status} @ ${url} – body: ${txt || "<empty>"}`);
   }
 
   const json = (await res.json()) as any;
@@ -182,13 +161,10 @@ body.sessionId = currentSessionId;
   }
 
   const reply = String(json?.reply ?? "");
-
   return { reply, sessionId: currentSessionId };
 }
 
-
 // --- Gestione sessionId lato widget ---
-
 let currentSessionId: string | undefined = undefined;
 
 /**
