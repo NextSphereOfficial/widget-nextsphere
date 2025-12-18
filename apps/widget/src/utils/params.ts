@@ -1,5 +1,5 @@
 // src/utils/params.ts
-export type Lang = 'it' | 'en' | 'auto';
+export type Lang = string; // <-- non limitarla a it/en
 
 export function getQueryParam(name: string, search = window.location.search): string | null {
   const read = (s: string | null | undefined) => {
@@ -42,6 +42,8 @@ export function getQueryParam(name: string, search = window.location.search): st
 export type Mode = 'default' | 'future';
 
 export function getInitialContext() {
+  console.info("[Widget params] search=", window.location.search);
+  console.info("[Widget params] lang=", getQueryParam("lang"), "hotel=", getQueryParam("hotel"), "room=", getQueryParam("room"));
   const hotel = getQueryParam('hotel') ?? 'NS001';
   const room  = getQueryParam('room')  ?? '101';
   const langQ = (getQueryParam('lang') ?? 'auto').toLowerCase() as Lang;
