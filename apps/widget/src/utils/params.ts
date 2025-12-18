@@ -2,10 +2,32 @@
 export type Lang = 'it' | 'en' | 'auto';
 
 export function getQueryParam(name: string, search = window.location.search): string | null {
-  const params = new URLSearchParams(search);
-  const val = params.get(name);
-  return val && val.trim() !== '' ? val.trim() : null;
+  const read = (s: string | null | undefined) => {
+    if (!s) return null;
+    const params = new URLSearchParams(s);
+    const val = params.get(name);
+    return val && val.trim() !== "" ? val.trim() : null;
+  };
+
+  // 1) prima prova i query params dell'iframe/widget
+  const direct = read(search);
+  if (direct) return direct;
+
+  // 2) fallback: se siamo in iframe, spesso la pagina host è in document.referrer
+  try {
+    const ref = document.referrer;
+    if (ref) {
+      const refUrl = new URL(ref);
+      const fromRef = read(refUrl.search);
+      if (fromRef) return fromRef;
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
 }
+
 
 export type Mode = 'default' | 'future';
 
