@@ -6,14 +6,23 @@ export function getQueryParam(name: string, search = window.location.search): st
     if (!s) return null;
     const params = new URLSearchParams(s);
     const val = params.get(name);
-    return val && val.trim() !== "" ? val.trim() : null;
+    return val && val.trim() !== '' ? val.trim() : null;
   };
 
-  // 1) prima prova i query params dell'iframe/widget
+  // 1) query dell'iframe/widget
   const direct = read(search);
   if (direct) return direct;
 
-  // 2) fallback: se siamo in iframe, spesso la pagina host è in document.referrer
+  // 2) query della pagina parent (funziona se same-origin)
+  try {
+    const parentSearch = window.parent?.location?.search;
+    const fromParent = read(parentSearch);
+    if (fromParent) return fromParent;
+  } catch {
+    // cross-origin: ignoriamo
+  }
+
+  // 3) referrer (se disponibile)
   try {
     const ref = document.referrer;
     if (ref) {
@@ -27,6 +36,7 @@ export function getQueryParam(name: string, search = window.location.search): st
 
   return null;
 }
+
 
 
 export type Mode = 'default' | 'future';
