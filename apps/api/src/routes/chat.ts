@@ -15,11 +15,12 @@ import {
 
 const LLM_CACHE_PREFIX = "llm:chat:";
 
-function buildLlmCacheKey(structureId: string, message: string, lang: string) {
+function buildLlmCacheKey(structureId: string, message: string, lang?: string) {
   const s = norm(message);
-  const l = (lang ?? "it").toLowerCase();
+  const l = String(lang || "it").slice(0, 2).toLowerCase();
   return `${LLM_CACHE_PREFIX}${structureId}:${l}:${s}`;
 }
+
 
 
 // -----------------------------------------------------
@@ -370,7 +371,8 @@ function findResponse(intentsCore: any, structureYaml: any, message: string) {
 
   return {
     intent: resp.intent,
-    lang: effectiveLang,
+    lang: String(lang || "it").slice(0, 2).toLowerCase(),
+
     meta: {
       mode: "short",
       uiButtons: resp.buttons,

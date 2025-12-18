@@ -93,6 +93,9 @@ export async function orchestrateChat(
   },
 ) {
   const ctx = await buildContext(structureId);
+  const replyLang = String(yamlProbe?.lang || ctx.locale || "it").slice(0, 2).toLowerCase();
+
+
 
   // decisione (se non hai confidenza dal matcher, passa matched=false)
   const decision = decideResponse({
@@ -170,8 +173,7 @@ export async function orchestrateChat(
     };
   }
 
-    const replyLang = String(yamlProbe?.lang ?? 'it').toLowerCase();
-
+    
       const langName =
     replyLang.startsWith('en') ? 'inglese' :
     replyLang.startsWith('de') ? 'tedesco' :
@@ -193,7 +195,7 @@ export async function orchestrateChat(
       LANGUAGE_RULE,
     '',
     'CONTESTO STRUTTURA:',
-    `- Lingua: ${ctx.locale}`,
+    `- Lingua: ${replyLang}`,
     `- Wi-Fi: ssid=${ctx.wifi?.ssid ?? 'n/d'}; password=${ctx.wifi?.password ?? 'n/d'}`,
     ctx.rules?.length ? `- Regole principali: ${ctx.rules.slice(0, 4).join(' | ')}` : '',
     ctx.emergencies?.phone ? `- Telefono emergenze: ${ctx.emergencies.phone}` : '',
@@ -241,7 +243,7 @@ Ignora argomenti più vecchi se non sono citati esplicitamente.
 `.trim();
 
   const res = await callLlm(finalUserMessage, {
-    locale: ctx.locale,
+    locale: replyLang,
     systemPrompt: system,
   });
 
