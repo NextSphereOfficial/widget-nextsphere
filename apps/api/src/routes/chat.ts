@@ -2,7 +2,8 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 
 import { orchestrateChat } from "../core/orchestrator.js";
-import { loadIntentsCore, loadStructure } from "../content/loader.js";
+import { loadIntentsCore, loadStructure, loadLangPack } from "../content/loader.js";
+
 import { cacheGet, cacheSet } from "../core/runtimeGuards.js";
 import {
   ensureSessionForChat,
@@ -10,10 +11,8 @@ import {
   getRecentMessages,
 } from "../services/sessionService.js";
 
-import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import YAML from "yaml";
+
 
 // -----------------------------------------------------
 // Helpers (base)
@@ -244,27 +243,7 @@ function fallbackText(
 // Language packs (src/content/lang in dev, dist/content/lang in prod)
 // Path: apps/api/src/routes/chat.ts -> ../content/lang
 
-const __filename = fileURLToPath(import.meta.url);
-const ROUTES_DIR = path.dirname(__filename); // .../src/routes | .../dist/routes
-const LANGPACK_DIR = path.resolve(ROUTES_DIR, "../content/lang"); // .../src/content/lang | .../dist/content/lang
 
-const langPackCache = new Map<string, Record<string, any>>();
-
-async function loadLangPackSafe(lang: string): Promise<Record<string, any>> {
-  const l = String(lang || "it").slice(0, 2).toLowerCase();
-  if (langPackCache.has(l)) return langPackCache.get(l)!;
-
-  try {
-    const file = path.join(LANGPACK_DIR, `${l}.yaml`);
-    const raw = await readFile(file, "utf8");
-    const parsed = (YAML.parse(raw) as any) || {};
-    langPackCache.set(l, parsed);
-    return parsed;
-  } catch {
-    langPackCache.set(l, {});
-    return {};
-  }
-}
 
 function resolveIntentVars(intentDef: any, structureYaml: any): Record<string, any> {
   const out: Record<string, any> = {};
@@ -318,13 +297,14 @@ async function renderTemplate(
   // 1) NUOVO: reply_key -> language pack (lang -> fallback it)
   const replyKey = intentDef.reply_key;
   if (typeof replyKey === "string" && replyKey.trim()) {
-    const pack = await loadLangPackSafe(lang);
-    let template = pack?.[replyKey];
+  const pack = await loadLangPack(lang);
+let template = pack?.[replyKey];
 
-    if (template === undefined) {
-      const itPack = await loadLangPackSafe("it");
-      template = itPack?.[replyKey];
-    }
+if (template === undefined) {
+  const itPack = await loadLangPack("it");
+  template = itPack?.[replyKey];
+}
+
 
     if (typeof template === "string" && template.trim()) {
       const vars = resolveIntentVars(intentDef, structureYaml);

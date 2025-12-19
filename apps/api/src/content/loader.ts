@@ -3,7 +3,7 @@
 // - normalizza il core (accetta {intents:{...}} o flat)
 // - messaggi d’errore espliciti con path assoluti
 
-import { readFile, stat, access } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
@@ -35,15 +35,30 @@ const STRUCTURE_DIRS = [
   path.resolve(SRC_DIR, "routes", "structures"),
 ];
 
+// --- CANDIDATI: language packs
+const LANG_DIRS = [
+  path.resolve(APP_DIR, "content", "lang"),     // accanto (src|dist)
+  path.resolve(DIST_DIR, "content", "lang"),    // dist fallback
+  path.resolve(SRC_DIR, "content", "lang"),     // src fallback
+];
+
+
+
 // cache semplice su mtime
 const cache = new Map<string, CacheEntry>();
 
 async function firstExisting(paths: string[]): Promise<string | null> {
   for (const p of paths) {
-    try { await access(p); return p; } catch {}
+    try {
+      const st = await stat(p);
+      if (st.isFile()) return p;
+    } catch {
+      // ignore
+    }
   }
   return null;
 }
+
 
 async function loadYaml(filePath: string): Promise<AnyObj> {
   try {
@@ -51,15 +66,23 @@ async function loadYaml(filePath: string): Promise<AnyObj> {
     const cached = cache.get(filePath);
     if (cached && cached.mtimeMs === st.mtimeMs) return cached.data;
 
-    const content = await readFile(filePath, "utf-8");
-    const data = YAML.parse(content) as AnyObj;
-    cache.set(filePath, { mtimeMs: st.mtimeMs, data });
-    return data;
+   const content = await readFile(filePath, "utf-8");
+   const data = (YAML.parse(content) as AnyObj) || {};
+   cache.set(filePath, { mtimeMs: st.mtimeMs, data });
+   return data;
+
   } catch (err: any) {
     err.message = `Failed to read/parse YAML at ${filePath}: ${err.message}`;
     throw err;
   }
 }
+
+function sanitizeLang(lang?: string): string {
+  const l = String(lang || "it").slice(0, 2).toLowerCase();
+  return l.replace(/[^a-z]/g, "") || "it";
+}
+
+
 
 export async function loadIntentsCore(): Promise<AnyObj> {
   const filePath = await firstExisting(INTENTS_CANDIDATES);
@@ -80,17 +103,51 @@ export async function loadIntentsCore(): Promise<AnyObj> {
   return core;
 }
 
+export async function loadLangPack(lang?: string): Promise<AnyObj> {
+  const l = sanitizeLang(lang);
+
+  const candidates = LANG_DIRS.map((dir) =>
+    path.resolve(dir, `${l}.yaml`)
+  );
+
+  const filePath = await firstExisting(candidates);
+
+  // Se non esiste il file della lingua richiesta, ritorna {} (fallback gestito da chi chiama)
+  if (!filePath) return {};
+
+  const raw = await loadYaml(filePath);
+
+  if (!raw || typeof raw !== "object") return {};
+  return raw;
+}
+
+
+
+function sanitizeStructureId(structureId: string): string {
+  const id = String(structureId || "").trim();
+  if (!id) throw new Error("Missing structureId");
+
+  // consenti solo: a-z A-Z 0-9 _ -
+  const safe = id.replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!safe) throw new Error(`Invalid structureId "${structureId}"`);
+  return safe;
+}
+
+
+
 async function resolveStructurePath(structureId: string): Promise<string> {
-  const candidates = STRUCTURE_DIRS.map(dir => path.resolve(dir, `${structureId}.yaml`));
+  const safeId = sanitizeStructureId(structureId);
+  const candidates = STRUCTURE_DIRS.map(dir => path.resolve(dir, `${safeId}.yaml`));
   const filePath = await firstExisting(candidates);
   if (!filePath) {
     throw new Error(
-      `Structure file not found for id "${structureId}". Looked in:\n` +
+      `Structure file not found for id "${safeId}". Looked in:\n` +
       candidates.map(p => ` - ${p}`).join("\n")
     );
   }
   return filePath;
 }
+
 
 export async function loadStructure(structureId: string): Promise<AnyObj> {
   const filePath = await resolveStructurePath(structureId);
