@@ -181,7 +181,7 @@ intents:
 
   electricity:
     output:
-      short: "{{content.appliances.electricity}}""
+      short: "{{content.appliances.electricity}}"
 
 
   # REGOLE

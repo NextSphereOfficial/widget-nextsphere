@@ -1,54 +1,26 @@
 // apps/api/src/routes/chat.ts
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
+
 import { orchestrateChat } from "../core/orchestrator.js";
 import { loadIntentsCore, loadStructure } from "../content/loader.js";
 import { cacheGet, cacheSet } from "../core/runtimeGuards.js";
 import {
   ensureSessionForChat,
   saveMessage,
-  getRecentMessages, // 👈 NEW
+  getRecentMessages,
 } from "../services/sessionService.js";
 
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import YAML from "yaml";
 
 // -----------------------------------------------------
-// Cache
+// Helpers (base)
 
-const LLM_CACHE_PREFIX = "llm:chat:";
-
-function buildLlmCacheKey(structureId: string, message: string, lang?: string) {
-  const s = norm(message);
-  const l = String(lang || "it").slice(0, 2).toLowerCase();
-  return `${LLM_CACHE_PREFIX}${structureId}:${l}:${s}`;
-}
-
-
-
-// -----------------------------------------------------
-// Types
-
-type IntentMatch = {
-  key: string;
-  score: number;
-  matched: boolean;
-};
-
-type EngineOutput = {
-  intent: string | null;
-  lang: string;
-  text: string;
-  meta: {
-    mode: "short" | "long";
-    uiButtons: any[];
-    isFallback: boolean;
-  };
-};
-
-// -----------------------------------------------------
-// Helpers
-
-function safeField(obj: any, path: string, defaultValue: any = undefined) {
+function safeField(obj: any, pathStr: string, defaultValue: any = undefined) {
   try {
-    const parts = path.split(".");
+    const parts = pathStr.split(".");
     let current = obj;
     for (const p of parts) {
       if (!current || typeof current !== "object") return defaultValue;
@@ -70,6 +42,37 @@ function norm(s: string) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+// -----------------------------------------------------
+// Cache
+
+const LLM_CACHE_PREFIX = "llm:chat:";
+
+function buildLlmCacheKey(structureId: string, message: string, lang?: string) {
+  const s = norm(message);
+  const l = String(lang || "it").slice(0, 2).toLowerCase();
+  return `${LLM_CACHE_PREFIX}${structureId}:${l}:${s}`;
+}
+
+// -----------------------------------------------------
+// Types
+
+type IntentMatch = {
+  key: string;
+  score: number;
+  matched: boolean;
+};
+
+type EngineOutput = {
+  intent: string | null;
+  lang: string;
+  text: string;
+  meta: {
+    mode: "short" | "long";
+    uiButtons: any[];
+    isFallback: boolean;
+  };
+};
 
 // -----------------------------------------------------
 // Intent scoring
@@ -95,9 +98,7 @@ function scoreIntent(
   const allNegative = (intent.negative || []).map(norm).filter(Boolean);
 
   for (const n of allNegative) {
-    if (t.includes(n)) {
-      score -= 5;
-    }
+    if (t.includes(n)) score -= 5;
   }
 
   for (const s of allSynonyms) {
@@ -106,6 +107,7 @@ function scoreIntent(
       matched = true;
     }
   }
+
   for (const k of allKeywords) {
     if (t.includes(k)) {
       score += 3;
@@ -126,7 +128,6 @@ function scoreIntent(
   }
 
   if (matched) score += intent.priority ?? 0;
-
   return { score, matched };
 }
 
@@ -141,14 +142,8 @@ function resolveIntent(userText: string, intentsCore: Record<string, any>) {
     }
   );
 
-  // override heuristico per intent base
-
-  if (
-    /\bwi\s*fi\b/.test(t) ||
-    t.includes("wifi") ||
-    t.includes("password wifi") ||
-    t.includes("ssid")
-  ) {
+  // override euristici per intent base (tieni qui la tua logica)
+  if (/\bwi\s*fi\b/.test(t) || t.includes("wifi") || t.includes("ssid")) {
     const idx = intents.findIndex((i) => i.key === "wifi");
     if (idx >= 0) intents[idx] = { key: "wifi", score: 999, matched: true };
     else intents.push({ key: "wifi", score: 999, matched: true });
@@ -182,70 +177,137 @@ function resolveIntent(userText: string, intentsCore: Record<string, any>) {
   intents.sort((a, b) => b.score - a.score);
   const top = intents[0];
 
-  if (!top || top.score <= 0) {
-    return { key: "fallback", score: 0, matched: false };
-  }
-
+  if (!top || top.score <= 0) return { key: "fallback", score: 0, matched: false };
   return top;
 }
 
 // -----------------------------------------------------
 // Template & fallback (✅ aggiornati a intents + output)
-// -----------------------------------------------------
 
-// Piccolo sistema di template: {{path.to.value}} → structureYaml[path.to.value]
-function resolvePath(obj: any, path: string): any {
-  if (!obj || typeof path !== "string") return undefined;
+// {{path.to.value}} → structureYaml[path.to.value]
+function resolvePath(obj: any, pathStr: string): any {
+  if (!obj || typeof pathStr !== "string") return undefined;
 
-  return path.split(".").reduce((acc: any, key: string) => {
-    if (acc && Object.prototype.hasOwnProperty.call(acc, key)) {
-      return acc[key];
-    }
+  return pathStr.split(".").reduce((acc: any, key: string) => {
+    if (acc && Object.prototype.hasOwnProperty.call(acc, key)) return acc[key];
     return undefined;
   }, obj);
 }
 
 function applyTemplateToText(text: string, structureYaml: any): string {
-  if (typeof text !== "string" || text.indexOf("{{") === -1) {
-    return text;
-  }
+  if (typeof text !== "string" || text.indexOf("{{") === -1) return text;
 
   return text.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, expr) => {
-    const path = (expr || "").trim();
-    if (!path) return "";
+    const pathStr = String(expr || "").trim();
+    if (!pathStr) return "";
 
-    const value = resolvePath(structureYaml, path);
+    const value = resolvePath(structureYaml, pathStr);
     if (value === undefined || value === null) return "";
 
-    if (typeof value === "string") return value;
-    return String(value);
+    return typeof value === "string" ? value : String(value);
   });
 }
 
-function applyYamlTemplate(text: string, yaml: any): string {
-  if (!text || typeof text !== "string") return text;
 
-  return text.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_, path) => {
-    const parts = path.split(".");
-    let current = yaml;
 
-    for (const p of parts) {
-      if (!current || typeof current !== "object") return "";
-      current = current[p];
+function fallbackText(
+  structureYaml: any,
+  intentKey: string,
+  lang: string
+): string {
+  if (!structureYaml || typeof structureYaml !== "object") return "";
+
+  // 1) fallback specifico dell'intent
+  const intentFallback =
+    safeField(structureYaml, `intents.${intentKey}.output.fallback`) ??
+    safeField(structureYaml, `intents.${intentKey}.output.short`);
+
+  if (typeof intentFallback === "string" && intentFallback.trim()) {
+    return applyTemplateToText(intentFallback, structureYaml);
+  }
+
+  // 2) fallback globale struttura
+  const globalFallback =
+    safeField(structureYaml, "content.fallback.default") ??
+    safeField(structureYaml, "content.fallback.generic");
+
+  if (typeof globalFallback === "string" && globalFallback.trim()) {
+    return applyTemplateToText(globalFallback, structureYaml);
+  }
+
+  // 3) ultima rete di sicurezza
+  return "";
+}
+
+
+// -----------------------------------------------------
+// Language packs (src/content/lang in dev, dist/content/lang in prod)
+// Path: apps/api/src/routes/chat.ts -> ../content/lang
+
+const __filename = fileURLToPath(import.meta.url);
+const ROUTES_DIR = path.dirname(__filename); // .../src/routes | .../dist/routes
+const LANGPACK_DIR = path.resolve(ROUTES_DIR, "../content/lang"); // .../src/content/lang | .../dist/content/lang
+
+const langPackCache = new Map<string, Record<string, any>>();
+
+async function loadLangPackSafe(lang: string): Promise<Record<string, any>> {
+  const l = String(lang || "it").slice(0, 2).toLowerCase();
+  if (langPackCache.has(l)) return langPackCache.get(l)!;
+
+  try {
+    const file = path.join(LANGPACK_DIR, `${l}.yaml`);
+    const raw = await readFile(file, "utf8");
+    const parsed = (YAML.parse(raw) as any) || {};
+    langPackCache.set(l, parsed);
+    return parsed;
+  } catch {
+    langPackCache.set(l, {});
+    return {};
+  }
+}
+
+function resolveIntentVars(intentDef: any, structureYaml: any): Record<string, any> {
+  const out: Record<string, any> = {};
+  const vars =
+    intentDef?.vars && typeof intentDef.vars === "object" ? intentDef.vars : {};
+
+  for (const [k, v] of Object.entries(vars)) {
+    if (typeof v === "string") {
+      // vars: { ssid: "{{content.wifi.ssid}}" } ecc
+      out[k] = applyTemplateToText(v, structureYaml);
+    } else if (v === undefined || v === null) {
+      out[k] = "";
+    } else {
+      out[k] = String(v);
+    }
+  }
+  return out;
+}
+
+function renderVars(template: string, vars: Record<string, any>): string {
+  if (typeof template !== "string" || template.indexOf("{{") === -1) return template;
+
+  return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, expr) => {
+    const key = String(expr || "").trim();
+    if (!key) return "";
+
+    // se è una var diretta (ssid/password/hotel_name), sostituisci
+    if (Object.prototype.hasOwnProperty.call(vars, key)) {
+      const v = vars[key];
+      return v === undefined || v === null ? "" : String(v);
     }
 
-    return typeof current === "string" ? current : "";
+    // altrimenti lascia intatto: poi lo risolve applyTemplateToText (content.xxx)
+    return `{{${key}}}`;
   });
 }
 
-
-function renderTemplate(
+async function renderTemplate(
   structureYaml: any,
   intentKey: string,
   lang: string,
   mode: "short" | "long"
-): { text: string; buttons: any[] } {
-  // Nuovo schema: structureYaml.intents[intentKey].output
+): Promise<{ text: string; buttons: any[] }> {
   const intents = structureYaml?.intents || {};
   const intentDef = intents[intentKey];
 
@@ -253,126 +315,124 @@ function renderTemplate(
     return { text: "", buttons: [] };
   }
 
+  // 1) NUOVO: reply_key -> language pack (lang -> fallback it)
+  const replyKey = intentDef.reply_key;
+  if (typeof replyKey === "string" && replyKey.trim()) {
+    const pack = await loadLangPackSafe(lang);
+    let template = pack?.[replyKey];
+
+    if (template === undefined) {
+      const itPack = await loadLangPackSafe("it");
+      template = itPack?.[replyKey];
+    }
+
+    if (typeof template === "string" && template.trim()) {
+      const vars = resolveIntentVars(intentDef, structureYaml);
+
+      // (a) sostituisci vars ({{ssid}} ecc)
+      let text = renderVars(template, vars);
+
+      // (b) poi risolvi eventuali {{content.xxx}} o simili
+      text = applyTemplateToText(text, structureYaml);
+
+      // bottoni: compatibile con schema output.ui.buttons (se presente)
+      const buttons =
+        Array.isArray(intentDef?.output?.ui?.buttons) ? intentDef.output.ui.buttons : [];
+
+      return { text, buttons };
+    }
+  }
+
+  // 2) BACKWARD COMPAT: vecchio schema output
   const output = intentDef.output || {};
   let text = "";
 
-  // 1) prova la variante richiesta (short/long)
-  if (mode === "short" && typeof output.short === "string") {
-    text = output.short;
-  } else if (mode === "long" && typeof output.long === "string") {
-    text = output.long;
-  }
+  if (typeof output.fallback === "string") text = output.fallback;
+  else if (typeof output.default === "string") text = output.default;
+  else if (mode === "long" && typeof output.long === "string") text = output.long;
+  else if (typeof output.short === "string") text = output.short;
+  else if (typeof output.long === "string") text = output.long;
 
-  // 2) fallback su "default"
-  if (!text && typeof output.default === "string") {
-    text = output.default;
-  }
-
-  // 3) fallback ulteriori
-  if (!text && typeof output.short === "string") {
-    text = output.short;
-  }
-  if (!text && typeof output.long === "string") {
-    text = output.long;
-  }
-
-  // 🔹 NUOVO: applica i template {{...}} usando structureYaml
   text = applyTemplateToText(text, structureYaml);
 
-  // 4) UI buttons opzionali, da schema:
-  //    output.ui?.buttons: [{ id, label }, ...]
   const buttons =
-    output?.ui && Array.isArray(output.ui.buttons)
-      ? output.ui.buttons
-      : [];
+    Array.isArray(output?.ui?.buttons) ? output.ui.buttons : [];
 
-const finalText = applyYamlTemplate(text, structureYaml.content || {});
-return { text: finalText, buttons };
+  return { text, buttons };
 }
 
 
-function fallbackText(structureYaml: any, intentKey: string, lang: string) {
-  const intents = structureYaml?.intents || {};
-  const intentDef = intents[intentKey];
 
-  if (!intentDef || typeof intentDef !== "object") {
-    return "";
-  }
-
-  const output = intentDef.output || {};
-  let text = "";
-
-  if (typeof output.fallback === "string") {
-    text = output.fallback;
-  } else if (typeof output.default === "string") {
-    text = output.default;
-  } else if (typeof output.short === "string") {
-    text = output.short;
-  } else if (typeof output.long === "string") {
-    text = output.long;
-  }
-
-  return applyTemplateToText(text, structureYaml);
-}
-
-
-// -----------------------------------------------------
 // Engine
 // -----------------------------------------------------
 
-function findResponse(intentsCore: any, structureYaml: any, message: string) {
-  const lang = safeField(structureYaml, "meta.language", "it");
+function resolveEffectiveLang(inputLang: string | undefined, structureYaml: any): string {
+  const fromBody = inputLang ? String(inputLang) : "";
+  if (fromBody) return fromBody.slice(0, 2).toLowerCase();
+
+  const metaLang =
+    safeField(structureYaml, "meta.language") ??
+    safeField(structureYaml, "meta.default_locale") ??
+    "it";
+
+  return String(metaLang || "it").slice(0, 2).toLowerCase();
+}
+
+async function findResponse(
+  intentsCore: any,
+  structureYaml: any,
+  message: string,
+  lang: string
+) {
   const mode: "short" | "long" = "short";
 
   const intentMatch = resolveIntent(message, intentsCore);
   const intentKey = intentMatch.key;
 
-  // 1) Caso "fallback" puro → qui ha senso usare l'LLM come vero fallback
+  // 1) fallback "puro" (nessun match): qui ha senso l'LLM
   if (intentKey === "fallback") {
     return {
       intent: intentKey,
       text: fallbackText(structureYaml, intentKey, lang),
       buttons: [] as any[],
-      isFallback: true, // 👈 questo è l'unico caso in cui chiediamo LLM
+      isFallback: true,
     };
   }
 
-  // 2) Per QUALSIASI altro intent:
-  //    - lo consideriamo "coperto da YAML",
-  //    - anche se stiamo usando il suo campo fallback interno
-  const rendered = renderTemplate(structureYaml, intentKey, lang, mode);
+  // 2) Qualsiasi altro intent: risposta YAML (anche se usa output.fallback interno)
+  const rendered = await renderTemplate(structureYaml, intentKey, lang, mode);
   const baseText =
-    rendered.text || fallbackText(structureYaml, intentKey, lang) || "";
+    (rendered.text && String(rendered.text).trim())
+      ? rendered.text
+      : (fallbackText(structureYaml, intentKey, lang) || "");
 
   return {
     intent: intentKey,
     text: baseText,
     buttons: rendered.buttons ?? [],
-    isFallback: false, // 👈 niente LLM: risposta 100% YAML
+    isFallback: false,
   };
 }
 
-  async function runEngine({
+async function runEngine({
   structureId,
   message,
   lang,
-  }: {
+}: {
   structureId: string;
   message: string;
   lang?: string;
-  }): Promise<EngineOutput> {
-
+}): Promise<EngineOutput> {
   const intentsCore = await loadIntentsCore();
   const structureYaml = await loadStructure(structureId);
-  const resp = findResponse(intentsCore, structureYaml, message);
-  const effectiveLang =
-    lang ?? String(safeField(structureYaml, "meta.language", "it"));
 
+  const effectiveLang = resolveEffectiveLang(lang, structureYaml);
+
+  const resp = await findResponse(intentsCore, structureYaml, message, effectiveLang);
 
   return {
     intent: resp.intent,
-    lang: String(lang || "it").slice(0, 2).toLowerCase(),
-
+    lang: effectiveLang,
     meta: {
       mode: "short",
       uiButtons: resp.buttons,

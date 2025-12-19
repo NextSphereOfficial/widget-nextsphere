@@ -11,6 +11,9 @@ meta:
 ############################################################
 
 content:
+  
+  hotel:
+    name: "S&V Apartments"
 
   welcome:
     intro: "Ciao! Benvenuto in S&V Apartments 😊 Se hai bisogno di qualcosa, sono qui per aiutarti."
@@ -25,8 +28,9 @@ content:
     damage: "Se noti un danno o qualcosa che non funziona, avvisaci il prima possibile."
 
   wifi:
-    ssid: "La rete Wi-Fi si chiama S&V."
-    password: "La password è: sv2026!."
+    ssid: "S&V"
+    password: "sv2026!"
+
 
   checkin:
     instructions: "Il check-in viene fatto di persona. L’orario standard è dalle 15:00 in poi."
@@ -88,8 +92,12 @@ content:
 intents:
 
   welcome:
+    reply_key: welcome_intro
+    vars:
+      hotel_name: "{{content.hotel.name}}"
     output:
       short: "{{content.welcome.intro}}"
+
 
   fallback:
     output:
@@ -122,8 +130,13 @@ intents:
 
   # DOTAZIONI
   wifi:
+    reply_key: wifi_credentials
+    vars:
+      ssid: "{{content.wifi.ssid}}"
+      password: "{{content.wifi.password}}"
     output:
       short: "SSID: {{content.wifi.ssid}} — Password: {{content.wifi.password}}"
+
 
   heating:
     output:
