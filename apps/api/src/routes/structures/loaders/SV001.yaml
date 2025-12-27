@@ -13,7 +13,7 @@ meta:
 content:
   
   copy_overrides:
-  welcome_intro: "OVERRIDE TEST: Ciao! 👋"
+    welcome_intro: "OVERRIDE TEST: Ciao! 👋"
 
 
   hotel:
