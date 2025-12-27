@@ -297,6 +297,28 @@ async function renderTemplate(
   // 1) NUOVO: reply_key -> language pack (lang -> fallback it)
   const replyKey = intentDef.reply_key;
   if (typeof replyKey === "string" && replyKey.trim()) {
+      const overrideKey =
+    (typeof (intentDef as any).override_key === "string" &&
+      (intentDef as any).override_key.trim())
+      ? (intentDef as any).override_key.trim()
+      : replyKey.trim();
+
+  // 0) PRIMA PRIORITÀ: copy_overrides (cliente)
+  const overrideTpl =
+    structureYaml &&
+    (structureYaml as any).copy_overrides &&
+    typeof (structureYaml as any).copy_overrides === "object"
+      ? (structureYaml as any).copy_overrides[overrideKey]
+      : undefined;
+
+  if (typeof overrideTpl === "string" && overrideTpl.trim()) {
+    const vars = resolveIntentVars(intentDef, structureYaml);
+    const text = renderVars(overrideTpl, vars);
+    const buttons =
+      Array.isArray(intentDef?.output?.ui?.buttons) ? intentDef.output.ui.buttons : [];
+    return { text, buttons };
+  }
+
   const pack = await loadLangPack(lang);
 let template = pack?.[replyKey];
 
