@@ -1,10 +1,12 @@
 # --- NextSphere standard slots (v2) ---
+# --- NextSphere slots (v2) - IT (testi completi) ---
 
 welcome_intro: "Ciao! Benvenuto in {{hotel_name}} 😊 Se hai bisogno di qualcosa, sono qui per aiutarti."
-wifi_credentials: "Wi-Fi — SSID: {{ssid}} · Password: {{password}}"
-wifi_unavailable: "La rete Wi-Fi e la password saranno fornite dall'host."
-checkin_instructions: "Il check-in è dalle {{checkin_from}} in poi. Se hai bisogno, chiedimi pure i dettagli."
-checkout_instructions: "Il check-out è entro le {{checkout_by}}. Se hai dubbi su chiavi o procedure, scrivimi."
+
+wifi_credentials: "Wi-Fi: {{ssid}} · Password: {{password}}"
+
+checkin_instructions: "Il check-in è dalle {{checkin_from}} in poi. {{checkin_extra}}"
+checkout_instructions: "Il check-out è entro le {{checkout_by}}. {{checkout_extra}}"
 
 house_rules: |
   Regole principali:
@@ -23,11 +25,12 @@ emergencies: |
   • Incendio: {{emergency_fire}}
   • Sicurezza: {{emergency_safety}}
 
-parking_info: "Il parcheggio in strada è gratuito nelle zone bianche. {{#if parking_note}}Nota: {{parking_note}}{{/if}}"
-breakfast_info: "{{breakfast_info}}"
+parking_info: "Parcheggio: {{parking_note}}"
 
-transportation_info: "{{transportation_info}}"
-transportation_to_venice: "{{transportation_to_venice}}"
-transportation_airport: "{{transportation_airport}}"
+breakfast_info: "Colazione: {{breakfast_info}}"
 
-restaurants: "{{restaurants}}"
+transportation_info: "Trasporti: {{transportation_info}}"
+transportation_to_venice: "Per andare a Venezia: {{transportation_to_venice}}"
+transportation_airport: "Per l’aeroporto: {{transportation_airport}}"
+
+restaurants: "Ristoranti consigliati: {{restaurants}}"
