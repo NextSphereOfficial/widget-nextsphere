@@ -1,3 +1,33 @@
+# --- NextSphere standard slots (v2) ---
+
 welcome_intro: "Hi! Welcome to {{hotel_name}} 😊 If you need anything, I’m here to help."
 wifi_credentials: "Wi-Fi — SSID: {{ssid}} · Password: {{password}}"
 wifi_unavailable: "The Wi-Fi network and password will be provided by the host."
+checkin_instructions: "Check-in is from {{checkin_from}} onwards. If you need details, just ask."
+checkout_instructions: "Check-out is by {{checkout_by}}. If you have any doubts about keys or the procedure, message me."
+
+house_rules: |
+  Main house rules:
+  • {{rules_general}}
+  • {{rules_smoking}}
+  • {{rules_pets}}
+  • {{rules_visitors}}
+  • {{rules_quiet_hours}}
+  • {{rules_waste}}
+  • {{rules_damage}}
+
+emergencies: |
+  Emergencies:
+  • General: {{emergency_general}}
+  • Medical: {{emergency_medical}}
+  • Fire: {{emergency_fire}}
+  • Safety: {{emergency_safety}}
+
+parking_info: "{{parking_info}}"
+breakfast_info: "{{breakfast_info}}"
+
+transportation_info: "{{transportation_info}}"
+transportation_to_venice: "{{transportation_to_venice}}"
+transportation_airport: "{{transportation_airport}}"
+
+restaurants: "{{restaurants}}"
