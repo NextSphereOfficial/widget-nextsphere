@@ -304,12 +304,14 @@ async function renderTemplate(
       : replyKey.trim();
 
   // 0) PRIMA PRIORITÀ: copy_overrides (cliente)
-  const overrideTpl =
+    const overrideTpl =
     structureYaml &&
-    (structureYaml as any).copy_overrides &&
-    typeof (structureYaml as any).copy_overrides === "object"
-      ? (structureYaml as any).copy_overrides[overrideKey]
+    (structureYaml as any).content &&
+    (structureYaml as any).content.copy_overrides &&
+    typeof (structureYaml as any).content.copy_overrides === "object"
+      ? (structureYaml as any).content.copy_overrides[overrideKey]
       : undefined;
+
 
   if (typeof overrideTpl === "string" && overrideTpl.trim()) {
     const vars = resolveIntentVars(intentDef, structureYaml);
