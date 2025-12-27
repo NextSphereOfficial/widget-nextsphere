@@ -23,7 +23,7 @@ emergencies: |
   • Incendio: {{emergency_fire}}
   • Sicurezza: {{emergency_safety}}
 
-parking_info: "{{parking_info}}"
+parking_info: "Il parcheggio in strada è gratuito nelle zone bianche. {{#if parking_note}}Nota: {{parking_note}}{{/if}}"
 breakfast_info: "{{breakfast_info}}"
 
 transportation_info: "{{transportation_info}}"

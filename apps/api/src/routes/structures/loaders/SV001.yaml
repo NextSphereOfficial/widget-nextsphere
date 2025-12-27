@@ -104,8 +104,10 @@ content:
     pharmacy: "La farmacia si trova in fondo alla strada, sulla sinistra."
     restaurants: "Nel centro di Mestre ti consigliamo: Barroca - per un aperitivo con ottimi panini. Fermenti - ristorante e pizzeria. Ca di Mat per un buon drink."
     activities: "A Mestre puoi trovare parchi, cinema e aree pedonali. Per Venezia c’è il tram."
-    parking: "Il parcheggio in strada è gratuito nelle zone bianche. Controlla i cartelli prima di lasciare l’auto."
-    transport: "Il tram T1 per Venezia si prende a pochi minuti a piedi. Passa ogni 7–10 minuti."
+    parking:
+      maps_url: "https://maps.google.com/..."
+      note: "Zone bianche in Via Roma"
+  transport: "Il tram T1 per Venezia si prende a pochi minuti a piedi. Passa ogni 7–10 minuti."
 
   venice:
     info: "Per andare a Venezia, prendi il tram T1 o l’autobus 4L. I biglietti si acquistano nei tabaccai, alle macchinette ACTV o tramite app."
@@ -279,9 +281,8 @@ intents:
   parking:
     reply_key: parking_info
     vars:
-      parking_info: "{{content.local_area.parking}}"
-    output:
-      short: "{{content.local_area.parking}}"
+      parking_note: "{{content.parking.note}}"
+
 
 
   transport:

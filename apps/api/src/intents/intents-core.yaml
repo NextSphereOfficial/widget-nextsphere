@@ -8,7 +8,7 @@ intents:
 
   welcome:
     category: system
-    synonyms: ["benvenuto", "ciao", "salve", "hey"]
+    synonyms: ["benvenuto", "ciao", "salve", "hey", "hi", "hello"]
     keywords: ["welcome"]
     patterns: ["ciao", "buongiorno", "buonasera", "salve"]
 

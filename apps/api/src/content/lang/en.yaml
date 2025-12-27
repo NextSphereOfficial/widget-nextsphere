@@ -23,7 +23,7 @@ emergencies: |
   • Fire: {{emergency_fire}}
   • Safety: {{emergency_safety}}
 
-parking_info: "{{parking_info}}"
+parking_info: "Street parking is free in the white zones. {{parking_note}}"
 breakfast_info: "{{breakfast_info}}"
 
 transportation_info: "{{transportation_info}}"
