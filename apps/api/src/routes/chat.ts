@@ -644,13 +644,16 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           })
         );
 
-        const llmOut = await orchestrateChat(defaultStructure, message, {
-          matched: false,
-          intent: out.intent ?? undefined,
-          confidence: 0.3,
-          history, // 👈 NEW
-          lang: out.lang ?? lang ?? "it",
-        });
+      const llmOut = await orchestrateChat(  defaultStructure,  message,  {
+    matched: false,
+    intent: out.intent ?? undefined,
+    confidence: 0.3,
+    history,
+    lang: out.lang ?? lang ?? "it",
+  },
+  lang // 👈 AGGIUNGI QUESTO
+);
+
 
         // 3) Se la risposta è valida, salviamo in cache (serializzata)
         if (llmOut && (llmOut as any).ok !== false) {
@@ -814,13 +817,19 @@ app.post("/chat/:structureId", async (req, reply) => {
           })
         );
 
-        const llmOut = await orchestrateChat(structureId, message, {
-          matched: false,
-          intent: out.intent ?? undefined,
-          confidence: 0.3,
-          history,
-          lang: out.lang ?? lang ?? "it",
-        });
+       const llmOut = await orchestrateChat(
+  structureId,
+  message,
+  {
+    matched: false,
+    intent: out.intent ?? undefined,
+    confidence: 0.3,
+    history,
+    lang: out.lang ?? lang ?? "it",
+  },
+  lang // 👈 PASSA SEMPRE LA LINGUA RICHIESTA DAL WIDGET
+);
+
 
         if (llmOut && (llmOut as any).ok !== false) {
           cacheSet(cacheKey, JSON.stringify(llmOut));

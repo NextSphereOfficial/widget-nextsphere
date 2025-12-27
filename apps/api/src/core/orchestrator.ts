@@ -91,9 +91,14 @@ export async function orchestrateChat(
     history?: { role: 'user' | 'assistant'; content: string }[];
     lang?: string;
   },
+  reqLang?: string,
 ) {
   const ctx = await buildContext(structureId);
-  const replyLang = String(yamlProbe?.lang || ctx.locale || "it").slice(0, 2).toLowerCase();
+
+  const replyLang = String(
+    yamlProbe?.lang || reqLang || ctx.locale || "it"
+  ).slice(0, 2).toLowerCase();
+
 
 
 
@@ -174,11 +179,14 @@ export async function orchestrateChat(
   }
 
     
-      const langName =
+  const langName =
     replyLang.startsWith('en') ? 'inglese' :
     replyLang.startsWith('de') ? 'tedesco' :
     replyLang.startsWith('fr') ? 'francese' :
+    replyLang.startsWith('es') ? 'spagnolo' :
+    replyLang.startsWith('pt') ? 'portoghese' :
     'italiano';
+
 
       const LANGUAGE_RULE = `
         LINGUA DI RISPOSTA (OBBLIGATORIA):
