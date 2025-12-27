@@ -245,37 +245,52 @@ function fallbackText(
 
 
 
-function resolveIntentVars(  intentDef: any,  structureYaml: any): Record<string, any> {
+function resolveIntentVars(
+  intentDef: any,
+  structureYaml: any,
+  lang: string
+): Record<string, any> {
   const out: Record<string, any> = {};
-
   const vars =
-    intentDef?.vars && typeof intentDef.vars === "object"
-      ? intentDef.vars
-      : {};
+    intentDef?.vars && typeof intentDef.vars === "object" ? intentDef.vars : {};
 
-  const lang =
-    structureYaml?.meta?.default_locale ||
-    structureYaml?.default_locale ||
-    "it";
+  const defaultLocale =
+    structureYaml?.meta?.default_locale || structureYaml?.default_locale || "it";
+
+  const pickLang = (val: any) => {
+    if (val && typeof val === "object") {
+      if (typeof val[lang] === "string") return val[lang];
+      if (typeof val[defaultLocale] === "string") return val[defaultLocale];
+      if (typeof val.it === "string") return val.it;
+      return "";
+    }
+    return val === undefined || val === null ? "" : String(val);
+  };
+
+  const getContentPath = (path: string) => {
+    // path esempio: "parking.note"
+    const parts = path.split(".");
+    let cur: any = structureYaml?.content;
+    for (const p of parts) {
+      if (!cur || typeof cur !== "object") return undefined;
+      cur = cur[p];
+    }
+    return cur;
+  };
 
   for (const [k, v] of Object.entries(vars)) {
     if (typeof v === "string") {
-      // Risolvi {{content.xxx}}
-      const resolved = applyTemplateToText(v, structureYaml);
-
-      // 🔴 QUI il fix: gestiamo oggetti per-lingua
-      if (typeof resolved === "object" && resolved !== null) {
-        if (typeof (resolved as any)[lang] === "string") {
-          out[k] = (resolved as any)[lang];
-        } else if (typeof (resolved as any).it === "string") {
-          out[k] = (resolved as any).it;
-        } else {
-          out[k] = "";
-        }
-      } else {
-        out[k] = resolved ?? "";
+      // Caso ottimizzato: "{{content.xxx.yyy}}"
+      const m = v.match(/^\{\{\s*content\.([a-zA-Z0-9_.-]+)\s*\}\}$/);
+      if (m) {
+        const raw = getContentPath(m[1]);
+        out[k] = pickLang(raw);
+        continue;
       }
 
+      // fallback: comportamento attuale
+      const resolved = applyTemplateToText(v, structureYaml);
+      out[k] = pickLang(resolved);
       continue;
     }
 
@@ -284,11 +299,12 @@ function resolveIntentVars(  intentDef: any,  structureYaml: any): Record<string
       continue;
     }
 
-    out[k] = String(v);
+    out[k] = pickLang(v);
   }
 
   return out;
 }
+
 
 
 
@@ -343,7 +359,7 @@ async function renderTemplate(
 
 
   if (typeof overrideTpl === "string" && overrideTpl.trim()) {
-    const vars = resolveIntentVars(intentDef, structureYaml);
+    const vars = resolveIntentVars(intentDef, structureYaml, lang);
     const text = renderVars(overrideTpl, vars);
     const buttons =
       Array.isArray(intentDef?.output?.ui?.buttons) ? intentDef.output.ui.buttons : [];
@@ -360,7 +376,7 @@ if (template === undefined) {
 
 
     if (typeof template === "string" && template.trim()) {
-      const vars = resolveIntentVars(intentDef, structureYaml);
+      const vars = resolveIntentVars(intentDef, structureYaml, lang);
 
       // (a) sostituisci vars ({{ssid}} ecc)
       let text = renderVars(template, vars);
