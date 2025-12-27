@@ -245,23 +245,63 @@ function fallbackText(
 
 
 
-function resolveIntentVars(intentDef: any, structureYaml: any): Record<string, any> {
+function resolveIntentVars(
+  intentDef: any,
+  structureYaml: any
+): Record<string, any> {
   const out: Record<string, any> = {};
+
   const vars =
-    intentDef?.vars && typeof intentDef.vars === "object" ? intentDef.vars : {};
+    intentDef?.vars && typeof intentDef.vars === "object"
+      ? intentDef.vars
+      : {};
+
+  // lingua corrente + fallback
+  const lang =
+    structureYaml?.meta?.default_locale ||
+    structureYaml?.default_locale ||
+    "it";
 
   for (const [k, v] of Object.entries(vars)) {
+    // Caso 1: stringa → comportamento attuale (immutato)
     if (typeof v === "string") {
-      // vars: { ssid: "{{content.wifi.ssid}}" } ecc
+      // es: "{{content.wifi.ssid}}"
       out[k] = applyTemplateToText(v, structureYaml);
-    } else if (v === undefined || v === null) {
-      out[k] = "";
-    } else {
-      out[k] = String(v);
+      continue;
     }
+
+    // Caso 2: null / undefined
+    if (v === undefined || v === null) {
+      out[k] = "";
+      continue;
+    }
+
+    // Caso 3: oggetto → possibile valore per-lingua { it, en, ... }
+    if (typeof v === "object") {
+      // es: { it: "...", en: "..." }
+      if (typeof (v as any)[lang] === "string") {
+        out[k] = (v as any)[lang];
+        continue;
+      }
+
+      // fallback su italiano
+      if (typeof (v as any).it === "string") {
+        out[k] = (v as any).it;
+        continue;
+      }
+
+      // ultimo fallback: stringificazione sicura
+      out[k] = "";
+      continue;
+    }
+
+    // Caso 4: qualunque altro tipo (number, boolean, ecc.)
+    out[k] = String(v);
   }
+
   return out;
 }
+
 
 function renderVars(template: string, vars: Record<string, any>): string {
   if (typeof template !== "string" || template.indexOf("{{") === -1) return template;

@@ -79,7 +79,9 @@ content:
   # Parcheggio (dato)
   ##########################################################
   parking:
-    note: "Zone bianche in Via Roma"
+    note:
+      it: "C'è un posto auto di fronte al garage dietro il palazzo."
+      en: "There is a parking spot in front of the garage behind the building."
     maps_url: "https://maps.google.com/..."
 
   ##########################################################
