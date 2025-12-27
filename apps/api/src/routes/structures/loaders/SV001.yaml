@@ -11,9 +11,14 @@ meta:
 ############################################################
 
 content:
-  
   copy_overrides:
-    welcome_intro: "OVERRIDE TEST: Ciao! 👋"
+    welcome_intro: "Ciao! Benvenuto in {{hotel_name}} 😊 Se hai bisogno di qualcosa, sono qui per aiutarti."
+
+    wifi_credentials: "Wi-Fi: {{ssid}} · Password: {{password}}"
+
+    checkin_instructions: "Il check-in viene fatto di persona. L’orario standard è dalle {{checkin_from}} in poi."
+
+    checkout_instructions: "Il check-out è entro le {{checkout_by}}. Lascia le chiavi sul tavolo e chiudi la porta dietro di te."
 
 
   hotel:
@@ -37,12 +42,15 @@ content:
 
 
   checkin:
+    from: "15:00"
     instructions: "Il check-in viene fatto di persona. L’orario standard è dalle 15:00 in poi."
+
 
   early_checkin:
     info: "Il check-in anticipato non è garantito. Contattaci per verificare la disponibilità."
 
   checkout:
+    by: "10:00"
     instructions: "Il check-out è entro le 10:00. Lascia le chiavi sul tavolo e chiudi la porta dietro di te."
 
   late_checkout:
@@ -109,8 +117,12 @@ intents:
 
   # CHECK-IN / CHECK-OUT
   checkin:
+    reply_key: checkin_instructions
+    vars:
+      checkin_from: "{{content.checkin.from}}"
     output:
       short: "{{content.checkin.instructions}}"
+
 
   early_checkin:
     output:
@@ -121,8 +133,12 @@ intents:
       short: "{{content.parking}}"
 
   checkout:
+    reply_key: checkout_instructions
+    vars:
+      checkout_by: "{{content.checkout.by}}"
     output:
       short: "{{content.checkout.instructions}}"
+
 
   late_checkout:
     output:
@@ -139,7 +155,7 @@ intents:
       ssid: "{{content.wifi.ssid}}"
       password: "{{content.wifi.password}}"
     output:
-      short: "SSID: {{content.wifi.ssid}} — Password: {{content.wifi.password}}"
+      short: "{{content.wifi.ssid}} {{content.wifi.password}}"
 
 
   heating:
