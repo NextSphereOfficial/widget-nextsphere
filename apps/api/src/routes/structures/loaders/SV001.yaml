@@ -89,7 +89,12 @@ content:
   ##########################################################
   transport:
     general: "Tram T1"
-    to_venice: "Tram T1 o autobus 4L"
+    to_venice:
+      it: "Per andare a Venezia, prendi il tram T1 o l’autobus 4L. I biglietti si acquistano nei tabaccai, alle macchinette ACTV o tramite app."
+      en: "To get to Venice, take tram T1 or bus 4L. Tickets can be bought at tobacco shops, ACTV ticket machines, or via the app."
+      de: "Um nach Venedig zu kommen, nimm die Straßenbahn T1 oder den Bus 4L. Tickets gibt es in Tabakläden, an ACTV-Automaten oder per App."
+      fr: "Pour aller à Venise, prenez le tram T1 ou le bus 4L. Les billets s’achètent dans les bureaux de tabac, aux distributeurs ACTV ou via l’application."
+      es: "Para ir a Venecia, toma el tranvía T1 o el autobús 4L. Los billetes se compran en estancos, en máquinas ACTV o mediante la app."
     airport: "Bus dedicato o taxi (Marco Polo / Treviso)"
 
   ##########################################################

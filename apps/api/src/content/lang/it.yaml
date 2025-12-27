@@ -30,7 +30,7 @@ parking_info: "Parcheggio: {{parking_note}}"
 breakfast_info: "Colazione: {{breakfast_info}}"
 
 transportation_info: "Trasporti: {{transportation_info}}"
-transportation_to_venice: "Per andare a Venezia: {{transportation_to_venice}}"
+transportation_to_venice: "{{transportation_to_venice}}"
 transportation_airport: "Per l’aeroporto: {{transportation_airport}}"
 
 restaurants: "Ristoranti consigliati: {{restaurants}}"
