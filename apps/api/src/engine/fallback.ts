@@ -7,7 +7,7 @@ export function buildClarify(lang: Lang, topIds: string[], config: EngineConfig)
                               : `I can help with Wi-Fi, check-in, house rules, emergencies.`;
     return `${base} ${ask}`.trim();
   }
-  const base = `Non sono sicuro al 100% di cosa ti serve.`;
+  const base = `Non sono sicuro al 100% cosa ti serva.`;
   const ask = topIds.length ? `Ti servono: ${topIds.join(' oppure ')}?`
                             : `Posso aiutarti con Wi-Fi, check-in, regole di casa, emergenze.`;
   return `${base} ${ask}`.trim();

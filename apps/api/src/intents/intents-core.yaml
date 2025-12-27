@@ -8,9 +8,19 @@ intents:
 
   welcome:
     category: system
-    synonyms: ["benvenuto", "ciao", "salve", "hey", "hi", "hello"]
-    keywords: ["welcome"]
-    patterns: ["ciao", "buongiorno", "buonasera", "salve"]
+    synonyms: ["benvenuto", "ciao", "salve", "hey", "hi", "hello", "buongiorno", "buonasera", "good morning", "good evening", "hallo", "guten tag", "guten morgen", "guten abend", "bonjour", "salut", "bonsoir", "hola", "buenos dÃ­as", "buenas tardes", "buenas noches"]
+    keywords: ["welcome", "greeting", "saluto", "salut", "saludo", "begrÃ¼ÃŸung", "accueil"]
+    patterns: [
+      "ciao", "buongiorno", "buonasera", "salve", "benvenuto",
+
+      "hello", "hi", "hey", "good morning", "good evening",
+
+      "hola", "buenos dÃ­as", "buenas tardes", "buenas noches",
+
+      "hallo", "guten tag", "guten morgen", "guten abend",
+
+      "bonjour", "salut", "bonsoir"
+    ]
 
   fallback:
     category: system
@@ -18,71 +28,110 @@ intents:
     keywords: []
     patterns: []
 
-
   ############################################################
   # B. CHECK-IN / CHECK-OUT
   ############################################################
 
   checkin:
     category: checkin
-    synonyms: ["checkin", "check-in"]
-    keywords: ["checkin", "check-in", "arrivo", "entrata"]
+    synonyms: ["checkin", "check-in", "arrivo", "check in", "arrival", "anreise", "ankunft", "arrivÃ©e", "llegada", "registro"]
+    keywords: ["checkin", "check-in", "arrivo", "entrata", "arrival", "arrive", "ankunft", "arrivÃ©e", "llegada", "entrada", "ingresso"]
     patterns: [
-      "come funziona il check in",
-      "a che ora posso entrare",
-      "quando posso arrivare",
-      "orario check in"
+      "come funziona il check in", "a che ora posso entrare", "quando posso arrivare", "orario check in", "check in", "check-in",
+
+      "check-in time", "what time is check-in", "when can I check in", "arrival time", "how does check-in work", "check in",
+
+      "a quÃ© hora es el check-in", "hora de llegada", "cuÃ¡ndo puedo hacer el check-in", "cÃ³mo funciona el check-in", "llegada", "check-in",
+
+      "wann ist check-in", "wann kann ich einchecken", "check-in uhrzeit", "ankunftszeit", "wie funktioniert der check-in", "einchecken",
+
+      "Ã  quelle heure est le check-in", "heure d'arrivÃ©e", "quand puis-je arriver", "comment fonctionne le check-in", "arrivÃ©e", "check-in"
     ]
     priority: 1
 
   early_checkin:
     category: checkin
-    synonyms: ["early checkin", "checkin anticipato"]
-    keywords: ["early", "anticipato"]
+    synonyms: ["early checkin", "checkin anticipato", "early check-in", "check-in anticipato", "arrivo anticipato", "frÃ¼h einchecken", "frÃ¼her check-in", "check-in anticipÃ©", "llegada temprana", "check-in temprano"]
+    keywords: ["early", "anticipato", "prima", "earlier", "frÃ¼h", "frÃ¼her", "anticipÃ©", "temprano"]
     patterns: [
-      "posso fare check in prima",
-      "posso entrare prima",
-      "arrivare prima è possibile"
+      "posso fare check in prima", "posso entrare prima", "arrivare prima Ã¨ possibile", "checkin anticipato", "arrivo prima",
+      "Ã¨ possibile check-in anticipato", "check-in prima",
+
+      "can I check in early", "is early check-in possible", "arrive earlier", "early check-in", "check in earlier",
+
+      "puedo hacer el check-in antes", "check-in temprano posible", "llego mÃ¡s temprano", "llegada temprana", "entrar antes",
+
+      "kann ich frÃ¼her einchecken", "frÃ¼her check-in mÃ¶glich", "ich komme frÃ¼her", "frÃ¼h einchecken", "eher einchecken",
+
+      "puis-je arriver plus tÃ´t", "check-in anticipÃ© possible", "j'arrive plus tÃ´t", "arrivÃ©e anticipÃ©e", "check-in plus tÃ´t"
     ]
 
   checkin_parking:
     category: checkin
-    synonyms: ["parcheggio check in"]
-    keywords: ["parcheggio checkin", "parking checkin"]
+    synonyms: ["parcheggio check in", "parcheggio", "parking", "park", "auto", "car park", "parkplatz", "stationnement", "aparcamiento"]
+    keywords: ["parcheggio checkin", "parking checkin", "parcheggio", "parking", "auto", "car", "park", "parkplatz", "stationnement", "aparcamiento", "garage"]
     patterns: [
-      "posso parcheggiare prima del check in",
-      "dove parcheggio per il check in"
+      "posso parcheggiare prima del check in", "dove parcheggio per il check in", "dove parcheggio al check-in", "parcheggio per checkin",
+      "dove lascio l'auto", "parcheggio arrivo",
+
+      "where can I park when I arrive", "parking for check-in", "where do I leave the car", "arrival parking",
+
+      "dÃ³nde aparcar al llegar", "aparcamiento para el check-in", "dÃ³nde dejo el coche", "parking al llegar",
+
+      "wo kann ich bei der ankunft parken", "parkplatz beim check-in", "wo stelle ich das auto ab", "parken bei ankunft",
+
+      "oÃ¹ se garer Ã  l'arrivÃ©e", "stationnement pour le check-in", "oÃ¹ laisser la voiture", "parking Ã  l'arrivÃ©e"
     ]
 
   checkout:
     category: checkout
-    synonyms: ["checkout", "check-out"]
-    keywords: ["checkout", "partenza"]
+    synonyms: ["checkout", "check-out", "partenza", "check out", "departure", "abreise", "dÃ©part", "salida", "salir"]
+    keywords: ["checkout", "partenza", "check-out", "uscita", "departure", "leave", "abreise", "dÃ©part", "salida"]
     patterns: [
-      "a che ora devo lasciare",
-      "quando devo andare via",
-      "orario checkout"
+      "a che ora devo lasciare", "quando devo andare via", "orario checkout", "come funziona il checkout", "a che ora devo uscire",
+      "check out", "check-out",
+
+      "check-out time", "what time is check-out", "when do we have to leave", "how does check-out work", "check out",
+
+      "a quÃ© hora es el check-out", "hora de salida", "cuÃ¡ndo tenemos que salir", "cÃ³mo funciona el check-out", "salida",
+
+      "wann ist check-out", "bis wann auschecken", "check-out uhrzeit", "wie funktioniert der check-out", "auschecken",
+
+      "Ã  quelle heure est le check-out", "heure de dÃ©part", "quand doit-on partir", "comment fonctionne le check-out", "dÃ©part"
     ]
 
   late_checkout:
     category: checkout
-    synonyms: ["late checkout", "check out posticipato"]
-    keywords: ["tardi", "posticipato"]
+    synonyms: ["late checkout", "check out posticipato", "late check-out", "checkout tardi", "check-out tardi", "partenza tardiva", "spÃ¤ter check-out", "dÃ©part tardif", "salida tardÃ­a"]
+    keywords: ["tardi", "posticipato", "late", "later", "spÃ¤ter", "tardif", "tardÃ­a"]
     patterns: [
-      "posso fare checkout più tardi",
-      "posso andare via dopo",
-      "posso restare di più"
+      "posso fare checkout piÃ¹ tardi", "posso andare via dopo", "posso restare di piÃ¹", "late checkout", "posso uscire piÃ¹ tardi",
+      "checkout posticipato", "check-out tardivo", "partenza piÃ¹ tardi",
+
+      "can we check out late", "late check-out possible", "leave later", "late checkout", "check out later",
+
+      "podemos salir mÃ¡s tarde", "check-out tardÃ­o posible", "salida mÃ¡s tarde", "late checkout", "salir mÃ¡s tarde",
+
+      "kÃ¶nnen wir spÃ¤ter auschecken", "late check-out mÃ¶glich", "spÃ¤ter gehen", "spÃ¤terer check-out", "auschecken spÃ¤ter",
+
+      "peut-on partir plus tard", "check-out tardif possible", "dÃ©part plus tard", "late check-out", "quitter plus tard"
     ]
 
   checkout_keys:
     category: checkout
-    synonyms: ["chiavi checkout", "consegna chiavi"]
-    keywords: ["lasciare chiavi", "dove lascio le chiavi"]
+    synonyms: ["chiavi checkout", "consegna chiavi", "chiavi", "keys", "key return", "schlÃ¼ssel", "schlÃ¼ssel abgabe", "clÃ©s", "remettre les clÃ©s", "llaves", "dejar las llaves"]
+    keywords: ["lasciare chiavi", "dove lascio le chiavi", "chiavi", "keys", "key", "return keys", "restituire", "schlÃ¼ssel", "rendre", "clÃ©s", "llaves", "entrega"]
     patterns: [
-      "dove lascio le chiavi",
-      "come funziona per le chiavi"
-    ]
+      "dove lascio le chiavi", "come funziona per le chiavi", "consegna chiavi", "come restituisco le chiavi", "key drop", "chiavi checkout",
 
+      "where do we leave the keys", "how to return the keys", "key drop-off", "leave the keys", "keys at check-out",
+
+      "dÃ³nde dejo las llaves", "cÃ³mo devolver las llaves", "entrega de llaves", "llaves al salir",
+
+      "wo sollen wir die schlÃ¼ssel lassen", "wie gebe ich die schlÃ¼ssel zurÃ¼ck", "schlÃ¼ssel abgabe", "schlÃ¼ssel beim check-out",
+
+      "oÃ¹ laisser les clÃ©s", "comment rendre les clÃ©s", "dÃ©pÃ´t des clÃ©s", "clÃ©s au dÃ©part"
+    ]
 
   ############################################################
   # C. DOTAZIONI / PROBLEMI TECNICI
@@ -90,53 +139,87 @@ intents:
 
   wifi:
     category: utilities
-    synonyms: ["wifi", "internet", "wi-fi"]
-    keywords: ["password wifi", "rete wifi", "internet non funziona"]
+    synonyms: ["wifi", "internet", "wi-fi", "password", "rete", "network", "wlan", "passwort", "mot de passe", "contraseÃ±a"]
+    keywords: ["password wifi", "rete wifi", "internet non funziona", "wifi", "wi-fi", "internet", "password", "pass", "ssid", "rete", "wlan", "passwort", "mot de passe", "contraseÃ±a", "network"]
     patterns: [
-      "qual è la password del wifi",
-      "come si chiama la rete wifi",
-      "non funziona internet"
+      "qual Ã¨ la password del wifi", "come si chiama la rete wifi", "non funziona internet", "wifi", "password wifi", "nome rete wifi",
+      "come mi collego al wifi",
+
+      "wifi password", "what is the wifi password", "wifi name", "how to connect to wifi", "internet password",
+
+      "contraseÃ±a del wifi", "cuÃ¡l es la contraseÃ±a del wifi", "nombre de la red", "cÃ³mo conectarse al wifi", "clave del wifi",
+
+      "wlan passwort", "wie lautet das wlan passwort", "wie heiÃŸt das wlan", "wlan verbinden", "internet passwort",
+
+      "mot de passe wifi", "quel est le mot de passe du wifi", "nom du wifi", "se connecter au wifi", "mot de passe internet"
     ]
 
   heating:
     category: utilities
-    synonyms: ["riscaldamento", "termosifoni"]
-    keywords: ["riscaldamento"]
+    synonyms: ["riscaldamento", "termosifoni", "heating", "heater", "termostato", "thermostat", "heizung", "chauffage", "calefacciÃ³n"]
+    keywords: ["riscaldamento", "heating", "heater", "thermostat", "termostato", "heizung", "chauffage", "calefacciÃ³n", "radiatore", "radiator"]
     patterns: [
-      "non funziona il riscaldamento",
-      "come si accende il riscaldamento",
-      "fa freddo"
+      "non funziona il riscaldamento", "come si accende il riscaldamento", "fa freddo", "come accendo il riscaldamento",
+      "il riscaldamento non funziona", "termostato", "radiatore",
+
+      "how to turn on the heating", "the heating doesn't work", "thermostat", "it's cold", "radiator",
+
+      "cÃ³mo encender la calefacciÃ³n", "la calefacciÃ³n no funciona", "termostato", "hace frÃ­o", "radiador",
+
+      "wie funktioniert die heizung", "heizung geht nicht", "thermostat", "es ist kalt", "heizkÃ¶rper",
+
+      "comment allumer le chauffage", "le chauffage ne marche pas", "thermostat", "il fait froid", "radiateur"
     ]
 
   air_conditioning:
     category: utilities
-    synonyms: ["aria condizionata", "condizionatore", "clima"]
-    keywords: ["clima", "aria condizionata"]
+    synonyms: ["aria condizionata", "condizionatore", "clima", "air conditioning", "ac", "a/c", "klimaanlage", "climatisation", "aire acondicionado"]
+    keywords: ["clima", "aria condizionata", "condizionatore", "air conditioning", "ac", "cooling", "klimaanlage", "climatisation", "aire acondicionado"]
     patterns: [
-      "non funziona il clima",
-      "come accendo il condizionatore",
-      "fa caldo"
+      "non funziona il clima", "come accendo il condizionatore", "fa caldo", "come uso l'aria condizionata",
+      "il condizionatore non funziona", "raffreddare la stanza", "aria condizionata",
+
+      "how to use the air conditioning", "the ac doesn't work", "cool the room", "air conditioning",
+
+      "cÃ³mo usar el aire acondicionado", "no funciona el aire acondicionado", "enfriar la habitaciÃ³n", "aire acondicionado",
+
+      "wie benutze ich die klimaanlage", "klimaanlage funktioniert nicht", "zimmer kÃ¼hlen", "klimaanlage",
+
+      "comment utiliser la climatisation", "la clim ne marche pas", "refroidir la chambre", "climatisation"
     ]
 
   water:
     category: utilities
-    synonyms: ["acqua"]
-    keywords: ["acqua", "rubinetto"]
+    synonyms: ["acqua", "acqua calda", "water", "hot water", "warmwasser", "wasser", "eau", "eau chaude", "agua", "agua caliente"]
+    keywords: ["acqua", "rubinetto", "water", "hot", "cold", "acqua calda", "hot water", "warmwasser", "eau chaude", "agua caliente", "no water"]
     patterns: [
-      "non esce acqua",
-      "acqua fredda",
-      "l'acqua non funziona"
+      "non esce acqua", "acqua fredda", "l'acqua non funziona", "non c'Ã¨ acqua", "non c'Ã¨ acqua calda", "l'acqua calda non funziona",
+      "problema acqua", "pressione acqua",
+
+      "no water", "no hot water", "hot water doesn't work", "water problem", "low water pressure",
+
+      "no hay agua", "no hay agua caliente", "no funciona el agua caliente", "problema de agua", "presiÃ³n de agua",
+
+      "kein wasser", "kein warmwasser", "warmwasser funktioniert nicht", "wasserproblem", "wasserdruck",
+
+      "pas d'eau", "pas d'eau chaude", "l'eau chaude ne marche pas", "problÃ¨me d'eau", "pression d'eau"
     ]
 
   electricity:
     category: utilities
-    synonyms: ["elettricità", "corrente"]
-    keywords: ["luce", "corrente"]
+    synonyms: ["elettricitÃ ", "corrente", "electricity", "power", "strom", "Ã©lectricitÃ©", "electricidad", "blackout", "presa", "socket"]
+    keywords: ["luce", "corrente", "electricity", "power", "no power", "strom", "Ã©lectricitÃ©", "electricidad", "blackout", "light", "presa", "socket"]
     patterns: [
-      "non c'è corrente",
-      "si è staccata la luce"
-    ]
+      "non c'Ã¨ corrente", "si Ã¨ staccata la luce", "blackout", "la luce non va", "Ã¨ saltata la corrente", "prese non funzionano",
 
+      "no electricity", "power outage", "the lights don't work", "the power went out", "sockets don't work",
+
+      "no hay electricidad", "corte de luz", "no funciona la luz", "se fue la luz", "no funcionan los enchufes",
+
+      "kein strom", "stromausfall", "das licht geht nicht", "sicherung raus", "steckdosen funktionieren nicht",
+
+      "pas d'Ã©lectricitÃ©", "coupure de courant", "la lumiÃ¨re ne marche pas", "panne de courant", "prises ne marchent pas"
+    ]
 
   ############################################################
   # D. REGOLE DELLA CASA
@@ -144,85 +227,152 @@ intents:
 
   house_rules:
     category: rules
-    synonyms: ["regole", "regole casa"]
-    keywords: ["regolamento", "norme"]
+    synonyms: ["regole", "regole casa", "regole della casa", "house rules", "rules", "hausregeln", "rÃ¨glement", "normas", "reglas"]
+    keywords: ["regolamento", "norme", "regole", "rules", "house rules", "policy", "hausregeln", "rÃ¨glement", "normas", "reglas"]
     patterns: [
-      "quali sono le regole",
-      "regole della casa"
+      "quali sono le regole", "regole della casa", "regole appartamento", "cosa Ã¨ consentito", "cosa non si puÃ² fare",
+
+      "house rules", "what are the rules", "rules of the apartment", "what is allowed", "what is not allowed",
+
+      "normas de la casa", "cuÃ¡les son las normas", "reglas del apartamento", "quÃ© estÃ¡ permitido", "quÃ© estÃ¡ prohibido",
+
+      "hausregeln", "welche regeln gibt es", "regeln der wohnung", "was ist erlaubt", "was ist nicht erlaubt",
+
+      "rÃ¨glement de la maison", "quelles sont les rÃ¨gles", "rÃ¨gles de l'appartement", "qu'est-ce qui est autorisÃ©",
+      "qu'est-ce qui est interdit"
     ]
 
   smoking:
     category: rules
-    synonyms: ["fumare", "fumo"]
-    keywords: ["sigaretta", "sigarette"]
+    synonyms: ["fumare", "fumo", "smoking", "cigarette", "vape", "rauchen", "rauchverbot", "fumer", "interdiction de fumer", "fumar", "prohibido fumar"]
+    keywords: ["sigaretta", "sigarette", "fumare", "smoking", "smoke", "cigarette", "vape", "rauchen", "fumer", "fumar", "smoking rules"]
     patterns: [
-      "posso fumare",
-      "è vietato fumare"
+      "posso fumare", "Ã¨ vietato fumare", "si puÃ² fumare", "Ã¨ consentito fumare", "regole fumo", "divieto di fumo", "si puÃ² svapare",
+
+      "can I smoke", "is smoking allowed", "smoking rules", "no smoking", "can I vape",
+
+      "se puede fumar", "estÃ¡ permitido fumar", "prohibido fumar", "normas de fumar", "se puede vapear",
+
+      "darf man rauchen", "rauchen erlaubt", "rauchverbot", "rauchregeln", "darf man dampfen",
+
+      "peut-on fumer", "fumer autorisÃ©", "interdiction de fumer", "rÃ¨gles de tabac", "peut-on vapoter"
     ]
 
   pets:
     category: rules
-    synonyms: ["animali", "cani", "gatti"]
-    keywords: ["animali ammessi", "pet"]
+    synonyms: ["animali", "cani", "gatti", "pets", "pet", "cane", "gatto", "dog", "cat", "haustiere", "hund", "katze", "animaux", "chien", "chat", "mascotas", "perro", "gato"]
+    keywords: ["animali ammessi", "pet", "animali", "pets", "dog", "cat", "haustiere", "animaux", "mascotas", "policy", "regole"]
     patterns: [
-      "posso portare un cane",
-      "accettate animali"
+      "posso portare un cane", "accettate animali", "sono ammessi animali", "posso portare il cane", "regole animali", "animali domestici",
+      "cani ammessi",
+
+      "are pets allowed", "can I bring my dog", "pet policy", "pets", "dogs allowed",
+
+      "se permiten mascotas", "puedo traer mi perro", "normas de mascotas", "mascotas", "perros permitidos",
+
+      "sind haustiere erlaubt", "darf ich meinen hund mitbringen", "haustierregeln", "haustiere", "hunde erlaubt",
+
+      "les animaux sont-ils autorisÃ©s", "puis-je venir avec mon chien", "rÃ¨gles animaux", "animaux", "chiens acceptÃ©s"
     ]
 
   visitors:
     category: rules
-    synonyms: ["ospiti", "visitatori"]
-    keywords: ["ospiti esterni"]
+    synonyms: ["ospiti", "visitatori", "visitors", "guests", "besucher", "gÃ¤ste", "visiteurs", "invitÃ©s", "visitantes", "invitados"]
+    keywords: ["ospiti esterni", "ospiti", "visitatori", "visitors", "guests", "besucher", "visiteurs", "visitantes", "regole"]
     patterns: [
-      "posso avere ospiti",
-      "posso far entrare amici"
+      "posso avere ospiti", "posso far entrare amici", "posso invitare ospiti", "sono ammessi visitatori", "possono venire amici",
+      "ospiti extra", "visite",
+
+      "can I have visitors", "are guests allowed", "can friends come", "extra guests", "visits",
+
+      "puedo recibir visitas", "se permiten invitados", "pueden venir amigos", "invitados extra", "visitas",
+
+      "darf ich besuch haben", "sind besucher erlaubt", "kÃ¶nnen freunde kommen", "zusÃ¤tzliche gÃ¤ste", "besuch",
+
+      "puis-je recevoir des visiteurs", "les invitÃ©s sont-ils autorisÃ©s", "des amis peuvent venir", "invitÃ©s supplÃ©mentaires", "visites"
     ]
 
   noise:
     category: rules
-    synonyms: ["rumore", "silenzio"]
-    keywords: ["orari silenzio"]
+    synonyms: ["rumore", "silenzio", "noise", "quiet hours", "lÃ¤rm", "ruhezeiten", "bruit", "heures de silence", "ruido", "horas de silencio"]
+    keywords: ["orari silenzio", "rumore", "noise", "quiet", "silence", "lÃ¤rm", "ruhezeiten", "bruit", "ruido"]
     patterns: [
-      "a che ora bisogna fare silenzio",
-      "regole rumore"
+      "a che ora bisogna fare silenzio", "regole rumore", "orari di silenzio", "vicini", "musica alta",
+
+      "quiet hours", "noise rules", "what time do we have to be quiet", "neighbors", "loud music",
+
+      "horas de silencio", "normas de ruido", "a quÃ© hora hay que hacer silencio", "vecinos", "mÃºsica alta",
+
+      "ruhezeiten", "lÃ¤rmregeln", "ab wann muss es ruhig sein", "nachbarn", "laute musik",
+
+      "heures de silence", "rÃ¨gles de bruit", "Ã  partir de quelle heure il faut Ãªtre calme", "voisins", "musique forte"
     ]
 
   kitchen_rules:
     category: rules
-    synonyms: ["cucina"]
-    keywords: ["regole cucina"]
+    synonyms: ["cucina", "kitchen", "fornelli", "stove", "kÃ¼che", "herd", "cuisine", "plaque", "cocina", "fogÃ³n"]
+    keywords: ["regole cucina", "cucina", "kitchen", "stove", "fornelli", "kÃ¼che", "herd", "cuisine", "cocina", "rules"]
     patterns: [
-      "come funziona la cucina",
-      "posso usare la cucina"
+      "come funziona la cucina", "posso usare la cucina", "regole cucina", "come usare i fornelli", "forno", "microonde",
+
+      "kitchen rules", "can I use the kitchen", "how to use the stove", "oven", "microwave",
+
+      "normas de cocina", "puedo usar la cocina", "cÃ³mo usar la cocina", "horno", "microondas",
+
+      "kÃ¼chenregeln", "darf ich die kÃ¼che benutzen", "wie benutze ich den herd", "ofen", "mikrowelle",
+
+      "rÃ¨gles de cuisine", "puis-je utiliser la cuisine", "utiliser la plaque", "four", "micro-ondes"
     ]
 
   bathroom_rules:
     category: rules
-    synonyms: ["bagno"]
-    keywords: ["regole bagno"]
+    synonyms: ["bagno", "bathroom", "toilet", "doccia", "shower", "badezimmer", "toilette", "dusche", "salle de bain", "toilettes", "douche", "baÃ±o", "inodoro", "ducha"]
+    keywords: ["regole bagno", "bagno", "bathroom", "toilet", "shower", "wc", "badezimmer", "toilettes", "baÃ±o", "rules"]
     patterns: [
-      "come funziona il bagno",
-      "regole del bagno"
+      "come funziona il bagno", "regole del bagno", "regole bagno", "come usare la doccia", "problema con il wc", "scarico",
+      "acqua che non scende",
+
+      "bathroom rules", "how to use the shower", "problem with the toilet", "flush", "water not draining",
+
+      "normas del baÃ±o", "cÃ³mo usar la ducha", "problema con el inodoro", "cisterna", "el agua no baja",
+
+      "baderegeln", "wie benutze ich die dusche", "problem mit der toilette", "spÃ¼lung", "wasser lÃ¤uft nicht ab",
+
+      "rÃ¨gles salle de bain", "comment utiliser la douche", "problÃ¨me avec les toilettes", "chasse d'eau", "l'eau ne s'Ã©coule pas"
     ]
 
   garbage:
     category: rules
-    synonyms: ["spazzatura", "immondizia", "rifiuti"]
-    keywords: ["raccolta differenziata", "bidoni"]
+    synonyms: ["spazzatura", "immondizia", "rifiuti", "garbage", "trash", "rubbish", "recycling", "mÃ¼ll", "abfall", "ordures", "dÃ©chets", "basura", "reciclaje"]
+    keywords: ["raccolta differenziata", "bidoni", "spazzatura", "rifiuti", "garbage", "trash", "recycling", "bins", "mÃ¼ll", "ordures", "basura"]
     patterns: [
-      "dove butto la spazzatura",
-      "come funziona la raccolta"
+      "dove butto la spazzatura", "come funziona la raccolta", "raccolta differenziata", "regole rifiuti", "bidoni", "dove sono i cestini",
+
+      "where to throw the garbage", "trash rules", "recycling bins", "bins", "where are the trash cans",
+
+      "dÃ³nde tirar la basura", "reciclaje", "contenedores de basura", "basureros", "dÃ³nde estÃ¡n los contenedores",
+
+      "wo kann ich den mÃ¼ll wegwerfen", "mÃ¼lltrennung", "recycling", "mÃ¼lleimer", "wo sind die tonnen",
+
+      "oÃ¹ jeter les ordures", "tri des dÃ©chets", "poubelles de recyclage", "poubelles", "oÃ¹ sont les poubelles"
     ]
 
   damage_reporting:
     category: support
-    synonyms: ["danni", "problemi"]
-    keywords: ["segnalare danni"]
+    synonyms: ["danni", "problemi", "damage", "broken", "report damage", "segnalare", "kaputt", "schaden", "schaden melden", "dommage", "signaler", "daÃ±o", "reportar"]
+    keywords: ["segnalare danni", "danni", "damage", "broken", "not working", "report", "kaputt", "schaden", "dommage", "daÃ±o", "issue"]
     patterns: [
-      "ho rotto qualcosa",
-      "devo segnalare un danno"
-    ]
+      "ho rotto qualcosa", "devo segnalare un danno", "si Ã¨ rotto qualcosa", "voglio segnalare un danno", "c'Ã¨ un problema in casa",
+      "Ã¨ danneggiato", "non funziona",
 
+      "something is broken", "I want to report damage", "there is a problem in the apartment", "it's damaged", "it doesn't work",
+
+      "algo estÃ¡ roto", "quiero reportar un daÃ±o", "hay un problema en el apartamento", "estÃ¡ daÃ±ado", "no funciona",
+
+      "etwas ist kaputt", "ich mÃ¶chte einen schaden melden", "es gibt ein problem in der wohnung", "es ist beschÃ¤digt", "funktioniert nicht",
+
+      "quelque chose est cassÃ©", "je veux signaler un dommage", "il y a un problÃ¨me dans l'appartement", "c'est abÃ®mÃ©", "Ã§a ne marche pas"
+    ]
 
   ############################################################
   # E. SERVIZI ESTERNI / INDICAZIONI
@@ -230,107 +380,128 @@ intents:
 
   restaurants:
     category: local_area
-    synonyms: ["ristoranti", "mangiare"]
-    keywords: ["ristorante", "cibo"]
+    synonyms: ["ristoranti", "mangiare", "ristorante", "restaurants", "restaurant", "where to eat", "essen", "restaurant empfehlen", "restaurantes", "dÃ³nde comer"]
+    keywords: ["ristorante", "cibo", "restaurants", "restaurant", "restaurante", "eat", "dinner", "lunch", "mangiare", "essen", "manger", "comer"]
     patterns: [
-      "dove posso mangiare",
-      "ristoranti consigliati"
+      "dove posso mangiare", "ristoranti consigliati", "ristoranti vicino", "dove mangiare", "consigli ristorante", "ristorante consigliato",
+      "cena", "pranzo",
+
+      "restaurants nearby", "where can we eat", "recommend a restaurant", "good restaurant", "dinner", "lunch",
+
+      "restaurantes cerca", "dÃ³nde comer", "recomienda un restaurante", "buen restaurante", "cena", "almuerzo",
+
+      "restaurants in der nÃ¤he", "wo kÃ¶nnen wir essen", "restaurant empfehlen", "gutes restaurant", "abendessen", "mittagessen",
+
+      "restaurants Ã  proximitÃ©", "oÃ¹ manger", "recommander un restaurant", "bon restaurant", "dÃ®ner", "dÃ©jeuner"
     ]
 
   breakfast:
     category: services
-    synonyms: ["breakfast", "colazione", "desayuno", "frühstück", "petit-déjeuner"]
-    keywords: ["colazione", "breakfast", "desayuno", "frühstück", "petit dejeuner", "petit-déjeuner", "cafe", "caffè", "bar"]
-    patterns: [
-      "colazione",
-      "info colazione",
-      "orario colazione",
-      "c'è colazione",
-      "avete colazione",
-      "dove faccio colazione",
-      "dove fare colazione",
-      "bar per colazione",
-      "consigli per colazione",
+    synonyms: ["breakfast", "colazione", "desayuno", "frÃ¼hstÃ¼ck", "petit-dÃ©jeuner"]
+    keywords: ["colazione", "breakfast", "desayuno", "frÃ¼hstÃ¼ck", "petit dejeuner", "petit-dÃ©jeuner", "cafe", "caffÃ¨", "bar"]
+    patterns: ["colazione", "info colazione", "orario colazione", "c'Ã¨ colazione", "avete colazione", "dove faccio colazione", "dove fare colazione", "bar per colazione", "consigli per colazione", "breakfast", "breakfast info", "breakfast time", "do you have breakfast", "where can I have breakfast", "desayuno", "info desayuno", "hay desayuno", "donde desayunar", "frÃ¼hstÃ¼ck", "frÃ¼hstÃ¼ck info", "gibt es frÃ¼hstÃ¼ck", "wo frÃ¼hstÃ¼cken", "petit-dÃ©jeuner", "info petit-dÃ©jeuner", "y a-t-il le petit-dÃ©jeuner", "oÃ¹ prendre le petit-dÃ©jeuner"]
 
-      "breakfast",
-      "breakfast info",
-      "breakfast time",
-      "do you have breakfast",
-      "where can I have breakfast",
-
-      "desayuno",
-      "info desayuno",
-      "hay desayuno",
-      "donde desayunar",
-
-      "frühstück",
-      "frühstück info",
-      "gibt es frühstück",
-      "wo frühstücken",
-
-      "petit-déjeuner",
-      "info petit-déjeuner",
-      "y a-t-il le petit-déjeuner",
-      "où prendre le petit-déjeuner"
-    ]
   priority: 1
 
   supermarket:
     category: local_area
-    synonyms: ["supermercato", "spesa"]
-    keywords: ["market", "spesa"]
+    synonyms: ["supermercato", "spesa", "supermarket", "grocery", "supermarkt", "lebensmittelgeschÃ¤ft", "supermarchÃ©", "Ã©picerie", "supermercado", "tienda"]
+    keywords: ["market", "spesa", "supermarket", "grocery", "shopping", "supermercato", "supermarkt", "supermarchÃ©", "supermercado"]
     patterns: [
-      "dove trovo un supermercato",
-      "devo fare la spesa"
+      "dove trovo un supermercato", "devo fare la spesa", "supermercato vicino", "dove Ã¨ il supermercato", "supermercato piÃ¹ vicino",
+      "dove fare la spesa", "negozio alimentari",
+
+      "nearest supermarket", "where is the supermarket", "grocery store nearby", "where to buy groceries", "shopping",
+
+      "supermercado mÃ¡s cercano", "dÃ³nde estÃ¡ el supermercado", "tienda de comestibles cerca", "dÃ³nde comprar comida", "hacer la compra",
+
+      "nÃ¤chster supermarkt", "wo ist der supermarkt", "lebensmittelgeschÃ¤ft in der nÃ¤he", "wo einkaufen", "supermarkt",
+
+      "supermarchÃ© le plus proche", "oÃ¹ est le supermarchÃ©", "Ã©picerie Ã  proximitÃ©", "oÃ¹ faire les courses", "courses"
     ]
 
   pharmacy:
     category: local_area
-    synonyms: ["farmacia"]
-    keywords: ["medicinali"]
+    synonyms: ["farmacia", "pharmacy", "drugstore", "apotheke", "pharmacie", "medicinali", "medicine"]
+    keywords: ["medicinali", "farmacia", "pharmacy", "apotheke", "pharmacie", "medicine", "medikamente", "mÃ©dicaments", "medicamentos"]
     patterns: [
-      "c'è una farmacia",
-      "farmacia vicina"
+      "c'Ã¨ una farmacia", "farmacia vicina", "dove Ã¨ la farmacia", "ho bisogno di una farmacia", "dove comprare medicinali",
+      "farmacia aperta",
+
+      "nearest pharmacy", "where is the pharmacy", "I need a pharmacy", "where to buy medicine", "open pharmacy",
+
+      "farmacia mÃ¡s cercana", "dÃ³nde estÃ¡ la farmacia", "necesito una farmacia", "dÃ³nde comprar medicamentos", "farmacia abierta",
+
+      "nÃ¤chste apotheke", "wo ist die apotheke", "ich brauche eine apotheke", "wo medikamente kaufen", "apotheke offen",
+
+      "pharmacie la plus proche", "oÃ¹ est la pharmacie", "j'ai besoin d'une pharmacie", "oÃ¹ acheter des mÃ©dicaments", "pharmacie ouverte"
     ]
 
   what_to_do:
     category: local_area
-    synonyms: ["consigli", "cosa fare"]
-    keywords: ["attività", "visitare"]
+    synonyms: ["consigli", "cosa fare", "attivitÃ ", "what to do", "things to do", "aktivitÃ¤ten", "sehenswÃ¼rdigkeiten", "que faire", "Ã  faire", "quÃ© hacer", "cosas para hacer"]
+    keywords: ["attivitÃ ", "visitare", "activities", "attractions", "visit", "tour", "cosa fare", "things to do", "aktivitÃ¤ten", "que faire", "quÃ© hacer"]
     patterns: [
-      "cosa posso visitare",
-      "cosa fare nei dintorni"
+      "cosa posso visitare", "cosa fare nei dintorni", "cose da fare", "consigli attivitÃ ", "cosa visitare", "attrazioni vicine",
+
+      "things to do nearby", "what can we do nearby", "suggest activities", "what to visit", "nearby attractions",
+
+      "quÃ© hacer cerca", "cosas para hacer", "quÃ© visitar", "atracciones cercanas", "ideas",
+
+      "was kann man hier machen", "aktivitÃ¤ten in der nÃ¤he", "was besuchen", "sehenswÃ¼rdigkeiten", "tipps",
+
+      "que faire ici", "activitÃ©s Ã  proximitÃ©", "que visiter", "attractions proches", "idÃ©es"
     ]
 
   parking:
     category: transport
-    synonyms: ["parcheggio", "parking"]
-    keywords: ["posto auto"]
+    synonyms: ["parcheggio", "parking", "parkplatz", "garage", "stationnement", "aparcamiento"]
+    keywords: ["posto auto", "parcheggio", "parking", "park", "car", "auto", "voiture", "coche", "garage", "parkplatz"]
     patterns: [
-      "dove parcheggio",
-      "c'è un parcheggio"
+      "dove parcheggio", "c'Ã¨ un parcheggio", "dove parcheggiare", "info parcheggio", "c'Ã¨ parcheggio", "parcheggio vicino", "garage",
+
+      "where can I park", "parking info", "is there parking", "parking nearby", "garage",
+
+      "dÃ³nde aparcar", "info aparcamiento", "hay parking", "aparcamiento cerca", "garaje",
+
+      "wo kann ich parken", "parkplatz info", "gibt es parkplÃ¤tze", "parkplatz in der nÃ¤he", "garage",
+
+      "oÃ¹ se garer", "info stationnement", "y a-t-il un parking", "parking Ã  proximitÃ©", "garage"
     ]
 
   transport:
     category: transport
-    synonyms: ["trasporti", "bus", "mezzi"]
-    keywords: ["bus", "tram", "trasporto"]
+    synonyms: ["trasporti", "bus", "mezzi", "transport", "public transport", "train", "tram", "metro", "Ã¶ffentliche verkehrsmittel", "transports", "transporte"]
+    keywords: ["bus", "tram", "trasporto", "train", "metro", "station", "airport", "trasporti", "public transport", "bahn", "gare", "aÃ©roport", "aeropuerto"]
     patterns: [
-      "come mi muovo",
-      "come arrivo al centro"
+      "come mi muovo", "come arrivo al centro", "come muoversi", "trasporti pubblici", "info bus e treni", "come arrivare in centro",
+      "stazione",
+
+      "how to get around", "public transport", "bus and train information", "how to get to the center", "station",
+
+      "cÃ³mo moverse", "transporte pÃºblico", "info de bus y tren", "cÃ³mo llegar al centro", "estaciÃ³n",
+
+      "wie komme ich herum", "Ã¶ffentliche verkehrsmittel", "bus und zug info", "wie komme ich ins zentrum", "bahnhof",
+
+      "comment se dÃ©placer", "transports en commun", "infos bus et train", "comment aller au centre", "gare"
     ]
 
   transport_to_venice:
     category: transport
-    synonyms: ["raggiungere venezia", "andare a venezia", "mezzi per venezia"]
-    keywords: ["vaporetto", "bus venezia", "trasporti venezia"]
+    synonyms: ["raggiungere venezia", "andare a venezia", "mezzi per venezia", "venezia", "venice", "venedig", "venise", "venecia", "come andare a venezia", "how to get to venice"]
+    keywords: ["vaporetto", "bus venezia", "trasporti venezia", "venezia", "venice", "venedig", "venise", "venecia", "bus", "train", "tram", "stazione"]
     patterns: [
-      "come vado a venezia",
-      "come raggiungo venezia",
-      "trasporti per venezia",
-      "che mezzi ci sono per venezia"
-    ]
+      "come vado a venezia", "come raggiungo venezia", "trasporti per venezia", "che mezzi ci sono per venezia", "come andare a venezia",
+      "trasporto per venezia", "come arrivare a venezia", "venezia in treno", "venezia in bus",
 
+      "how to get to Venice", "transport to Venice", "Venice by bus or train", "train to Venice", "bus to Venice",
+
+      "cÃ³mo llegar a venecia", "transporte a venecia", "venecia bus o tren", "tren a venecia", "bus a venecia",
+
+      "wie komme ich nach venedig", "verkehr nach venedig", "venedig bus zug", "zug nach venedig", "bus nach venedig",
+
+      "comment aller Ã  venise", "transport pour venise", "venise bus train", "train pour venise", "bus pour venise"
+    ]
 
   ############################################################
   # F. EMERGENZE / SICUREZZA
@@ -338,43 +509,71 @@ intents:
 
   emergency:
     category: emergencies
-    synonyms: ["emergenza", "emergenza generale"]
-    keywords: ["soccorso", "aiuto urgente"]
+    synonyms: ["emergenza", "emergenza generale", "emergency", "help", "aiuto", "notfall", "hilfe", "urgence", "aide", "emergencia", "ayuda"]
+    keywords: ["soccorso", "aiuto urgente", "emergenza", "emergency", "urgent", "help", "112", "118", "911", "notruf", "urgence", "emergencia"]
     patterns: [
-      "aiuto è un'emergenza",
-      "ho bisogno di aiuto subito",
-      "c'è un'emergenza"
+      "aiuto Ã¨ un'emergenza", "ho bisogno di aiuto subito", "c'Ã¨ un'emergenza", "numeri emergenza", "ho bisogno di aiuto",
+      "situazione urgente", "emergenza", "chiamare 112",
+
+      "emergency numbers", "I need help now", "urgent situation", "emergency", "call 112",
+
+      "nÃºmeros de emergencia", "necesito ayuda ahora", "situaciÃ³n urgente", "emergencia", "llamar al 112",
+
+      "notrufnummer", "ich brauche sofort hilfe", "dringender notfall", "notfall", "112 anrufen",
+
+      "numÃ©ros d'urgence", "j'ai besoin d'aide maintenant", "situation urgente", "urgence", "appeler le 112"
     ]
     priority: 3
 
   emergency_medical:
     category: emergencies
-    synonyms: ["emergenza medica"]
-    keywords: ["medico", "ambulanza"]
+    synonyms: ["emergenza medica", "medico", "medical", "doctor", "hospital", "ambulanza", "ambulance", "arzt", "krankenwagen", "hÃ´pital", "mÃ©decin", "mÃ©dico", "ambulancia"]
+    keywords: ["medico", "ambulanza", "doctor", "hospital", "ambulance", "medical emergency", "arzt", "hÃ´pital", "mÃ©dico", "ambulancia"]
     patterns: [
-      "ho bisogno di un medico",
-      "serve un'ambulanza",
-      "sta male qualcuno"
+      "ho bisogno di un medico", "serve un'ambulanza", "sta male qualcuno", "mi serve un medico", "emergenza medica", "chiamare ambulanza",
+      "devo andare in ospedale", "malore",
+
+      "I need a doctor", "medical emergency", "call an ambulance", "I need a hospital", "I'm feeling sick",
+
+      "necesito un mÃ©dico", "emergencia mÃ©dica", "llamar una ambulancia", "necesito un hospital", "me siento mal",
+
+      "ich brauche einen arzt", "medizinischer notfall", "krankenwagen rufen", "ich brauche ein krankenhaus", "mir ist schlecht",
+
+      "j'ai besoin d'un mÃ©decin", "urgence mÃ©dicale", "appeler une ambulance", "j'ai besoin d'un hÃ´pital", "je me sens mal"
     ]
 
   fire_emergency:
     category: emergencies
-    synonyms: ["incendio", "fuoco"]
-    keywords: ["incendio"]
+    synonyms: ["incendio", "fuoco", "fire", "smoke", "fumo", "feuer", "rauch", "incendie", "fumÃ©e", "fuego", "humo"]
+    keywords: ["incendio", "fire", "smoke", "alarm", "feuer", "rauch", "incendie", "fumÃ©e", "fuego", "humo", "alarma"]
     patterns: [
-      "c'è un incendio",
-      "odore di bruciato"
+      "c'Ã¨ un incendio", "odore di bruciato", "allarme incendio", "fumo in casa", "fuoco",
+
+      "there is a fire", "fire alarm", "smoke in the apartment", "smell of smoke", "fire",
+
+      "hay un incendio", "alarma de incendio", "humo en el apartamento", "olor a quemado", "fuego",
+
+      "es brennt", "feueralarm", "rauch in der wohnung", "brandgeruch", "feuer",
+
+      "il y a un incendie", "alarme incendie", "fumÃ©e dans l'appartement", "odeur de brÃ»lÃ©", "feu"
     ]
 
   safety_advice:
     category: emergencies
-    synonyms: ["sicurezza", "consigli sicurezza"]
-    keywords: ["sicurezza appartamento", "comportamento sicuro"]
+    synonyms: ["sicurezza", "consigli sicurezza", "safety", "security", "sicherheit", "sÃ©curitÃ©", "seguridad", "advice", "consigli"]
+    keywords: ["sicurezza appartamento", "comportamento sicuro", "safety", "safe", "security", "sicurezza", "sicherheit", "sÃ©curitÃ©", "seguridad", "tips", "consigli"]
     patterns: [
-      "come mi comporto in caso di emergenza",
-      "consigli di sicurezza"
-    ]
+      "come mi comporto in caso di emergenza", "consigli di sicurezza", "Ã¨ sicuro", "suggerimenti sicurezza", "come stare al sicuro",
+      "zona sicura",
 
+      "safety advice", "is it safe", "security tips", "how to stay safe", "safe area",
+
+      "consejos de seguridad", "es seguro", "tips de seguridad", "cÃ³mo estar seguro", "zona segura",
+
+      "sicherheitshinweise", "ist es sicher", "tipps zur sicherheit", "wie bleibe ich sicher", "sichere gegend",
+
+      "conseils de sÃ©curitÃ©", "est-ce sÃ»r", "astuces de sÃ©curitÃ©", "comment rester en sÃ©curitÃ©", "quartier sÃ»r"
+    ]
 
   ############################################################
   # G. SUPPORTO / CONTATTO
@@ -382,45 +581,80 @@ intents:
 
   contact:
     category: support
-    synonyms: ["contatti"]
-    keywords: ["numero", "telefono", "contattare"]
+    synonyms: ["contatti", "contatto", "contact", "kontakt", "contacto", "telefono", "phone", "telefon", "tÃ©lÃ©phone", "telÃ©fono", "email"]
+    keywords: ["numero", "telefono", "contattare", "contatto", "contact", "phone", "call", "message", "email", "kontakt", "contacto"]
     patterns: [
-      "come vi contatto",
-      "avete un numero"
+      "come vi contatto", "avete un numero", "come posso contattarvi", "contatti", "numero di telefono", "email", "scrivervi",
+
+      "how can I contact you", "contact details", "phone number", "email", "message you",
+
+      "cÃ³mo contactarlos", "datos de contacto", "nÃºmero de telÃ©fono", "correo", "enviar un mensaje",
+
+      "wie kann ich euch kontaktieren", "kontakt", "telefonnummer", "e-mail", "eine nachricht schicken",
+
+      "comment vous contacter", "coordonnÃ©es", "numÃ©ro de tÃ©lÃ©phone", "e-mail", "vous envoyer un message"
     ]
 
   reception:
     category: support
-    synonyms: ["reception"]
-    keywords: ["accoglienza"]
+    synonyms: ["reception", "front desk", "rezeption", "accueil", "recepciÃ³n", "portineria", "desk"]
+    keywords: ["accoglienza", "reception", "front desk", "desk", "rezeption", "accueil", "recepciÃ³n", "hours", "orari"]
     patterns: [
-      "c'è una reception",
-      "reception aperta"
+      "c'Ã¨ una reception", "reception aperta", "c'Ã¨ reception", "orari reception", "portineria", "front desk", "reception",
+
+      "is there a reception", "reception hours", "front desk", "reception desk", "staff",
+
+      "hay recepciÃ³n", "horario de recepciÃ³n", "recepciÃ³n", "mostrador", "front desk",
+
+      "gibt es eine rezeption", "Ã¶ffnungszeiten rezeption", "rezeption", "empfang", "front desk",
+
+      "y a-t-il un accueil", "horaires de l'accueil", "rÃ©ception", "accueil", "front desk"
     ]
 
   support:
     category: support
-    synonyms: ["aiuto", "supporto"]
-    keywords: ["aiuto", "supporto"]
+    synonyms: ["aiuto", "supporto", "assistenza", "support", "help", "assistance", "unterstÃ¼tzung", "hilfe", "aide", "soporte", "ayuda"]
+    keywords: ["aiuto", "supporto", "support", "help", "assistance", "problem", "issue", "hilfe", "aide", "ayuda", "soporte"]
     patterns: [
-      "ho bisogno di aiuto",
-      "potete aiutarmi"
+      "ho bisogno di aiuto", "potete aiutarmi", "mi serve assistenza", "ho un problema", "supporto", "assistenza",
+
+      "I need support", "can you help me", "I have a problem", "support", "assistance",
+
+      "necesito ayuda", "puedes ayudarme", "tengo un problema", "soporte", "asistencia",
+
+      "ich brauche hilfe", "kÃ¶nnen sie mir helfen", "ich habe ein problem", "unterstÃ¼tzung", "hilfe",
+
+      "j'ai besoin d'aide", "pouvez-vous m'aider", "j'ai un problÃ¨me", "assistance", "support"
     ]
 
   help_issue:
     category: support
-    synonyms: ["problema", "issue"]
-    keywords: ["problema appartamento"]
+    synonyms: ["problema", "issue", "problem", "bug", "guasto", "stÃ¶rung", "problÃ¨me", "no funciona", "doesn't work"]
+    keywords: ["problema appartamento", "problema", "issue", "problem", "not working", "broken", "guasto", "stÃ¶rung", "problÃ¨me", "no funciona"]
     patterns: [
-      "c'è un problema",
-      "ho un problema"
+      "c'Ã¨ un problema", "ho un problema", "non funziona qualcosa", "non va", "Ã¨ rotto",
+
+      "something doesn't work", "there is an issue", "I have a problem", "it doesn't work", "it's broken",
+
+      "no funciona", "hay un problema", "tengo un problema", "no va", "estÃ¡ roto",
+
+      "etwas funktioniert nicht", "es gibt ein problem", "ich habe ein problem", "geht nicht", "ist kaputt",
+
+      "Ã§a ne marche pas", "il y a un problÃ¨me", "j'ai un souci", "Ã§a fonctionne pas", "c'est cassÃ©"
     ]
 
   faq:
     category: support
-    synonyms: ["faq", "domande frequenti"]
-    keywords: ["informazioni"]
+    synonyms: ["faq", "domande frequenti", "questions", "frequently asked questions", "hÃ¤ufige fragen", "questions frÃ©quentes", "preguntas frecuentes"]
+    keywords: ["informazioni", "faq", "question", "questions", "domanda", "frage", "pregunta", "help"]
     patterns: [
-      "domande frequenti",
-      "info generali"
+      "domande frequenti", "info generali", "FAQ", "domande comuni", "informazioni", "aiuto",
+
+      "FAQ", "frequently asked questions", "common questions", "information", "help",
+
+      "FAQ", "preguntas frecuentes", "preguntas", "informaciÃ³n", "ayuda",
+
+      "FAQ", "hÃ¤ufige fragen", "fragen", "information", "hilfe",
+
+      "FAQ", "questions frÃ©quentes", "questions", "informations", "aide"
     ]
