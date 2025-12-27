@@ -1,12 +1,7 @@
-# --- NextSphere standard slots (v2) ---
-# --- NextSphere slots (v2) - IT (testi completi) ---
-
 welcome_intro: "Ciao! Benvenuto in {{hotel_name}} 😊 Se hai bisogno di qualcosa, sono qui per aiutarti."
-
 wifi_credentials: "Wi-Fi: {{ssid}} · Password: {{password}}"
-
-checkin_instructions: "Il check-in è dalle {{checkin_from}} in poi. {{checkin_extra}}"
-checkout_instructions: "Il check-out è entro le {{checkout_by}}. {{checkout_extra}}"
+checkin_instructions: "Check-in dalle {{checkin_from}}. {{checkin_extra}}"
+checkout_instructions: "Check-out entro le {{checkout_by}}. {{checkout_extra}}"
 
 house_rules: |
   Regole principali:
@@ -26,11 +21,8 @@ emergencies: |
   • Sicurezza: {{emergency_safety}}
 
 parking_info: "Parcheggio: {{parking_note}}"
-
 breakfast_info: "Colazione: {{breakfast_info}}"
-
 transportation_info: "Trasporti: {{transportation_info}}"
-transportation_to_venice: "{{transportation_to_venice}}"
+transportation_to_venice: "Per andare a Venezia: {{transportation_to_venice}}"
 transportation_airport: "Per l’aeroporto: {{transportation_airport}}"
-
 restaurants: "Ristoranti consigliati: {{restaurants}}"

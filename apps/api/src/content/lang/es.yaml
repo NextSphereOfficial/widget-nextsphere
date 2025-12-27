@@ -1,1 +1,28 @@
+welcome_intro: "¡Hola! Bienvenido/a a {{hotel_name}} 😊 Si necesitas algo, estoy aquí para ayudarte."
+wifi_credentials: "Wi-Fi: {{ssid}} · Contraseña: {{password}}"
+checkin_instructions: "Check-in a partir de las {{checkin_from}}. {{checkin_extra}}"
+checkout_instructions: "Check-out antes de las {{checkout_by}}. {{checkout_extra}}"
+
+house_rules: |
+  Normas principales:
+  • {{rules_general}}
+  • {{rules_smoking}}
+  • {{rules_pets}}
+  • {{rules_visitors}}
+  • {{rules_quiet_hours}}
+  • {{rules_waste}}
+  • {{rules_damage}}
+
+emergencies: |
+  Emergencias:
+  • General: {{emergency_general}}
+  • Médica: {{emergency_medical}}
+  • Incendio: {{emergency_fire}}
+  • Seguridad: {{emergency_safety}}
+
+parking_info: "Aparcamiento: {{parking_note}}"
+breakfast_info: "Desayuno: {{breakfast_info}}"
+transportation_info: "Transporte: {{transportation_info}}"
 transportation_to_venice: "Para ir a Venecia: {{transportation_to_venice}}"
+transportation_airport: "Para el aeropuerto: {{transportation_airport}}"
+restaurants: "Recomendaciones: {{restaurants}}"
