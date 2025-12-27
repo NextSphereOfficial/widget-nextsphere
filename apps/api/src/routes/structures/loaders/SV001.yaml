@@ -20,6 +20,33 @@ content:
 
     checkout_instructions: "Il check-out è entro le {{checkout_by}}. Lascia le chiavi sul tavolo e chiudi la porta dietro di te."
 
+    house_rules: |
+      Regole principali:
+      • {{rules_general}}
+      • {{rules_smoking}}
+      • {{rules_pets}}
+      • {{rules_visitors}}
+      • {{rules_quiet_hours}}
+      • {{rules_waste}}
+      • {{rules_damage}}
+
+    emergencies: |
+      Emergenze:
+      • Generale: {{emergency_general}}
+      • Medica: {{emergency_medical}}
+      • Incendio: {{emergency_fire}}
+      • Sicurezza: {{emergency_safety}}
+
+    parking_info: "{{parking_info}}"
+    breakfast_info: "{{breakfast_info}}"
+
+    transportation_info: "{{transportation_info}}"
+    transportation_to_venice: "{{transportation_to_venice}}"
+    transportation_airport: "{{transportation_airport}}"
+
+    restaurants: "{{restaurants}}"
+
+
 
   hotel:
     name: "S&V Apartments"
@@ -55,6 +82,13 @@ content:
 
   late_checkout:
     info: "Il late check-out non è sempre possibile. Chiedi pure e vediamo se riusciamo a organizzarlo."
+
+  breakfast:
+    info: "Non offriamo colazione in struttura. Se vuoi, posso consigliarti bar e locali nelle vicinanze."
+
+  transport:
+    airport: "Per l’aeroporto: puoi usare autobus dedicati o taxi. Se mi dici quale aeroporto (Marco Polo / Treviso) ti indico l’opzione migliore."
+
 
   checkout_keys:
     instructions: "Per il check-out, lascia le chiavi sul tavolo e chiudi la porta a chiave dall’esterno."
@@ -176,8 +210,18 @@ intents:
 
   # REGOLE
   house_rules:
+    reply_key: house_rules
+    vars:
+      rules_general: "{{content.house_rules.general}}"
+      rules_smoking: "{{content.house_rules.smoking}}"
+      rules_pets: "{{content.house_rules.pets}}"
+      rules_visitors: "{{content.house_rules.visitors}}"
+      rules_quiet_hours: "{{content.house_rules.quiet_hours}}"
+      rules_waste: "{{content.house_rules.waste}}"
+      rules_damage: "{{content.house_rules.damage}}"
     output:
       short: "{{content.house_rules.general}}"
+
 
   smoking:
     output:
@@ -213,8 +257,12 @@ intents:
 
   # SERVIZI ESTERNI
   restaurants:
+    reply_key: restaurants
+    vars:
+      restaurants: "{{content.local_area.restaurants}}"
     output:
       short: "{{content.local_area.restaurants}}"
+
 
   supermarket:
     output:
@@ -229,21 +277,40 @@ intents:
       short: "{{content.local_area.activities}}"
 
   parking:
+    reply_key: parking_info
+    vars:
+      parking_info: "{{content.local_area.parking}}"
     output:
       short: "{{content.local_area.parking}}"
 
+
   transport:
+    reply_key: transportation_info
+    vars:
+      transportation_info: "{{content.local_area.transport}}"
     output:
       short: "{{content.local_area.transport}}"
 
+
   transport_to_venice:
+    reply_key: transportation_to_venice
+    vars:
+      transportation_to_venice: "{{content.venice.info}}"
     output:
       short: "{{content.venice.info}}"
 
+
   # EMERGENZE
   emergency:
+    reply_key: emergencies
+    vars:
+      emergency_general: "{{content.emergencies.general}}"
+      emergency_medical: "{{content.emergencies.medical}}"
+      emergency_fire: "{{content.emergencies.fire}}"
+      emergency_safety: "{{content.emergencies.safety}}"
     output:
       short: "{{content.emergencies.general}}"
+
 
   emergency_medical:
     output:
