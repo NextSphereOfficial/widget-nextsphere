@@ -237,6 +237,44 @@ intents:
       "ristoranti consigliati"
     ]
 
+  breakfast:
+    category: services
+    synonyms: ["breakfast", "colazione", "desayuno", "frühstück", "petit-déjeuner"]
+    keywords: ["colazione", "breakfast", "desayuno", "frühstück", "petit dejeuner", "petit-déjeuner", "cafe", "caffè", "bar"]
+    patterns: [
+      "colazione",
+      "info colazione",
+      "orario colazione",
+      "c'è colazione",
+      "avete colazione",
+      "dove faccio colazione",
+      "dove fare colazione",
+      "bar per colazione",
+      "consigli per colazione",
+
+      "breakfast",
+      "breakfast info",
+      "breakfast time",
+      "do you have breakfast",
+      "where can I have breakfast",
+
+      "desayuno",
+      "info desayuno",
+      "hay desayuno",
+      "donde desayunar",
+
+      "frühstück",
+      "frühstück info",
+      "gibt es frühstück",
+      "wo frühstücken",
+
+      "petit-déjeuner",
+      "info petit-déjeuner",
+      "y a-t-il le petit-déjeuner",
+      "où prendre le petit-déjeuner"
+    ]
+  priority: 1
+
   supermarket:
     category: local_area
     synonyms: ["supermercato", "spesa"]
