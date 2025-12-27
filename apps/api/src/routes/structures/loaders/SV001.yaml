@@ -104,9 +104,9 @@ content:
     pharmacy: "La farmacia si trova in fondo alla strada, sulla sinistra."
     restaurants: "Nel centro di Mestre ti consigliamo: Barroca - per un aperitivo con ottimi panini. Fermenti - ristorante e pizzeria. Ca di Mat per un buon drink."
     activities: "A Mestre puoi trovare parchi, cinema e aree pedonali. Per Venezia c’è il tram."
-    parking:
-      maps_url: "https://maps.google.com/..."
-      note: "Zone bianche in Via Roma"
+  parking:
+    maps_url: "https://maps.google.com/..."
+    note: "Zone bianche in Via Roma"
   transport: "Il tram T1 per Venezia si prende a pochi minuti a piedi. Passa ogni 7–10 minuti."
 
   venice:
