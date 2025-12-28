@@ -66,22 +66,6 @@ intents:
       "puis-je arriver plus tÃ´t", "check-in anticipÃ© possible", "j'arrive plus tÃ´t", "arrivÃ©e anticipÃ©e", "check-in plus tÃ´t"
     ]
 
-  checkin_parking:
-    category: checkin
-    synonyms: ["parcheggio check in", "parcheggio", "parking", "park", "auto", "car park", "parkplatz", "stationnement", "aparcamiento"]
-    keywords: ["parcheggio checkin", "parking checkin", "parcheggio", "parking", "auto", "car", "park", "parkplatz", "stationnement", "aparcamiento", "garage"]
-    patterns: [
-      "posso parcheggiare prima del check in", "dove parcheggio per il check in", "dove parcheggio al check-in", "parcheggio per checkin",
-      "dove lascio l'auto", "parcheggio arrivo",
-
-      "where can I park when I arrive", "parking for check-in", "where do I leave the car", "arrival parking",
-
-      "dÃ³nde aparcar al llegar", "aparcamiento para el check-in", "dÃ³nde dejo el coche", "parking al llegar",
-
-      "wo kann ich bei der ankunft parken", "parkplatz beim check-in", "wo stelle ich das auto ab", "parken bei ankunft",
-
-      "oÃ¹ se garer Ã  l'arrivÃ©e", "stationnement pour le check-in", "oÃ¹ laisser la voiture", "parking Ã  l'arrivÃ©e"
-    ]
 
   checkout:
     category: checkout
@@ -454,20 +438,22 @@ intents:
     ]
 
   parking:
-    category: transport
-    synonyms: ["parcheggio", "parking", "parkplatz", "garage", "stationnement", "aparcamiento"]
-    keywords: ["posto auto", "parcheggio", "parking", "park", "car", "auto", "voiture", "coche", "garage", "parkplatz"]
+    category: local
+    synonyms: ["parcheggio", "parking", "park", "auto", "posto auto", "garage", "car park", "parkplatz", "stationnement", "parking", "aparcamiento"]
+    keywords: ["parcheggio", "parking", "park", "auto", "car", "garage", "car park", "parkplatz", "stationnement", "aparcamiento", "coche", "voiture"]
     patterns: [
-      "dove parcheggio", "c'Ã¨ un parcheggio", "dove parcheggiare", "info parcheggio", "c'Ã¨ parcheggio", "parcheggio vicino", "garage",
+      "parcheggio", "info parcheggio", "c'è parcheggio", "dove parcheggio", "dove posso parcheggiare", "dove lascio l'auto", "dove lascio la macchina", "posto auto", "garage", "parcheggio arrivo", "parcheggio check-in", "parcheggio per il check in", "dove parcheggio al check in",
 
-      "where can I park", "parking info", "is there parking", "parking nearby", "garage",
+      "parking", "parking info", "is there any parking", "is there parking", "where can I park", "where do I park", "where do I leave the car", "where do i leave the car", "parking for check-in", "arrival parking", "where can I park when I arrive", "where can i park when i arrive", "car park", "garage",
 
-      "dÃ³nde aparcar", "info aparcamiento", "hay parking", "aparcamiento cerca", "garaje",
+      "aparcamiento", "hay parking", "hay aparcamiento", "dónde aparcar", "donde aparcar", "dónde dejo el coche", "donde dejo el coche", "aparcamiento para el check-in", "parking al llegar", "llegada parking",
 
-      "wo kann ich parken", "parkplatz info", "gibt es parkplÃ¤tze", "parkplatz in der nÃ¤he", "garage",
+      "parkplatz", "gibt es parkplätze", "gibt es parkplatz", "wo kann ich parken", "wo parke ich", "wo stelle ich das auto ab", "parkplatz beim check-in", "parkplatz bei der ankunft", "parken bei ankunft",
 
-      "oÃ¹ se garer", "info stationnement", "y a-t-il un parking", "parking Ã  proximitÃ©", "garage"
+      "stationnement", "y a-t-il un parking", "où se garer", "où garer la voiture", "où laisser la voiture", "stationnement à l'arrivée", "parking pour le check-in", "où puis-je me garer"
     ]
+    priority: 1
+
 
   transport:
     category: transport
