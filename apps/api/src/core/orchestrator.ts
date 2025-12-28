@@ -155,13 +155,53 @@ export async function orchestrateChat(
     }
   }
 
-  // Alta confidenza YAML → rispondi subito
-  if (decision.source === 'yaml' && yamlProbe?.replyText) {
-    cacheSet(cacheKey, yamlProbe.replyText);
+function pickLocalizedText(val: any, lang: string) {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+
+  // oggetto per-lingua tipo { it, en, de, fr, es }
+  if (typeof val === 'object') {
+    const tryKeys = [lang, 'en', 'it', 'de', 'fr', 'es'];
+    for (const k of tryKeys) {
+      const v = (val as any)?.[k];
+      if (typeof v === 'string' && v.trim()) return v;
+    }
+  }
+
+  // fallback ultimo: stringifica
+  try {
+    return typeof val === 'string' ? val : JSON.stringify(val);
+  } catch {
+    return String(val);
+  }
+}
+
+function noInfoText(lang: string) {
+  switch (lang) {
+    case 'en':
+      return "I don’t have that information yet. Please contact the host if you need it right now.";
+    case 'de':
+      return "Diese Information habe ich noch nicht. Bitte kontaktiere den Gastgeber, wenn du sie sofort brauchst.";
+    case 'fr':
+      return "Je n’ai pas encore cette information. Contactez l’hôte si vous en avez besoin tout de suite.";
+    case 'es':
+      return "Aún no tengo esa información. Contacta con el anfitrión si la necesitas ahora mismo.";
+    default:
+      return "Non ho ancora questa informazione. Se ti serve subito, contatta l’host.";
+  }
+}
+
+// Alta confidenza YAML → rispondi subito (MAI vuoto / MAI oggetto)
+if (decision.source === 'yaml' && yamlProbe?.replyText != null) {
+  const lang = (reqLang || yamlProbe?.lang || ctx.locale || 'it').toLowerCase();
+  const replyText = pickLocalizedText(yamlProbe.replyText, lang).trim();
+
+  if (replyText) {
+    cacheSet(cacheKey, replyText);
     return {
       ok: true,
       source: 'yaml',
-      reply: yamlProbe.replyText,
+      reply: replyText,
       intent: decision.intent,
       confidence: decision.confidence,
       cacheHit: false,
@@ -169,6 +209,20 @@ export async function orchestrateChat(
       ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
     };
   }
+
+  // Se YAML “matcha” ma produce vuoto → fallback controllato (niente bubble vuote)
+  return {
+    ok: true,
+    source: 'yaml',
+    reply: noInfoText(lang),
+    intent: decision.intent,
+    confidence: decision.confidence,
+    cacheHit: false,
+    ctxVer: ctx.contextVersion,
+    ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
+  };
+}
+
 
   // LLM branch (borderline / no match)
   const perm = canCallLlm();

@@ -495,6 +495,211 @@ async function runEngine({
 // Routes
 // -----------------------------------------------------
 
+// Helpers (shared)
+// ----------------
+function pickLocalizedText(val: any, lang: string) {
+  if (val == null) return "";
+  if (typeof val === "string") return val;
+
+  // oggetto per-lingua { it, en, de, fr, es }
+  if (typeof val === "object") {
+    const tryKeys = [lang, "en", "it", "de", "fr", "es"];
+    for (const k of tryKeys) {
+      const v = (val as any)?.[k];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+  }
+
+  // fallback: tenta stringify
+  try {
+    return JSON.stringify(val);
+  } catch {
+    return String(val);
+  }
+}
+
+function noInfoText(lang: string) {
+  switch ((lang || "it").toLowerCase()) {
+    case "en":
+      return "I don’t have that information yet. Please contact the host if you need it right now.";
+    case "de":
+      return "Diese Information habe ich noch nicht. Bitte kontaktiere den Gastgeber, wenn du sie sofort brauchst.";
+    case "fr":
+      return "Je n’ai pas encore cette information. Contactez l’hôte si vous en avez besoin tout de suite.";
+    case "es":
+      return "Aún no tengo esa información. Contacta con el anfitrión si la necesitas ahora mismo.";
+    default:
+      return "Non ho ancora questa informazione. Se ti serve subito, contatta l’host.";
+  }
+}
+
+type ChatMode = "default" | "future";
+
+async function handleChatRequest(
+  req: any,
+  reply: any,
+  resolvedStructureId: string
+) {
+  const body = (req.body as any) || {};
+  const message = String(body?.message ?? "").trim();
+  const clientSessionId = body?.sessionId ? String(body.sessionId) : undefined;
+  const lang = body?.lang ? String(body.lang) : undefined;
+
+  if (!message) {
+    return reply.code(400).send({
+      ok: false,
+      error: "Missing message",
+      reply: "Missing message",
+    });
+  }
+
+  // 1) Sessione
+  const session = await ensureSessionForChat({
+    structureId: resolvedStructureId,
+    sessionId: clientSessionId,
+    lang,
+    // roomId: body?.room ? String(body.room) : undefined, // opzionale
+  });
+
+  // 💾 2) Salviamo il messaggio dell’utente
+  await saveMessage({
+    sessionId: session.id,
+    role: "user",
+    content: message,
+    source: "user",
+    intent: null,
+    isFallback: null,
+  });
+
+  // 🧠 3) Motore YAML
+  const out = await runEngine({ structureId: resolvedStructureId, message, lang });
+
+  // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
+  if (out?.meta?.isFallback === true) {
+    const cacheKey = buildLlmCacheKey(
+      resolvedStructureId,
+      message,
+      out.lang ?? lang ?? "it"
+    );
+
+    // 1) Prova cache
+    const cachedRaw: any = cacheGet(cacheKey);
+    if (cachedRaw) {
+      try {
+        const cached = JSON.parse(String(cachedRaw));
+
+        const resp = {
+          ...cached,
+          source: (cached as any).source ?? "llm_cache",
+          cacheHit: true,
+          sessionId: session.id,
+        };
+
+        // 💾 salviamo anche la risposta cached come assistant
+        const assistantText =
+          (cached as any)?.reply ?? (cached as any)?.text ?? "";
+        if (assistantText) {
+          await saveMessage({
+            sessionId: session.id,
+            role: "assistant",
+            content: String(assistantText),
+            intent: out.intent ?? null,
+            source: "llm",
+            isFallback: true,
+          });
+        }
+
+        return reply.code(200).send(resp);
+      } catch {
+        // cache corrotta → proseguiamo senza cache
+      }
+    }
+
+    // 2) Se niente cache → chiamiamo LLM con history
+    const historyRows = await getRecentMessages({
+      sessionId: session.id,
+      limit: 6,
+    });
+
+    const history = historyRows.map(
+      (m): { role: "assistant" | "user"; content: string } => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      })
+    );
+
+    const llmOut = await orchestrateChat(
+      resolvedStructureId,
+      message,
+      {
+        matched: false,
+        intent: out.intent ?? undefined,
+        confidence: 0.3,
+        history,
+        lang: out.lang ?? lang ?? "it",
+      },
+      lang // reqLang dal widget
+    );
+
+    // 3) Se la risposta è valida, salviamo in cache (serializzata)
+    if (llmOut && (llmOut as any).ok !== false) {
+      cacheSet(cacheKey, JSON.stringify(llmOut));
+    }
+
+    // 💾 4) Salviamo il messaggio dell’assistente (se c’è testo)
+    const assistantText = (llmOut as any)?.reply ?? (llmOut as any)?.text ?? "";
+    if (assistantText) {
+      await saveMessage({
+        sessionId: session.id,
+        role: "assistant",
+        content: String(assistantText),
+        intent: out.intent ?? null,
+        source: "llm",
+        isFallback: true,
+      });
+    }
+
+    const resp = {
+      ...(llmOut ?? {}),
+      sessionId: session.id,
+    };
+
+    return reply.code(200).send(resp);
+  }
+
+  // ✅ Risposta YAML “normale” (mai vuota / mai oggetto non risolto)
+  const replyLang = (out.lang ?? lang ?? "it").toLowerCase();
+  const replyTextRaw = out.text;
+  const replyText = pickLocalizedText(replyTextRaw, replyLang).trim();
+  const safeReply = replyText ? replyText : noInfoText(replyLang);
+
+  // 💾 Salviamo SEMPRE una risposta assistant (safeReply non è mai vuota)
+  await saveMessage({
+    sessionId: session.id,
+    role: "assistant",
+    content: String(safeReply),
+    intent: out.intent ?? null,
+    source: "yaml",
+    isFallback: false,
+  });
+
+  return reply
+    .header("X-NS-Source", "yaml")
+    .code(200)
+    .send({
+      ok: true,
+      source: "yaml",
+      intent: out.intent,
+      confidence: 1.0,
+      lang: out.lang,
+      mode: out.meta?.mode ?? "short",
+      text: safeReply,
+      reply: safeReply,
+      ui: { buttons: out.meta?.uiButtons ?? [] },
+      sessionId: session.id,
+    });
+}
+
 const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
   // Debug: GET /_debug/chat/:structureId?q=...
   app.get("/_debug/chat/:structureId", async (req, reply) => {
@@ -517,10 +722,7 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
           intentsKeys: Object.keys(structureYaml?.intents || {}),
           responsesKeys: Object.keys(structureYaml?.responses || {}),
           sampleIntents: Object.keys(intentsCore || {}).slice(0, 5),
-          sampleResponses: Object.keys(structureYaml?.responses || {}).slice(
-            0,
-            5
-          ),
+          sampleResponses: Object.keys(structureYaml?.responses || {}).slice(0, 5),
         },
       });
     } catch (err: any) {
@@ -529,359 +731,44 @@ const chatRoutes: FastifyPluginAsync = async (app: FastifyInstance) => {
     }
   });
 
-  // Retrocompatibilità: POST /chat (default structure)
+  // Retrocompatibilità: POST /chat (default structure + support ?hotel=SV001)
   app.post("/chat", async (req, reply) => {
     try {
       const body = (req.body as any) || {};
-      const message = String(body?.message ?? "").trim();
-      const clientSessionId = body?.sessionId
-        ? String(body.sessionId)
-        : undefined;
-      const lang = body?.lang ? String(body.lang) : undefined;
 
       const modeRaw = (body?.mode ?? "default") as string;
-      const mode: "default" | "future" =
-      modeRaw === "future" ? "future" : "default";
+      const mode: ChatMode = modeRaw === "future" ? "future" : "default";
 
-
-  
-
-
-
-      if (!message) {
-        return reply.code(400).send({
-          ok: false,
-          error: "Missing message",
-          reply: "Missing message",
-        });
-      }
-
-        const defaultStructure =
+      const defaultStructure =
         mode === "future" ? "nextsphere-future" : "nextsphere";
 
-            const hotel = body?.hotel ? String(body.hotel) : undefined;
-      const room  = body?.room  ? String(body.room)  : undefined;
+      const hotel = body?.hotel ? String(body.hotel) : undefined;
+      // const room  = body?.room  ? String(body.room)  : undefined; // opzionale
 
       // Se hotel è passato dal widget, lo usiamo come structureId.
       // Altrimenti manteniamo il comportamento attuale.
       const structureId = hotel || defaultStructure;
 
-
-      // 1) Sessione
-      const session = await ensureSessionForChat({
-        structureId,
-        sessionId: clientSessionId,
-        lang,
-          // Se un domani vorrai salvare anche il room nella sessione:
-          // roomId: room,
-      });
-
-      // 💾 2) Salviamo il messaggio dell’utente
-     // 💾 2) Salviamo il messaggio dell’utente
-      await saveMessage({
-        sessionId: session.id,
-        role: "user",
-        content: message,
-        source: "user",
-        intent: null,
-        isFallback: null,
-        });
-
-
-      // 🧠 3) Motore YAML
-      const out = await runEngine({ structureId, message, lang });
-
-      // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
-      if (out?.meta?.isFallback === true) {
-        const cacheKey = buildLlmCacheKey(defaultStructure, message, out.lang ?? lang ?? "it");
-
-        // 1) Prova cache
-        const cachedRaw: any = cacheGet(cacheKey);
-        if (cachedRaw) {
-          try {
-            const cached = JSON.parse(String(cachedRaw));
-
-            const resp = {
-              ...cached,
-              source: (cached as any).source ?? "llm_cache",
-              cacheHit: true,
-              // 🔗 sessione sempre presente nella risposta
-              sessionId: session.id,
-            };
-
-            // 💾 salviamo anche la risposta cached come assistant
-            const assistantText =
-              (cached as any)?.reply ?? (cached as any)?.text ?? "";
-           if (assistantText) {
-  await saveMessage({
-    sessionId: session.id,
-    role: "assistant",
-    content: String(assistantText),
-    intent: out.intent ?? null,
-    source: "llm",
-    isFallback: true,
-  });
-}
-
-
-            return reply.code(200).send(resp);
-          } catch {
-            // se la cache è corrotta, proseguiamo senza
-          }
-        }
-
-        // 2) Se niente cache → chiamiamo LLM con history
-        const historyRows = await getRecentMessages({
-          sessionId: session.id,
-          limit: 6,
-        });
-
-        // convertiamo in [{ role, content }] per l'LLM
-        const history = historyRows.map(
-          (m): { role: "assistant" | "user"; content: string } => ({
-            role: m.role === "assistant" ? "assistant" : "user",
-            content: m.content,
-          })
-        );
-
-      const llmOut = await orchestrateChat(  defaultStructure,  message,  {
-    matched: false,
-    intent: out.intent ?? undefined,
-    confidence: 0.3,
-    history,
-    lang: out.lang ?? lang ?? "it",
-  },
-  lang // 👈 AGGIUNGI QUESTO
-);
-
-
-        // 3) Se la risposta è valida, salviamo in cache (serializzata)
-        if (llmOut && (llmOut as any).ok !== false) {
-          cacheSet(cacheKey, JSON.stringify(llmOut));
-        }
-
-        // 💾 4) Salviamo il messaggio dell’assistente (se c’è testo)
-        const assistantText =
-          (llmOut as any)?.reply ?? (llmOut as any)?.text ?? "";
-        if (assistantText) {
-          await saveMessage({
-            sessionId: session.id,
-            role: "assistant",
-            content: String(assistantText),
-          });
-        }
-
-        const resp = {
-          ...(llmOut ?? {}),
-          sessionId: session.id,
-        };
-
-        return reply.code(200).send(resp);
-      }
-
-      // Risposta YAML “normale” proveniente dal motore
-      const replyText = out.text;
-
-      // 💾 Salviamo anche la risposta YAML come messaggio assistant
-    if (replyText) {
-  await saveMessage({
-    sessionId: session.id,
-    role: "assistant",
-    content: String(replyText),
-    intent: out.intent ?? null,
-    source: "yaml",
-    isFallback: false,
-  });
-}
-
-
-      return reply
-        .header("X-NS-Source", "yaml")
-        .code(200)
-        .send({
-          ok: true,
-          source: "yaml",
-          intent: out.intent,
-          confidence: 1.0,
-          lang: out.lang,
-          mode: out.meta?.mode ?? "short",
-          text: replyText,
-          reply: replyText,
-          ui: { buttons: out.meta?.uiButtons ?? [] },
-          // 🔗 restituiamo sempre la sessione al widget
-          sessionId: session.id,
-        });
+      return await handleChatRequest(req, reply, structureId);
     } catch (err: any) {
       const msg = err?.message || "Errore inatteso";
       return reply.code(500).send({ ok: false, error: msg, reply: msg });
     }
   });
 
-// Multistruttura: POST /chat/:structureId
-app.post("/chat/:structureId", async (req, reply) => {
-  try {
-    const { structureId } = req.params as { structureId: string };
-    const body = (req.body as any) || {};
-    const message = String(body?.message ?? "").trim();
-    const clientSessionId = body?.sessionId
-      ? String(body.sessionId)
-      : undefined;
-    const lang = body?.lang ? String(body.lang) : undefined;
+  // Multistruttura: POST /chat/:structureId (+ mode future -> suffix -future)
+  app.post("/chat/:structureId", async (req, reply) => {
+    try {
+      const { structureId } = req.params as { structureId: string };
+      const body = (req.body as any) || {};
 
-    // 👇 nuovo: leggiamo il mode dal body ("default" | "future")
-    const modeRaw = (body?.mode ?? "default") as string;
-    const mode: "default" | "future" =
-      modeRaw === "future" ? "future" : "default";
+      const modeRaw = (body?.mode ?? "default") as string;
+      const mode: ChatMode = modeRaw === "future" ? "future" : "default";
 
-    // 👇 nuovo: se siamo in future, usiamo la struttura "-future"
-    const effectiveStructureId =
-      mode === "future" ? `${structureId}-future` : structureId;
+      const effectiveStructureId =
+        mode === "future" ? `${structureId}-future` : structureId;
 
-    if (!message) {
-      return reply.code(400).send({
-        ok: false,
-        error: "Missing message",
-        reply: "Missing message",
-      });
-    }
-
-    // 1) Sessione
-    const session = await ensureSessionForChat({
-      structureId: effectiveStructureId,
-      sessionId: clientSessionId,
-      lang,
-    });
-
-    // 💾 2) Salviamo il messaggio dell’utente
-
-    await saveMessage({
-      sessionId: session.id,
-      role: "user",
-      content: message,
-      source: "user",
-      intent: null,
-      isFallback: null,
-      });
-
-
-    // 🧠 3) Motore YAML
-    const out = await runEngine({ structureId: effectiveStructureId, message, lang });
-
-    // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
-    if (out?.meta?.isFallback === true) {
-      const cacheKey = buildLlmCacheKey(effectiveStructureId, message, out.lang ?? lang ?? "it");
-      // ... il resto del blocco rimane identico
-
-
-        const cachedRaw: any = cacheGet(cacheKey);
-        if (cachedRaw) {
-          try {
-            const cached = JSON.parse(String(cachedRaw));
-
-            const resp = {
-              ...cached,
-              source: (cached as any).source ?? "llm_cache",
-              cacheHit: true,
-              sessionId: session.id,
-            };
-
-            const assistantText =
-              (cached as any)?.reply ?? (cached as any)?.text ?? "";
-           if (assistantText) {
-  await saveMessage({
-    sessionId: session.id,
-    role: "assistant",
-    content: String(assistantText),
-    intent: out.intent ?? null,
-    source: "llm",
-    isFallback: true,
-  });
-}
-
-
-            return reply.code(200).send(resp);
-          } catch {
-            // se cache corrotta → proseguiamo senza
-          }
-        }
-
-        const historyRows = await getRecentMessages({
-          sessionId: session.id,
-          limit: 6,
-        });
-
-        const history = historyRows.map(
-          (m): { role: "assistant" | "user"; content: string } => ({
-            role: m.role === "assistant" ? "assistant" : "user",
-            content: m.content,
-          })
-        );
-
-       const llmOut = await orchestrateChat(
-  structureId,
-  message,
-  {
-    matched: false,
-    intent: out.intent ?? undefined,
-    confidence: 0.3,
-    history,
-    lang: out.lang ?? lang ?? "it",
-  },
-  lang // 👈 PASSA SEMPRE LA LINGUA RICHIESTA DAL WIDGET
-);
-
-
-        if (llmOut && (llmOut as any).ok !== false) {
-          cacheSet(cacheKey, JSON.stringify(llmOut));
-        }
-
-        const assistantText =
-          (llmOut as any)?.reply ?? (llmOut as any)?.text ?? "";
-        if (assistantText) {
-          await saveMessage({
-            sessionId: session.id,
-            role: "assistant",
-            content: String(assistantText),
-          });
-        }
-
-        const resp = {
-          ...(llmOut ?? {}),
-          sessionId: session.id,
-        };
-
-        return reply.code(200).send(resp);
-      }
-
-      const replyText = out.text;
-
-      if (replyText) {
-  await saveMessage({
-    sessionId: session.id,
-    role: "assistant",
-    content: String(replyText),
-    intent: out.intent ?? null,
-    source: "yaml",
-    isFallback: false,
-  });
-}
-
-
-      return reply
-        .header("X-NS-Source", "yaml")
-        .code(200)
-        .send({
-          ok: true,
-          source: "yaml",
-          intent: out.intent,
-          confidence: 1.0,
-          lang: out.lang,
-          mode: out.meta?.mode ?? "short",
-          text: replyText,
-          reply: replyText,
-          ui: { buttons: out.meta?.uiButtons ?? [] },
-          sessionId: session.id,
-        });
+      return await handleChatRequest(req, reply, effectiveStructureId);
     } catch (err: any) {
       const msg = err?.message || "Errore inatteso";
       return reply.code(500).send({ ok: false, error: msg, reply: msg });
