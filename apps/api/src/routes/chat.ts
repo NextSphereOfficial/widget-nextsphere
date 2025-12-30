@@ -213,9 +213,11 @@ function resolveIntent(userText: string, intentsCore: Record<string, any>) {
 
   if (!top || top.score <= 0) return { key: "fallback", score: 0, matched: false };
   // Guardrail: su singola parola evita intent "welcome" (anche se score alto)
-if (isSingleWord && top && top.key === "welcome") {
+if (isSingleWord && top && top.key === "welcome" && !/^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(t)) {
   return { key: "fallback", score: 0, matched: false };
 }
+
+
 
   return top;
 }
