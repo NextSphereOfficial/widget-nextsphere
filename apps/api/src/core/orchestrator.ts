@@ -200,6 +200,22 @@ export async function orchestrateChat(
   // 🔒 Single source of truth per la lingua
   const replyLang = normalizeLang(yamlProbe?.lang || reqLang || ctx.locale || 'it');
 
+
+function isGreeting(msg: string) {
+  const s = String(msg || '').trim().toLowerCase();
+  return /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(s);
+}
+
+// Guardrail: welcome solo se l’utente sta salutando
+if (yamlProbe?.intent === 'welcome' && !isGreeting(userMessage)) {
+  yamlProbe.matched = false;
+  yamlProbe.confidence = 0;
+  yamlProbe.replyText = undefined;
+  yamlProbe.buttons = undefined;
+}
+
+
+
   // decisione (se non hai confidenza dal matcher, passa matched=false)
   const decision = decideResponse({
     matched: !!yamlProbe?.matched,

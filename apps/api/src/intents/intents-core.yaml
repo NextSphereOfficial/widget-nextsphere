@@ -6,30 +6,21 @@ intents:
   # A. META / SYSTEM
   ############################################################
 
- welcome:
-  category: system
-  patterns:
-    - ciao
-    - buongiorno
-    - buonasera
-    - salve
-    - hello
-    - hi
-    - hey
-    - good morning
-    - good evening
-    - hola
-    - buenos días
-    - buenas tardes
-    - buenas noches
-    - hallo
-    - guten tag
-    - guten morgen
-    - guten abend
-    - bonjour
-    - salut
-    - bonsoir
+  welcome:
+    category: system
+    synonyms: ["benvenuto", "ciao", "salve", "hey", "hi", "hello", "buongiorno", "buonasera", "good morning", "good evening", "hallo", "guten tag", "guten morgen", "guten abend", "bonjour", "salut", "bonsoir", "hola", "buenos dÃ­as", "buenas tardes", "buenas noches"]
+    keywords: ["welcome", "greeting", "saluto", "salut", "saludo", "begrÃ¼ÃŸung", "accueil"]
+    patterns: [
+      "ciao", "buongiorno", "buonasera", "salve", "benvenuto",
 
+      "hello", "hi", "hey", "good morning", "good evening",
+
+      "hola", "buenos dÃ­as", "buenas tardes", "buenas noches",
+
+      "hallo", "guten tag", "guten morgen", "guten abend",
+
+      "bonjour", "salut", "bonsoir"
+    ]
   fallback:
     category: system
     synonyms: []
