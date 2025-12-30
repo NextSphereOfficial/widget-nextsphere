@@ -11,155 +11,70 @@ import {
 } from './runtimeGuards.js';
 import crypto from 'node:crypto';
 
-const FALLBACK_SYSTEM_PROMPT = `
-Sei un concierge digitale per appartamenti turistici. Assistente semplice, pratico e amichevole.
+/**
+ * Style & Behavior Guide v1.0 (Lumo) — Regole GLOBALI (no info hardcoded sulla location).
+ * Il contesto specifico della struttura viene aggiunto dinamicamente nel system prompt.
+ */
+const LUMO_SYSTEM_RULES = `
+Sei Lumo, un concierge digitale per ospiti in appartamenti turistici.
 
-CONTESTO GENERALE:
-- L’appartamento si trova a Mestre (VE), vicino ai collegamenti per Venezia.
-- Gli ospiti stanno già soggiornando nella struttura.
-- Se la risposta è già contenuta chiaramente nello YAML della struttura, non modificarla né contraddirla.
+STILE (OBBLIGATORIO):
+- Risposte brevi e chiare: di default 1–3 frasi.
+- Tono caloroso ma non stucchevole; utile e pratico.
+- Emoji rare (al massimo una, e solo se naturale).
+- Niente spiegazioni inutili, niente “preamboli”.
 
-STILE DELLE RISPOSTE:
-- Rispondi sempre in modo semplice, diretto e breve (1–3 frasi).
-- Tono gentile, colloquiale e non formale.
-- Non fare discorsi lunghi a meno che l’utente lo chieda esplicitamente.
-- Mantieni sempre un atteggiamento utile e pratico.
-- NON ripetere messaggi di benvenuto o presentazioni (es. “Benvenuto… Sono qui per aiutarti…”)
-  a meno che l’utente stia chiaramente salutando (ciao/hola/hello/hi) oppure stia iniziando la chat.
-- Se la richiesta è generica o fuori contesto (es. “sushi”), NON salutare:
-  fai 1 domanda di chiarimento O proponi un’azione utile.
-  Esempi:
-  - “Vuoi consigli di ristoranti sushi vicino a Mestre o vicino a Venezia?”
-  - “Se mi dici la zona e il budget, ti suggerisco qualche opzione; in alternativa puoi cercare su Google Maps…”
+DIVIETI:
+- Non dire mai di essere un’AI o un modello.
+- Non fare presentazioni/benvenuti (es. “Benvenuto… Sono qui per aiutarti…”) a meno che l’utente stia chiaramente salutando o stia iniziando la chat con un saluto.
+- Non inventare mai luoghi, nomi di attività, indirizzi, orari o disponibilità non presenti nel contesto.
+- Non affermare di “vedere” l’appartamento, la posizione dell’utente o lo stato reale della casa.
 
-
-REGOLE IMPORTANTI (NON VIOLARLE MAI):
-
-1. LOCALITÀ E NON-INVENZIONE
-- Sai che ti trovi a Mestre (Venezia).
-- NON inventare mai nomi di ristoranti, bar, locali, negozi, strade o vie.
-- NON inventare mai informazioni su disponibilità, orari commerciali o luoghi specifici.
-- Se l’utente chiede un posto preciso dove mangiare, bere o andare, rispondi ad esempio:
-  "Non posso indicare nomi specifici, ma puoi cercare su Google Maps (es. 'sushi Mestre') oppure chiedere direttamente all’host."
-
-2. COERENZA CON IL CONTESTO
-- Se nel contesto (YAML) ci sono regole, orari, istruzioni o policy, non cambiarle.
-- Se l’utente chiede eccezioni (late checkout, animali extra, ospiti esterni, modifiche), rispondi:
-  "Per queste richieste serve l’host."
-
-3. LIMITI DI CONOSCENZA
-- Non dire mai che "vedi" l’appartamento, la posizione dell’utente o lo stato reale della casa.
-- Non inventare mai informazioni di cui non sei certo.
-- Non suggerire procedure tecniche non presenti nello YAML della struttura.
-
-4. CONTINUITÀ LEGGERA
-- Usa il contesto recente della chat per capire a cosa si riferisce l’utente.
-- Se una frase è ambigua (es. "quale mi consigli?"), chiedi:
-  "Intendi un ristorante, un mezzo di trasporto o altro?"
-
-5. PRIVACY E SICUREZZA
-- Non chiedere documenti, numeri di carta o dati sensibili.
-- Non dare pareri sanitari o legali tecnici.
-
-6. EMERGENZE
-- Se l’utente descrive una situazione di pericolo (incendio, malore, aggressione), rispondi immediatamente:
-  "Chiama subito il numero di emergenza 112."
-- NON fornire istruzioni mediche o diagnostiche.
-
-7. ESCALATION ALL’HOST
-- Se serve l’intervento umano (chiavi perse, danni, pulizie extra, problemi tecnici gravi):
-  "Per questo è necessario contattare l’host."
-
-COMPORTAMENTO GENERALE:
-- Il tuo obiettivo è aiutare l’ospite nel modo più utile possibile, entro questi limiti.
-- Se non sei sicuro, dì chiaramente che non lo sai e suggerisci alternative utili (Google Maps, chiedere all’host, verificare nell’appartamento).
-`;
+COMPORTAMENTO:
+- Se la richiesta è generica o ambigua (es. una sola parola tipo “sushi”), NON salutare: fai UNA domanda di chiarimento o proponi UNA azione utile.
+- Se l’utente chiede eccezioni alle policy (late checkout, ospiti extra, animali extra, modifiche), invita a contattare l’host.
+- In emergenza/pericolo: rispondi subito “Chiama il 112” (o numero equivalente nel contesto).
+- Privacy: non chiedere dati sensibili (documenti, carte, ecc.).
+`.trim();
 
 function keyHash(x: unknown) {
   return crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
 }
 
+function normalize(s: string) {
+  return String(s || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .slice(0, 200);
+}
+
 /**
- * Orchestratore: unifica YAML + LLM.
- * Nota: qui assumiamo che il matcher YAML sia esterno alla route.
- * Se la route non ha un matcher, questo orchestratore può operare “LLM-only”.
- *
- * yamlProbe ora può contenere anche una mini-history della sessione:
- *  - history: ultimi turni di conversazione (user/assistant)
+ * Lingue supportate dal tuo sistema (allineate ai language pack).
  */
-export async function orchestrateChat(
-  structureId: string,
-  userMessage: string,
-  yamlProbe?: {
-    matched: boolean;
-    intent?: string;
-    confidence?: number;
-    replyText?: string;
-    buttons?: any[];
-    history?: { role: 'user' | 'assistant'; content: string }[];
-    lang?: string;
-  },
-  reqLang?: string,
-) {
-  const ctx = await buildContext(structureId);
-
-  const replyLang = String(
-    yamlProbe?.lang || reqLang || ctx.locale || "it"
-  ).slice(0, 2).toLowerCase();
-
-
-
-
-  // decisione (se non hai confidenza dal matcher, passa matched=false)
-  const decision = decideResponse({
-    matched: !!yamlProbe?.matched,
-    intent: yamlProbe?.intent,
-    confidence: yamlProbe?.confidence,
-  });
-
-  // Prepara una rappresentazione sintetica della history (se c'è)
-  const historySummary =
-    yamlProbe?.history && Array.isArray(yamlProbe.history)
-      ? yamlProbe.history
-          .map((m) => `${m.role === 'assistant' ? 'A' : 'U'}:${normalize(m.content)}`)
-          .join('|')
-          .slice(0, 500)
-      : '';
-
-  // Cache: include contesto (ctxVer) + sorgente + (opzionale) history
-  const cacheKey = keyHash({
-    structureId,
-    ctxVer: ctx.contextVersion,
-    intent: decision.intent,
-    matched: decision.source,
-    historySummary,
-    userMessageNorm: normalize(userMessage),
-  });
-
-  // Se la decisione è chiaramente “uguale a prima”, prova cache prima
-  const cached = cacheGet(cacheKey);
-  if (cached) {
-    try {
-      const cachedText = String(cached);
-      return {
-        ok: true,
-        source: 'cache',
-        reply: cachedText,
-        intent: decision.intent,
-        confidence: decision.confidence,
-        cacheHit: true,
-        ctxVer: ctx.contextVersion,
-      };
-    } catch {
-      // ignore cache errors
-    }
+function normalizeLang(raw?: string) {
+  const v = String(raw || 'it').trim().toLowerCase();
+  const two = v.slice(0, 2);
+  switch (two) {
+    case 'it':
+    case 'en':
+    case 'de':
+    case 'fr':
+    case 'es':
+      return two;
+    default:
+      return 'it';
   }
+}
 
+/**
+ * Se replyText è string OR oggetto per-lingua {it,en,de,fr,es},
+ * ritorna il testo migliore per lang con fallback ragionato.
+ */
 function pickLocalizedText(val: any, lang: string) {
-  if (!val) return '';
+  if (val == null) return '';
   if (typeof val === 'string') return val;
 
-  // oggetto per-lingua tipo { it, en, de, fr, es }
   if (typeof val === 'object') {
     const tryKeys = [lang, 'en', 'it', 'de', 'fr', 'es'];
     for (const k of tryKeys) {
@@ -168,11 +83,15 @@ function pickLocalizedText(val: any, lang: string) {
     }
   }
 
-  // fallback ultimo: stringifica
+  // ultimo fallback: stringifica in modo sicuro
   try {
     return typeof val === 'string' ? val : JSON.stringify(val);
   } catch {
-    return String(val);
+    try {
+      return String(val);
+    } catch {
+      return '';
+    }
   }
 }
 
@@ -191,17 +110,154 @@ function noInfoText(lang: string) {
   }
 }
 
-// Alta confidenza YAML → rispondi subito (MAI vuoto / MAI oggetto)
-if (decision.source === 'yaml' && yamlProbe?.replyText != null) {
-  const lang = (reqLang || yamlProbe?.lang || ctx.locale || 'it').toLowerCase();
-  const replyText = pickLocalizedText(yamlProbe.replyText, lang).trim();
+function fallbackText(lang: string) {
+  switch (lang) {
+    case 'en':
+      return "I can help with Wi-Fi, hours, rules, and emergencies. What do you need exactly?";
+    case 'de':
+      return "Ich kann bei WLAN, Zeiten, Regeln und Notfällen helfen. Was brauchst du genau?";
+    case 'fr':
+      return "Je peux aider avec le Wi-Fi, les horaires, les règles et les urgences. De quoi as-tu besoin exactement ?";
+    case 'es':
+      return "Puedo ayudar con Wi-Fi, horarios, reglas y emergencias. ¿Qué necesitas exactamente?";
+    default:
+      return "Posso aiutarti con Wi-Fi, orari, regole o emergenze. Cosa ti serve esattamente?";
+  }
+}
 
-  if (replyText) {
-    cacheSet(cacheKey, replyText);
+function isGreeting(message: string) {
+  const s = normalize(message);
+  // saluti comuni (non perfetto, ma sufficiente per guardrail)
+  return /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour)\b/.test(s);
+}
+
+function splitIntoSentences(text: string) {
+  // Split semplice: . ! ? + newline; mantiene ordine, evita vuoti.
+  const parts = String(text || '')
+    .replace(/\r/g, '\n')
+    .split(/(?<=[.!?])\s+|\n+/g)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  return parts;
+}
+
+/**
+ * Applica la Style & Behavior Guide v1.0 in modo deterministico (demo-safe).
+ */
+function sanitizeReply(text: string, lang: string, userMessage: string) {
+  let t = String(text || '').trim();
+  if (!t) return noInfoText(lang);
+
+  // Rimuovi boilerplate tipici
+  t = t.replace(/^\s*(Certo!|Sure!|Claro!|Natürlich!|Bien sûr!)\s*/i, '').trim();
+
+  // Se l'utente NON saluta, evita benvenuti/presentazioni in apertura
+  const userGreet = isGreeting(userMessage);
+  if (!userGreet) {
+    const sentences = splitIntoSentences(t);
+    if (sentences.length) {
+      const first = normalize(sentences[0]);
+      const looksLikeWelcome =
+        /\b(benvenut|welcome|bienvenid|willkomm|bienvenue)\b/.test(first) ||
+        /\b(sono qui per aiut|i am here to help|estoy aquí para|ich bin hier um|je suis là pour)\b/.test(first);
+      if (looksLikeWelcome && sentences.length > 1) {
+        sentences.shift();
+        t = sentences.join(' ');
+      }
+    }
+  }
+
+  // Limita a 1–3 frasi di default (evita wall of text)
+  const sents = splitIntoSentences(t);
+  if (sents.length > 3) t = sents.slice(0, 3).join(' ');
+
+  // Ultimo guardrail
+  t = t.trim();
+  if (!t) return noInfoText(lang);
+  return t;
+}
+
+/**
+ * Orchestratore: unifica YAML + LLM.
+ * Nota: yamlProbe può contenere mini-history e lang già risolta dalla route.
+ */
+export async function orchestrateChat(
+  structureId: string,
+  userMessage: string,
+  yamlProbe?: {
+    matched: boolean;
+    intent?: string;
+    confidence?: number;
+    replyText?: string;
+    buttons?: any[];
+    history?: { role: 'user' | 'assistant'; content: string }[];
+    lang?: string;
+  },
+  reqLang?: string,
+) {
+  const ctx = await buildContext(structureId);
+
+  // 🔒 Single source of truth per la lingua
+  const replyLang = normalizeLang(yamlProbe?.lang || reqLang || ctx.locale || 'it');
+
+  // decisione (se non hai confidenza dal matcher, passa matched=false)
+  const decision = decideResponse({
+    matched: !!yamlProbe?.matched,
+    intent: yamlProbe?.intent,
+    confidence: yamlProbe?.confidence,
+  });
+
+  // History sintetica (opzionale) per cache key e contesto LLM
+  const historySummary =
+    yamlProbe?.history && Array.isArray(yamlProbe.history)
+      ? yamlProbe.history
+          .map((m) => `${m.role === 'assistant' ? 'A' : 'U'}:${normalize(m.content)}`)
+          .join('|')
+          .slice(0, 500)
+      : '';
+
+  // Cache key: lingua-safe + sorgente + intent + contesto versione
+  const cacheKey = keyHash({
+    structureId,
+    ctxVer: ctx.contextVersion,
+    replyLang,
+    source: decision.source,
+    intent: decision.intent,
+    confidence: decision.confidence,
+    historySummary,
+    userMessageNorm: normalize(userMessage),
+  });
+
+  const cached = cacheGet(cacheKey);
+  if (cached) {
+    const cachedText = String(cached || '').trim();
+    if (cachedText) {
+      return {
+        ok: true,
+        source: 'cache',
+        reply: cachedText,
+        intent: decision.intent,
+        confidence: decision.confidence,
+        cacheHit: true,
+        ctxVer: ctx.contextVersion,
+      };
+    }
+  }
+
+  /**
+   * ✅ YAML branch: alta confidenza → rispondi subito
+   * Guardrail: MAI vuoto / MAI object.
+   */
+  if (decision.source === 'yaml' && yamlProbe?.replyText != null) {
+    const replyText = pickLocalizedText(yamlProbe.replyText, replyLang).trim();
+
+    const finalText = replyText || noInfoText(replyLang);
+    cacheSet(cacheKey, finalText);
+
     return {
       ok: true,
       source: 'yaml',
-      reply: replyText,
+      reply: finalText,
       intent: decision.intent,
       confidence: decision.confidence,
       cacheHit: false,
@@ -210,24 +266,12 @@ if (decision.source === 'yaml' && yamlProbe?.replyText != null) {
     };
   }
 
-  // Se YAML “matcha” ma produce vuoto → fallback controllato (niente bubble vuote)
-  return {
-    ok: true,
-    source: 'yaml',
-    reply: noInfoText(lang),
-    intent: decision.intent,
-    confidence: decision.confidence,
-    cacheHit: false,
-    ctxVer: ctx.contextVersion,
-    ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
-  };
-}
-
-
-  // LLM branch (borderline / no match)
+  /**
+   * ✅ LLM branch: borderline / no match
+   */
   const perm = canCallLlm();
   if (!perm.ok) {
-    const text = fallbackText(ctx.locale);
+    const text = fallbackText(replyLang);
     return {
       ok: false,
       source: 'llm',
@@ -240,116 +284,87 @@ if (decision.source === 'yaml' && yamlProbe?.replyText != null) {
     };
   }
 
-    
-  const langName =
-    replyLang.startsWith('en') ? 'inglese' :
-    replyLang.startsWith('de') ? 'tedesco' :
-    replyLang.startsWith('fr') ? 'francese' :
-    replyLang.startsWith('es') ? 'spagnolo' :
-    replyLang.startsWith('pt') ? 'portoghese' :
-    'italiano';
+  // System prompt: regole Lumo + lingua + contesto struttura (dinamico, non inventare)
+  const LANGUAGE_RULE = `LINGUA (OBBLIGATORIA): Rispondi SOLO in lang="${replyLang}". Non cambiare lingua.`;
 
+  const structureContextLines: string[] = [];
+  structureContextLines.push(`- Lingua richiesta: ${replyLang}`);
+  structureContextLines.push(`- Wi-Fi: ssid=${ctx.wifi?.ssid ?? 'n/d'}; password=${ctx.wifi?.password ?? 'n/d'}`);
+  if (ctx.rules?.length) structureContextLines.push(`- Regole principali: ${ctx.rules.slice(0, 4).join(' | ')}`);
+  if (ctx.emergencies?.phone) structureContextLines.push(`- Emergenze: ${ctx.emergencies.phone}`);
 
-      const LANGUAGE_RULE = `
-        LINGUA DI RISPOSTA (OBBLIGATORIA):
-        - Rispondi SEMPRE in ${langName} (lang="${replyLang}").
-        - Anche se l’utente scrive in un’altra lingua, mantieni ${langName}.
-        `.trim();
-
-
-
-  // Prompt: includi un riassunto minimo del contesto utile, unito alle regole rigide
-  const system = [
-    FALLBACK_SYSTEM_PROMPT,
+  const systemPrompt = [
+    LUMO_SYSTEM_RULES,
     '',
-      LANGUAGE_RULE,
+    LANGUAGE_RULE,
     '',
-    'CONTESTO STRUTTURA:',
-    `- Lingua: ${replyLang}`,
-    `- Wi-Fi: ssid=${ctx.wifi?.ssid ?? 'n/d'}; password=${ctx.wifi?.password ?? 'n/d'}`,
-    ctx.rules?.length ? `- Regole principali: ${ctx.rules.slice(0, 4).join(' | ')}` : '',
-    ctx.emergencies?.phone ? `- Telefono emergenze: ${ctx.emergencies.phone}` : '',
+    'CONTESTO STRUTTURA (USA SOLO QUESTE INFO, NON INVENTARE):',
+    ...structureContextLines,
   ]
     .filter(Boolean)
     .join('\n');
 
-    // 🔥 Costruiamo il testo per l'LLM usando SOLO il contesto più recente
+  // Contesto recente conversazione (leggero, come da guida)
   let lastUserMessage = '';
   let lastAssistantMessage = '';
 
-  // Se yamlProbe.history è presente, prova a prendere da lì
   if (yamlProbe?.history && Array.isArray(yamlProbe.history)) {
-    lastUserMessage =
-      [...yamlProbe.history].reverse().find((m) => m.role === 'user')?.content || '';
-    lastAssistantMessage =
-      [...yamlProbe.history].reverse().find((m) => m.role === 'assistant')?.content || '';
+    lastUserMessage = [...yamlProbe.history].reverse().find((m) => m.role === 'user')?.content || '';
+    lastAssistantMessage = [...yamlProbe.history].reverse().find((m) => m.role === 'assistant')?.content || '';
   }
 
-  // Se manca l'ultima risposta dell’assistente, usa la risposta YAML corrente (replyText)
   if (!lastAssistantMessage && yamlProbe?.replyText) {
-    lastAssistantMessage = yamlProbe.replyText;
+    lastAssistantMessage = pickLocalizedText(yamlProbe.replyText, replyLang);
   }
-
-  // L'ultima domanda dell’utente, in mancanza di meglio, è SEMPRE l'userMessage attuale
-  if (!lastUserMessage) {
-    lastUserMessage = userMessage;
-  }
+  if (!lastUserMessage) lastUserMessage = userMessage;
 
   const finalUserMessage = `
-CONTESTO RECENTE DELLA CONVERSAZIONE:
+CONTESTO RECENTE (SE UTILE):
 
 Ultima risposta dell’assistente:
-"${lastAssistantMessage}"
+"${String(lastAssistantMessage || '').trim()}"
 
 Ultima domanda dell’utente:
-"${lastUserMessage}"
+"${String(lastUserMessage || '').trim()}"
 
 Nuova domanda dell’utente:
-"${userMessage}"
+"${String(userMessage || '').trim()}"
 
 ISTRUZIONE:
-Rispondi collegando la nuova domanda ALL’ULTIMA RISPOSTA e ALL’ULTIMA DOMANDA dell’utente.
-Ignora argomenti più vecchi se non sono citati esplicitamente.
+Rispondi in modo coerente con il contesto recente solo se rilevante. Se è ambiguo, fai UNA sola domanda di chiarimento.
 `.trim();
 
   const res = await callLlm(finalUserMessage, {
     locale: replyLang,
-    systemPrompt: system,
+    systemPrompt,
   });
 
   if (res && !res.error && res.text) {
     registerLlmSuccess();
-    cacheSet(cacheKey, res.text);
+    const clean = sanitizeReply(res.text, replyLang, userMessage);
+    cacheSet(cacheKey, clean);
+
     return {
       ok: true,
       source: 'llm',
-      reply: res.text,
+      reply: clean,
       intent: decision.intent,
       confidence: decision.confidence,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
       snapshot: getRuntimeSnapshot(),
     };
-  } else {
-    registerLlmFailure();
-    return {
-      ok: false,
-      source: 'llm',
-      error: res.error ?? 'Unknown error',
-      reply: fallbackText(ctx.locale),
-      intent: decision.intent,
-      confidence: decision.confidence,
-      ctxVer: ctx.contextVersion,
-      snapshot: getRuntimeSnapshot(),
-    };
   }
-}
 
-function normalize(s: string) {
-  return s.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, 200);
-}
-function fallbackText(locale?: string) {
-  return (locale || 'it').startsWith('it')
-    ? 'Posso aiutarti con Wi-Fi, orari, regole o emergenze. Vuoi dirmi meglio cosa ti serve?'
-    : 'I can help with Wi-Fi, hours, rules or emergencies. Could you specify what you need?';
+  registerLlmFailure();
+  return {
+    ok: false,
+    source: 'llm',
+    error: res?.error ?? 'Unknown error',
+    reply: fallbackText(replyLang),
+    intent: decision.intent,
+    confidence: decision.confidence,
+    ctxVer: ctx.contextVersion,
+    snapshot: getRuntimeSnapshot(),
+  };
 }
