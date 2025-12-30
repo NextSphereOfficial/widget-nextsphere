@@ -35,6 +35,7 @@ COMPORTAMENTO:
 - Se l’utente chiede eccezioni alle policy (late checkout, ospiti extra, animali extra, modifiche), invita a contattare l’host.
 - In emergenza/pericolo: rispondi subito “Chiama il 112” (o numero equivalente nel contesto).
 - Privacy: non chiedere dati sensibili (documenti, carte, ecc.).
+- Se l’utente scrive una sola parola, fai UNA domanda di chiarimento (niente saluti).
 `.trim();
 
 function keyHash(x: unknown) {

@@ -142,6 +142,11 @@ for (const p of allPatterns) {
 function resolveIntent(userText: string, intentsCore: Record<string, any>) {
   const t = norm(userText);
 
+  // Heuristica: keyword singola → non forzare intent "welcome" e preferisci fallback/LLM
+  const tokens = t.split(" ").filter(Boolean);
+  const isSingleWord = tokens.length === 1;
+
+
   const intents: IntentMatch[] = Object.entries(intentsCore || {}).map(
     ([key, value]) => {
       const intent = value as any;
@@ -186,6 +191,11 @@ function resolveIntent(userText: string, intentsCore: Record<string, any>) {
   const top = intents[0];
 
   if (!top || top.score <= 0) return { key: "fallback", score: 0, matched: false };
+  // Guardrail: su singola parola evita intent "welcome" (anche se score alto)
+if (isSingleWord && top && top.key === "welcome") {
+  return { key: "fallback", score: 0, matched: false };
+}
+
   return top;
 }
 
@@ -527,6 +537,37 @@ function pickLocalizedText(val: any, lang: string) {
   }
 }
 
+function sanitizeYamlReply(text: string, userMessage: string) {
+  let t = String(text || "").trim();
+  if (!t) return t;
+
+  // evita welcome ripetuti se l'utente non sta salutando
+  const um = norm(userMessage);
+  const userIsGreeting = /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(um);
+
+  if (!userIsGreeting) {
+    // se la risposta inizia con "Ciao! Benvenuto..." taglia la prima frase
+    const parts = t.split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
+    if (parts.length > 1) {
+      const first = norm(parts[0]);
+      const looksWelcome =
+        first.includes("benvenut") || first.includes("welcome") || first.includes("bienvenid") ||
+        first.includes("willkomm") || first.includes("bienvenue");
+      if (looksWelcome) {
+        parts.shift();
+        t = parts.join(" ").trim();
+      }
+    }
+  }
+
+  // stile: massimo 3 frasi (ma NON tocchiamo risposte corte tipo wifi)
+  const sents = t.split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
+  if (sents.length > 3) t = sents.slice(0, 3).join(" ").trim();
+
+  return t;
+}
+
+
 function noInfoText(lang: string) {
   switch ((lang || "it").toLowerCase()) {
     case "en":
@@ -680,7 +721,8 @@ async function handleChatRequest(
   const replyLang = (out.lang ?? lang ?? "it").toLowerCase();
   const replyTextRaw = out.text;
   const replyText = pickLocalizedText(replyTextRaw, replyLang).trim();
-  const safeReply = replyText ? replyText : noInfoText(replyLang);
+  const baseReply = replyText ? replyText : noInfoText(replyLang);
+  const safeReply = sanitizeYamlReply(baseReply, message) || noInfoText(replyLang);
 
   // 💾 Salviamo SEMPRE una risposta assistant (safeReply non è mai vuota)
   await saveMessage({
