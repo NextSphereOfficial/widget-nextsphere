@@ -76,6 +76,17 @@ type EngineOutput = {
 // -----------------------------------------------------
 // Intent scoring
 
+function escapeRegExp(s: string) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function includesWord(t: string, w: string) {
+  if (!t || !w) return false;
+  const re = new RegExp(`\\b${escapeRegExp(w)}\\b`, "i");
+  return re.test(t);
+}
+
+
 function scoreIntent(
   text: string,
   intent: {
@@ -100,31 +111,29 @@ function scoreIntent(
     if (t.includes(n)) score -= 5;
   }
 
-  for (const s of allSynonyms) {
-    if (t.includes(s)) {
-      score += 5;
-      matched = true;
-    }
+for (const s of allSynonyms) {
+  if (includesWord(t, s)) {
+    score += 5;
+    matched = true;
   }
+}
 
-  for (const k of allKeywords) {
-    if (t.includes(k)) {
-      score += 3;
-      matched = true;
-    }
-  }
 
-  for (const p of allPatterns) {
-    try {
-      const re = new RegExp(p, "i");
-      if (re.test(t)) {
-        score += 4;
-        matched = true;
-      }
-    } catch {
-      /* ignore invalid regex */
-    }
+for (const k of allKeywords) {
+  if (includesWord(t, k)) {
+    score += 3;
+    matched = true;
   }
+}
+
+
+for (const p of allPatterns) {
+  if (includesWord(t, p)) {
+    score += 4;
+    matched = true;
+  }
+}
+
 
   if (matched) score += intent.priority ?? 0;
   return { score, matched };
