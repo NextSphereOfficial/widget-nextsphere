@@ -128,11 +128,32 @@ for (const k of allKeywords) {
 
 
 for (const p of allPatterns) {
-  if (includesWord(t, p)) {
-    score += 4;
-    matched = true;
+  try {
+    // Se il pattern contiene caratteri "da regex", trattalo come regex.
+    // Altrimenti, trattalo come frase letterale a token (no substring).
+    const looksRegex = /[.*+?^${}()|[\]\\]/.test(p);
+
+    if (looksRegex) {
+      const re = new RegExp(p, "i");
+      if (re.test(t)) {
+        score += 4;
+        matched = true;
+      }
+    } else {
+      // match letterale su token/frase (no substring)
+      // Qui NON usare \b...\b su frasi: usa una regex che gestisca spazi/punteggiatura
+      const phrase = escapeRegExp(p).replace(/\s+/g, "\\s+");
+      const re = new RegExp(`(^|\\s)${phrase}(\\s|$)`, "i");
+      if (re.test(t)) {
+        score += 4;
+        matched = true;
+      }
+    }
+  } catch {
+    /* ignore invalid regex */
   }
 }
+
 
 
   if (matched) score += intent.priority ?? 0;
