@@ -560,22 +560,32 @@ function pickLocalizedText(val: any, lang: string) {
   }
 }
 
-function sanitizeYamlReply(text: string, userMessage: string) {
+function sanitizeYamlReply(text: string, userMessage: string, intent?: string) {
   let t = String(text || "").trim();
   if (!t) return t;
 
-  // evita welcome ripetuti se l'utente non sta salutando
   const um = norm(userMessage);
-  const userIsGreeting = /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(um);
+  const userIsGreeting =
+    /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(um);
 
-  if (!userIsGreeting) {
-    // se la risposta inizia con "Ciao! Benvenuto..." taglia la prima frase
-    const parts = t.split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
+  // ✅ Taglia l’eventuale “welcome” SOLO se:
+  // - l’utente NON sta salutando
+  // - e NON siamo nell’intent welcome (che deve restare integro)
+  if (!userIsGreeting && intent !== "welcome") {
+    const parts = t
+      .split(/(?<=[.!?])\s+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+
     if (parts.length > 1) {
       const first = norm(parts[0]);
       const looksWelcome =
-        first.includes("benvenut") || first.includes("welcome") || first.includes("bienvenid") ||
-        first.includes("willkomm") || first.includes("bienvenue");
+        first.includes("benvenut") ||
+        first.includes("welcome") ||
+        first.includes("bienvenid") ||
+        first.includes("willkomm") ||
+        first.includes("bienvenue");
+
       if (looksWelcome) {
         parts.shift();
         t = parts.join(" ").trim();
@@ -583,12 +593,17 @@ function sanitizeYamlReply(text: string, userMessage: string) {
     }
   }
 
-  // stile: massimo 3 frasi (ma NON tocchiamo risposte corte tipo wifi)
-  const sents = t.split(/(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
+  // Stile: massimo 3 frasi (ma NON tocchiamo risposte corte tipo wifi)
+  const sents = t
+    .split(/(?<=[.!?])\s+/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+
   if (sents.length > 3) t = sents.slice(0, 3).join(" ").trim();
 
   return t;
 }
+
 
 
 function noInfoText(lang: string) {
@@ -605,6 +620,9 @@ function noInfoText(lang: string) {
       return "Non ho ancora questa informazione. Se ti serve subito, contatta l’host.";
   }
 }
+
+
+
 
 type ChatMode = "default" | "future";
 
@@ -745,7 +763,8 @@ async function handleChatRequest(
   const replyTextRaw = out.text;
   const replyText = pickLocalizedText(replyTextRaw, replyLang).trim();
   const baseReply = replyText ? replyText : noInfoText(replyLang);
-  const safeReply = sanitizeYamlReply(baseReply, message) || noInfoText(replyLang);
+  const safeReply = sanitizeYamlReply(baseReply, message, out.intent ?? undefined) || noInfoText(replyLang);
+
 
   // 💾 Salviamo SEMPRE una risposta assistant (safeReply non è mai vuota)
   await saveMessage({
