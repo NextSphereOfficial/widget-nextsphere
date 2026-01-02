@@ -11,12 +11,12 @@ content:
   copy_overrides: {}
 
   hotel:
-    name: "Tuo Appartamento"
+    name: "S&V Apartments"
 
   # 2) WiFi (dato puro)
   wifi:
-    ssid: "Rete1234"
-    password: "Esempio1234"
+    ssid: "S&V"
+    password: "sv2026!"
 
   # 3) Check-in (dato puro + extra opzionale per-lingua se vuoi)
   checkin:
