@@ -99,6 +99,8 @@ model Session {
   lang           String  @default("it")
   status         String  @default("open") // open, closed
 
+  stateJson Json?
+
   startedAt DateTime  @default(now())
   closedAt  DateTime?
   createdAt DateTime  @default(now())

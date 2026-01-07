@@ -83,3 +83,7 @@ export function getRuntimeSnapshot() {
     cache_size: cache.size,
   };
 }
+
+export function isOrchestratorAlwaysOn() {
+  return ENV.ORCH_ALWAYS_ON === true;
+}

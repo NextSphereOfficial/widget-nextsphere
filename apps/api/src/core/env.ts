@@ -23,4 +23,6 @@ export const ENV = {
   CACHE_TTL_S: Number(process.env.CACHE_TTL_S ?? 43200),
   CB_FAILURE_THRESHOLD: Number(process.env.CB_FAILURE_THRESHOLD ?? 5),
   DEFAULT_LOCALE: process.env.DEFAULT_LOCALE ?? 'it',
+  ORCH_ALWAYS_ON: process.env.ORCH_ALWAYS_ON === "true",
+
 } as const;

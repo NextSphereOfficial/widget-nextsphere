@@ -3,44 +3,29 @@ import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 
 import { orchestrateChat } from "../core/orchestrator.js";
 import { loadIntentsCore, loadStructure, loadLangPack } from "../content/loader.js";
+import { norm, resolveIntent } from "../core/logic/intentResolver.js";
+import { renderTemplate, fallbackText, resolveEffectiveLang } from "../core/logic/templateEngine.js";
+import { pickLocalizedText, sanitizeYamlReply, noInfoText, parseTimeFromText } from "../core/logic/sanitize.js";
+
 
 import { cacheGet, cacheSet } from "../core/runtimeGuards.js";
 import {
   ensureSessionForChat,
   saveMessage,
   getRecentMessages,
+  getSessionState,
+  setSessionState,
+  clearPending,
 } from "../services/sessionService.js";
+
+
+import { isOrchestratorAlwaysOn } from "../core/runtimeGuards.js";
 
 import path from "node:path";
 
 
 // -----------------------------------------------------
-// Helpers (base)
 
-function safeField(obj: any, pathStr: string, defaultValue: any = undefined) {
-  try {
-    const parts = pathStr.split(".");
-    let current = obj;
-    for (const p of parts) {
-      if (!current || typeof current !== "object") return defaultValue;
-      current = current[p];
-    }
-    return current ?? defaultValue;
-  } catch {
-    return defaultValue;
-  }
-}
-
-function norm(s: string) {
-  return String(s || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[_\-]+/g, " ")
-    .replace(/[^\p{L}\p{N}\s]/gu, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
 // -----------------------------------------------------
 // Cache
@@ -56,6 +41,17 @@ function buildLlmCacheKey(structureId: string, message: string, lang?: string) {
 // -----------------------------------------------------
 // Types
 
+type IntentResolution = {
+  key: string;
+  matched: boolean;
+  score: number;
+  secondScore: number;
+  margin: number;
+  confidence: number; // 0..1
+  isSingleWord: boolean;
+};
+
+
 type IntentMatch = {
   key: string;
   score: number;
@@ -70,404 +66,21 @@ type EngineOutput = {
     mode: "short" | "long";
     uiButtons: any[];
     isFallback: boolean;
+
+    // NEW: telemetria intent (non cambia il comportamento)
+    intentScore?: number;
+    intentSecondScore?: number;
+    intentMargin?: number;
+    intentConfidence?: number;
+    isSingleWord?: boolean;
   };
 };
-
-// -----------------------------------------------------
-// Intent scoring
-
-function escapeRegExp(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function includesWord(t: string, w: string) {
-  if (!t || !w) return false;
-  const re = new RegExp(`\\b${escapeRegExp(w)}\\b`, "i");
-  return re.test(t);
-}
-
-
-function scoreIntent(
-  text: string,
-  intent: {
-    id?: string;
-    synonyms?: string[];
-    keywords?: string[];
-    patterns?: string[];
-    negative?: string[];
-    priority?: number;
-  }
-): { score: number; matched: boolean } {
-  const t = norm(text);
-  let score = 0;
-  let matched = false;
-
-  const allSynonyms = (intent.synonyms || []).map(norm).filter(Boolean);
-  const allKeywords = (intent.keywords || []).map(norm).filter(Boolean);
-  const allPatterns = (intent.patterns || []).map(norm).filter(Boolean);
-  const allNegative = (intent.negative || []).map(norm).filter(Boolean);
-
-  for (const n of allNegative) {
-    if (t.includes(n)) score -= 5;
-  }
-
-for (const s of allSynonyms) {
-  if (includesWord(t, s)) {
-    score += 5;
-    matched = true;
-  }
-}
-
-
-for (const k of allKeywords) {
-  if (includesWord(t, k)) {
-    score += 3;
-    matched = true;
-  }
-}
-
-
-for (const p of allPatterns) {
-  try {
-    // Se il pattern contiene caratteri "da regex", trattalo come regex.
-    // Altrimenti, trattalo come frase letterale a token (no substring).
-    const looksRegex = /[.*+?^${}()|[\]\\]/.test(p);
-
-    if (looksRegex) {
-      const re = new RegExp(p, "i");
-      if (re.test(t)) {
-        score += 4;
-        matched = true;
-      }
-    } else {
-      // match letterale su token/frase (no substring)
-      // Qui NON usare \b...\b su frasi: usa una regex che gestisca spazi/punteggiatura
-      const phrase = escapeRegExp(p).replace(/\s+/g, "\\s+");
-      const re = new RegExp(`(^|\\s)${phrase}(\\s|$)`, "i");
-      if (re.test(t)) {
-        score += 4;
-        matched = true;
-      }
-    }
-  } catch {
-    /* ignore invalid regex */
-  }
-}
-
-
-
-  if (matched) score += intent.priority ?? 0;
-  return { score, matched };
-}
-
-function resolveIntent(userText: string, intentsCore: Record<string, any>) {
-  const t = norm(userText);
-
-  // Heuristica: keyword singola → non forzare intent "welcome" e preferisci fallback/LLM
-  const tokens = t.split(" ").filter(Boolean);
-  const isSingleWord = tokens.length === 1;
-
-
-  const intents: IntentMatch[] = Object.entries(intentsCore || {}).map(
-    ([key, value]) => {
-      const intent = value as any;
-      const { score, matched } = scoreIntent(t, intent);
-      return { key, score, matched };
-    }
-  );
-
-  // override euristici per intent base (tieni qui la tua logica)
-  if (/\bwi\s*fi\b/.test(t) || t.includes("wifi") || t.includes("ssid")) {
-    const idx = intents.findIndex((i) => i.key === "wifi");
-    if (idx >= 0) intents[idx] = { key: "wifi", score: 999, matched: true };
-    else intents.push({ key: "wifi", score: 999, matched: true });
-  }
-
-  if (
-    t.includes("late checkout") ||
-    /posticip(a|o)\s*il?\s*checkout/.test(t) ||
-    /checkout\s*tardi/.test(t)
-  ) {
-    const idx = intents.findIndex((i) => i.key === "late_checkout");
-    if (idx >= 0)
-      intents[idx] = { key: "late_checkout", score: 999, matched: true };
-    else intents.push({ key: "late_checkout", score: 999, matched: true });
-  }
-
-  if (
-    t.includes("emergenz") ||
-    t.includes("ambulanza") ||
-    t.includes("polizia") ||
-    t.includes("carabinieri") ||
-    t.includes("fuoco") ||
-    t.includes("incendio")
-  ) {
-    const idx = intents.findIndex((i) => i.key === "emergency");
-    if (idx >= 0)
-      intents[idx] = { key: "emergency", score: 999, matched: true };
-    else intents.push({ key: "emergency", score: 999, matched: true });
-  }
-
-  intents.sort((a, b) => b.score - a.score);
-  const top = intents[0];
-
-  if (!top || top.score <= 0) return { key: "fallback", score: 0, matched: false };
-  // Guardrail: su singola parola evita intent "welcome" (anche se score alto)
-if (isSingleWord && top && top.key === "welcome" && !/^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(t)) {
-  return { key: "fallback", score: 0, matched: false };
-}
-
-
-
-  return top;
-}
-
-// -----------------------------------------------------
-// Template & fallback (✅ aggiornati a intents + output)
-
-// {{path.to.value}} → structureYaml[path.to.value]
-function resolvePath(obj: any, pathStr: string): any {
-  if (!obj || typeof pathStr !== "string") return undefined;
-
-  return pathStr.split(".").reduce((acc: any, key: string) => {
-    if (acc && Object.prototype.hasOwnProperty.call(acc, key)) return acc[key];
-    return undefined;
-  }, obj);
-}
-
-function applyTemplateToText(text: string, structureYaml: any): string {
-  if (typeof text !== "string" || text.indexOf("{{") === -1) return text;
-
-  return text.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_match, expr) => {
-    const pathStr = String(expr || "").trim();
-    if (!pathStr) return "";
-
-    const value = resolvePath(structureYaml, pathStr);
-    if (value === undefined || value === null) return "";
-
-    return typeof value === "string" ? value : String(value);
-  });
-}
-
-
-
-function fallbackText(
-  structureYaml: any,
-  intentKey: string,
-  lang: string
-): string {
-  if (!structureYaml || typeof structureYaml !== "object") return "";
-
-  // 1) fallback specifico dell'intent
-  const intentFallback =
-    safeField(structureYaml, `intents.${intentKey}.output.fallback`) ??
-    safeField(structureYaml, `intents.${intentKey}.output.short`);
-
-  if (typeof intentFallback === "string" && intentFallback.trim()) {
-    return applyTemplateToText(intentFallback, structureYaml);
-  }
-
-  // 2) fallback globale struttura
-  const globalFallback =
-    safeField(structureYaml, "content.fallback.default") ??
-    safeField(structureYaml, "content.fallback.generic");
-
-  if (typeof globalFallback === "string" && globalFallback.trim()) {
-    return applyTemplateToText(globalFallback, structureYaml);
-  }
-
-  // 3) ultima rete di sicurezza
-  return "";
-}
-
-
-// -----------------------------------------------------
-// Language packs (src/content/lang in dev, dist/content/lang in prod)
-// Path: apps/api/src/routes/chat.ts -> ../content/lang
-
-
-
-function resolveIntentVars(
-  intentDef: any,
-  structureYaml: any,
-  lang: string
-): Record<string, any> {
-  const out: Record<string, any> = {};
-  const vars =
-    intentDef?.vars && typeof intentDef.vars === "object" ? intentDef.vars : {};
-
-  const defaultLocale =
-    structureYaml?.meta?.default_locale || structureYaml?.default_locale || "it";
-
-  const pickLang = (val: any) => {
-    if (val && typeof val === "object") {
-      if (typeof val[lang] === "string") return val[lang];
-      if (typeof val[defaultLocale] === "string") return val[defaultLocale];
-      if (typeof val.it === "string") return val.it;
-      return "";
-    }
-    return val === undefined || val === null ? "" : String(val);
-  };
-
-  const getContentPath = (path: string) => {
-    // path esempio: "parking.note"
-    const parts = path.split(".");
-    let cur: any = structureYaml?.content;
-    for (const p of parts) {
-      if (!cur || typeof cur !== "object") return undefined;
-      cur = cur[p];
-    }
-    return cur;
-  };
-
-  for (const [k, v] of Object.entries(vars)) {
-    if (typeof v === "string") {
-      // Caso ottimizzato: "{{content.xxx.yyy}}"
-      const m = v.match(/^\{\{\s*content\.([a-zA-Z0-9_.-]+)\s*\}\}$/);
-      if (m) {
-        const raw = getContentPath(m[1]);
-        out[k] = pickLang(raw);
-        continue;
-      }
-
-      // fallback: comportamento attuale
-      const resolved = applyTemplateToText(v, structureYaml);
-      out[k] = pickLang(resolved);
-      continue;
-    }
-
-    if (v === undefined || v === null) {
-      out[k] = "";
-      continue;
-    }
-
-    out[k] = pickLang(v);
-  }
-
-  return out;
-}
-
-
-
-
-function renderVars(template: string, vars: Record<string, any>): string {
-  if (typeof template !== "string" || template.indexOf("{{") === -1) return template;
-
-  return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, expr) => {
-    const key = String(expr || "").trim();
-    if (!key) return "";
-
-    // se è una var diretta (ssid/password/hotel_name), sostituisci
-    if (Object.prototype.hasOwnProperty.call(vars, key)) {
-      const v = vars[key];
-      return v === undefined || v === null ? "" : String(v);
-    }
-
-    // altrimenti lascia intatto: poi lo risolve applyTemplateToText (content.xxx)
-    return `{{${key}}}`;
-  });
-}
-
-async function renderTemplate(
-  structureYaml: any,
-  intentKey: string,
-  lang: string,
-  mode: "short" | "long"
-): Promise<{ text: string; buttons: any[] }> {
-  const intents = structureYaml?.intents || {};
-  const intentDef = intents[intentKey];
-
-  if (!intentDef || typeof intentDef !== "object") {
-    return { text: "", buttons: [] };
-  }
-
-  // 1) NUOVO: reply_key -> language pack (lang -> fallback it)
-  const replyKey = intentDef.reply_key;
-  if (typeof replyKey === "string" && replyKey.trim()) {
-      const overrideKey =
-    (typeof (intentDef as any).override_key === "string" &&
-      (intentDef as any).override_key.trim())
-      ? (intentDef as any).override_key.trim()
-      : replyKey.trim();
-
-  // 0) PRIMA PRIORITÀ: copy_overrides (cliente)
-    const overrideTpl =
-    structureYaml &&
-    (structureYaml as any).content &&
-    (structureYaml as any).content.copy_overrides &&
-    typeof (structureYaml as any).content.copy_overrides === "object"
-      ? (structureYaml as any).content.copy_overrides[overrideKey]
-      : undefined;
-
-
-  if (typeof overrideTpl === "string" && overrideTpl.trim()) {
-    const vars = resolveIntentVars(intentDef, structureYaml, lang);
-    const text = renderVars(overrideTpl, vars);
-    const buttons =
-      Array.isArray(intentDef?.output?.ui?.buttons) ? intentDef.output.ui.buttons : [];
-    return { text, buttons };
-  }
-
-  const pack = await loadLangPack(lang);
-let template = pack?.[replyKey];
-
-if (template === undefined) {
-  const itPack = await loadLangPack("it");
-  template = itPack?.[replyKey];
-}
-
-
-    if (typeof template === "string" && template.trim()) {
-      const vars = resolveIntentVars(intentDef, structureYaml, lang);
-
-      // (a) sostituisci vars ({{ssid}} ecc)
-      let text = renderVars(template, vars);
-
-      // (b) poi risolvi eventuali {{content.xxx}} o simili
-      text = applyTemplateToText(text, structureYaml);
-
-      // bottoni: compatibile con schema output.ui.buttons (se presente)
-      const buttons =
-        Array.isArray(intentDef?.output?.ui?.buttons) ? intentDef.output.ui.buttons : [];
-
-      return { text, buttons };
-    }
-  }
-
-  // 2) BACKWARD COMPAT: vecchio schema output
-  const output = intentDef.output || {};
-  let text = "";
-
-  if (typeof output.fallback === "string") text = output.fallback;
-  else if (typeof output.default === "string") text = output.default;
-  else if (mode === "long" && typeof output.long === "string") text = output.long;
-  else if (typeof output.short === "string") text = output.short;
-  else if (typeof output.long === "string") text = output.long;
-
-  text = applyTemplateToText(text, structureYaml);
-
-  const buttons =
-    Array.isArray(output?.ui?.buttons) ? output.ui.buttons : [];
-
-  return { text, buttons };
-}
-
 
 
 // Engine
 // -----------------------------------------------------
 
-function resolveEffectiveLang(inputLang: string | undefined, structureYaml: any): string {
-  const fromBody = inputLang ? String(inputLang) : "";
-  if (fromBody) return fromBody.slice(0, 2).toLowerCase();
 
-  const metaLang =
-    safeField(structureYaml, "meta.language") ??
-    safeField(structureYaml, "meta.default_locale") ??
-    "it";
-
-  return String(metaLang || "it").slice(0, 2).toLowerCase();
-}
 
 async function findResponse(
   intentsCore: any,
@@ -477,8 +90,8 @@ async function findResponse(
 ) {
   const mode: "short" | "long" = "short";
 
-  const intentMatch = resolveIntent(message, intentsCore);
-  const intentKey = intentMatch.key;
+  const intentRes = resolveIntent(message, intentsCore);
+  const intentKey = intentRes.key;
 
   // 1) fallback "puro" (nessun match): qui ha senso l'LLM
   if (intentKey === "fallback") {
@@ -487,6 +100,13 @@ async function findResponse(
       text: fallbackText(structureYaml, intentKey, lang),
       buttons: [] as any[],
       isFallback: true,
+
+      // NEW: telemetria intent
+      intentScore: intentRes.score,
+      intentSecondScore: intentRes.secondScore,
+      intentMargin: intentRes.margin,
+      intentConfidence: intentRes.confidence,
+      isSingleWord: intentRes.isSingleWord,
     };
   }
 
@@ -502,8 +122,16 @@ async function findResponse(
     text: baseText,
     buttons: rendered.buttons ?? [],
     isFallback: false,
+
+    // NEW: telemetria intent
+    intentScore: intentRes.score,
+    intentSecondScore: intentRes.secondScore,
+    intentMargin: intentRes.margin,
+    intentConfidence: intentRes.confidence,
+    isSingleWord: intentRes.isSingleWord,
   };
 }
+
 
 async function runEngine({
   structureId,
@@ -521,16 +149,24 @@ async function runEngine({
 
   const resp = await findResponse(intentsCore, structureYaml, message, effectiveLang);
 
-  return {
-    intent: resp.intent,
-    lang: effectiveLang,
-    meta: {
-      mode: "short",
-      uiButtons: resp.buttons,
-      isFallback: resp.isFallback,
-    },
-    text: resp.text,
-  };
+ return {
+  intent: resp.intent,
+  lang: effectiveLang,
+  meta: {
+    mode: "short",
+    uiButtons: resp.buttons,
+    isFallback: resp.isFallback,
+
+    // NEW: telemetria intent
+    intentScore: resp.intentScore,
+    intentSecondScore: resp.intentSecondScore,
+    intentMargin: resp.intentMargin,
+    intentConfidence: resp.intentConfidence,
+    isSingleWord: resp.isSingleWord,
+  },
+  text: resp.text,
+};
+
 }
 
 // -----------------------------------------------------
@@ -538,88 +174,6 @@ async function runEngine({
 // -----------------------------------------------------
 
 // Helpers (shared)
-// ----------------
-function pickLocalizedText(val: any, lang: string) {
-  if (val == null) return "";
-  if (typeof val === "string") return val;
-
-  // oggetto per-lingua { it, en, de, fr, es }
-  if (typeof val === "object") {
-    const tryKeys = [lang, "en", "it", "de", "fr", "es"];
-    for (const k of tryKeys) {
-      const v = (val as any)?.[k];
-      if (typeof v === "string" && v.trim()) return v;
-    }
-  }
-
-  // fallback: tenta stringify
-  try {
-    return JSON.stringify(val);
-  } catch {
-    return String(val);
-  }
-}
-
-function sanitizeYamlReply(text: string, userMessage: string, intent?: string) {
-  let t = String(text || "").trim();
-  if (!t) return t;
-
-  const um = norm(userMessage);
-  const userIsGreeting =
-    /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(um);
-
-  // ✅ Taglia l’eventuale “welcome” SOLO se:
-  // - l’utente NON sta salutando
-  // - e NON siamo nell’intent welcome (che deve restare integro)
-  if (!userIsGreeting && intent !== "welcome") {
-    const parts = t
-      .split(/(?<=[.!?])\s+/)
-      .map((x) => x.trim())
-      .filter(Boolean);
-
-    if (parts.length > 1) {
-      const first = norm(parts[0]);
-      const looksWelcome =
-        first.includes("benvenut") ||
-        first.includes("welcome") ||
-        first.includes("bienvenid") ||
-        first.includes("willkomm") ||
-        first.includes("bienvenue");
-
-      if (looksWelcome) {
-        parts.shift();
-        t = parts.join(" ").trim();
-      }
-    }
-  }
-
-  // Stile: massimo 3 frasi (ma NON tocchiamo risposte corte tipo wifi)
-  const sents = t
-    .split(/(?<=[.!?])\s+/)
-    .map((x) => x.trim())
-    .filter(Boolean);
-
-  if (sents.length > 3) t = sents.slice(0, 3).join(" ").trim();
-
-  return t;
-}
-
-
-
-function noInfoText(lang: string) {
-  switch ((lang || "it").toLowerCase()) {
-    case "en":
-      return "I don’t have that information yet. Please contact the host if you need it right now.";
-    case "de":
-      return "Diese Information habe ich noch nicht. Bitte kontaktiere den Gastgeber, wenn du sie sofort brauchst.";
-    case "fr":
-      return "Je n’ai pas encore cette information. Contactez l’hôte si vous en avez besoin tout de suite.";
-    case "es":
-      return "Aún no tengo esa información. Contacta con el anfitrión si la necesitas ahora mismo.";
-    default:
-      return "Non ho ancora questa informazione. Se ti serve subito, contatta l’host.";
-  }
-}
 
 
 
@@ -652,6 +206,10 @@ async function handleChatRequest(
     // roomId: body?.room ? String(body.room) : undefined, // opzionale
   });
 
+  // 🧠 Stato conversazionale (pending slot)
+const state = await getSessionState(session.id);
+
+
   // 💾 2) Salviamo il messaggio dell’utente
   await saveMessage({
     sessionId: session.id,
@@ -662,8 +220,183 @@ async function handleChatRequest(
     isFallback: null,
   });
 
+  // ✅ Pending slot handler (prima del motore intent)
+if (state?.pending?.intent && state?.pending?.slot) {
+    // 🧯 Escape hatch: se l’utente chiede chiaramente altro (wifi/emergency), non forzare pending
+  const t = norm(message);
+  const looksWifi = /\bwi\s*fi\b/.test(t) || t.includes("wifi") || t.includes("ssid");
+  const looksEmergency =
+    t.includes("emergenz") ||
+    t.includes("ambulanza") ||
+    t.includes("polizia") ||
+    t.includes("carabinieri") ||
+    t.includes("fuoco") ||
+    t.includes("incendio");
+
+  if (looksWifi || looksEmergency) {
+    await clearPending(session.id);
+  } else {
+    // (continua con handler pending normale)
+
+  // Per ora supportiamo solo slot "time"
+  if (state.pending.slot === "time") {
+    const time = parseTimeFromText(message);
+
+    if (time) {
+      // Puliamo pending
+      await clearPending(session.id);
+
+      // Risposta deterministica, senza LLM: rimanda all’host come da policy
+      const replyLang = (lang || session.lang || "it").slice(0, 2).toLowerCase();
+
+      const text =
+        replyLang === "en"
+          ? `Got it — around ${time}. For late checkout, please message the host to confirm availability.`
+          : replyLang === "de"
+          ? `Alles klar — gegen ${time}. Für Late Checkout bitte den Gastgeber kontaktieren, um die Verfügbarkeit zu bestätigen.`
+          : replyLang === "fr"
+          ? `D’accord — vers ${time}. Pour un late checkout, contacte l’hôte pour confirmer la disponibilité.`
+          : replyLang === "es"
+          ? `Perfecto — sobre las ${time}. Para late checkout, contacta con el anfitrión para confirmar disponibilidad.`
+          : `Perfetto — verso le ${time}. Per il late checkout, contatta l’host per confermare la disponibilità.`;
+
+      await saveMessage({
+        sessionId: session.id,
+        role: "assistant",
+        content: text,
+        intent: state.pending.intent,
+        source: "yaml_followup",
+        isFallback: false,
+      });
+
+      return reply.code(200).send({
+        ok: true,
+        source: "yaml",
+        intent: state.pending.intent,
+        confidence: 1.0,
+        lang: replyLang,
+        text,
+        reply: text,
+        sessionId: session.id,
+      });
+    }}
+
+    // Se non capiamo l’orario → una domanda guidata (UNA)
+    const replyLang = (lang || session.lang || "it").slice(0, 2).toLowerCase();
+
+    const ask =
+      replyLang === "en"
+        ? "What time exactly? (e.g., 13:00)"
+        : replyLang === "de"
+        ? "Welche Uhrzeit genau? (z.B. 13:00)"
+        : replyLang === "fr"
+        ? "À quelle heure exactement ? (ex. 13:00)"
+        : replyLang === "es"
+        ? "¿A qué hora exactamente? (p. ej., 13:00)"
+        : "A che ora esattamente? (es. 13:00)";
+
+    await saveMessage({
+      sessionId: session.id,
+      role: "assistant",
+      content: ask,
+      intent: state.pending.intent,
+      source: "yaml_followup",
+      isFallback: false,
+    });
+
+    return reply.code(200).send({
+      ok: true,
+      source: "yaml",
+      intent: state.pending.intent,
+      confidence: 1.0,
+      lang: replyLang,
+      text: ask,
+      reply: ask,
+      sessionId: session.id,
+    });
+  }
+}
+
+
   // 🧠 3) Motore YAML
   const out = await runEngine({ structureId: resolvedStructureId, message, lang });
+
+  // 🔁 History breve (serve per orchestrator / contesto)
+const historyRows = await getRecentMessages({
+  sessionId: session.id,
+  limit: 6,
+});
+
+const history = historyRows.map(
+  (m): { role: "assistant" | "user"; content: string } => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: m.content,
+  })
+);
+
+// 🧠 Orchestrator always-on (dietro feature flag)
+if (isOrchestratorAlwaysOn()) {
+  const orch = await orchestrateChat(
+    resolvedStructureId,
+    message,
+    {
+      matched: out.meta?.isFallback === false,
+      intent: out.intent ?? undefined,
+      confidence:
+        typeof out.meta?.intentConfidence === "number"
+          ? out.meta.intentConfidence
+          : out.meta?.isFallback
+          ? 0
+          : 0.6,
+      replyText: out.text,
+      buttons: out.meta?.uiButtons ?? [],
+      history,
+      lang: out.lang,
+      isSingleWord: !!out.meta?.isSingleWord,
+    },
+    lang
+  );
+
+// 🧠 Pending strutturato dall’orchestrator
+const pending = (orch as any)?.pending;
+if (pending && typeof pending === "object" && pending.intent && pending.slot) {
+  await setSessionState(session.id, {
+    ...(state || {}),
+    pending: {
+      intent: String(pending.intent),
+      slot: String(pending.slot),
+      askedAt: new Date().toISOString(),
+    },
+  });
+} else {
+  // se non c’è pending, puliamo eventuale pending precedente per sicurezza
+  await clearPending(session.id);
+}
+
+
+
+
+  // 💾 Salviamo SEMPRE la risposta assistant dall’orchestrator
+  const assistantText =
+    (orch as any)?.reply ?? (orch as any)?.text ?? "";
+
+  if (assistantText) {
+    await saveMessage({
+      sessionId: session.id,
+      role: "assistant",
+      content: String(assistantText),
+      intent: out.intent ?? null,
+      source: orch.source ?? "orchestrator",
+      isFallback: orch.source === "llm",
+    });
+  }
+
+  return reply.code(200).send({
+    ...(orch ?? {}),
+    sessionId: session.id,
+  });
+}
+
 
   // LLM fallback: se la risposta è di fallback YAML, attiva orchestratore + cache
   if (out?.meta?.isFallback === true) {

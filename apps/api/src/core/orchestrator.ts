@@ -126,6 +126,62 @@ function fallbackText(lang: string) {
   }
 }
 
+function followUpText(lang: string, intent?: string) {
+  // Domande brevi, una sola, deterministiche (no invenzioni).
+  // Se vuoi in futuro: mappa per intent specifici.
+  switch (lang) {
+    case 'en':
+      if (intent === 'late_checkout') return 'What time would you need it?';
+      return 'What exactly do you need (details, time, price, or how to get there)?';
+    case 'de':
+      if (intent === 'late_checkout') return 'Zu welcher Uhrzeit brauchst du es?';
+      return 'Was genau brauchst du (Details, Uhrzeit, Preis oder Wegbeschreibung)?';
+    case 'fr':
+      if (intent === 'late_checkout') return 'Pour quelle heure en aurais-tu besoin ?';
+      return 'De quoi as-tu besoin exactement (détails, horaire, prix ou itinéraire) ?';
+    case 'es':
+      if (intent === 'late_checkout') return '¿Para qué hora lo necesitas?';
+      return '¿Qué necesitas exactamente (detalles, hora, precio o cómo llegar)?';
+    default:
+      if (intent === 'late_checkout') return 'Per che orario ti servirebbe?';
+      return 'Cosa ti serve esattamente (dettagli, orario, prezzo o come arrivare)?';
+  }
+}
+
+function shouldAddYamlFollowUp(args: {
+  matched: boolean;
+  confidence: number;
+  isSingleWord: boolean;
+  intent?: string;
+  userMessage: string;
+}) {
+  const { matched, confidence, isSingleWord, intent, userMessage } = args;
+
+  if (!matched) return false;
+
+  // intent “forti”/sensibili: NON aggiungiamo follow-up per non essere invadenti
+  // (wifi ed emergency devono restare secchi e immediati)
+  if (intent === 'wifi' || intent === 'emergency') return false;
+
+  // se l’utente sta salutando, non aggiungere follow-up (lascia che la risposta sia pulita)
+  if (isGreeting(userMessage)) return false;
+
+  // Regola principale: conf media o input troppo corto → UNA domanda
+  if (isSingleWord) return true;
+  if (confidence >= 0.45 && confidence < 0.75) return true;
+
+  return false;
+}
+
+function pendingForIntent(intent?: string) {
+  // Per ora: solo late_checkout → slot time
+  if (intent === 'late_checkout') {
+    return { intent: 'late_checkout', slot: 'time' as const };
+  }
+  return null;
+}
+
+
 function isGreeting(message: string) {
   const s = normalize(message);
   // saluti comuni (non perfetto, ma sufficiente per guardrail)
@@ -193,6 +249,8 @@ export async function orchestrateChat(
     buttons?: any[];
     history?: { role: 'user' | 'assistant'; content: string }[];
     lang?: string;
+    isSingleWord?: boolean;
+
   },
   reqLang?: string,
 ) {
@@ -218,11 +276,13 @@ if (yamlProbe?.intent === 'welcome' && !isGreeting(userMessage)) {
 
 
   // decisione (se non hai confidenza dal matcher, passa matched=false)
-  const decision = decideResponse({
-    matched: !!yamlProbe?.matched,
-    intent: yamlProbe?.intent,
-    confidence: yamlProbe?.confidence,
-  });
+const decision = decideResponse({
+  matched: !!yamlProbe?.matched,
+  intent: yamlProbe?.intent,
+  confidence: yamlProbe?.confidence,
+  isSingleWord: !!yamlProbe?.isSingleWord,
+});
+
 
   // History sintetica (opzionale) per cache key e contesto LLM
   const historySummary =
@@ -265,22 +325,41 @@ if (yamlProbe?.intent === 'welcome' && !isGreeting(userMessage)) {
    * ✅ YAML branch: alta confidenza → rispondi subito
    * Guardrail: MAI vuoto / MAI object.
    */
-  if (decision.source === 'yaml' && yamlProbe?.replyText != null) {
+  if ((decision.source === 'yaml' || decision.source === 'yaml_followup') && yamlProbe?.replyText != null) {
+
     const replyText = pickLocalizedText(yamlProbe.replyText, replyLang).trim();
 
-    const finalText = replyText || noInfoText(replyLang);
-    cacheSet(cacheKey, finalText);
+let finalText = replyText || noInfoText(replyLang);
+
+const addFollowUp = decision.source === 'yaml_followup';
+
+
+let pending: { intent: string; slot: string } | null = null;
+
+if (addFollowUp) {
+  const q = followUpText(replyLang, decision.intent);
+  if (q) finalText = `${finalText} ${q}`.trim();
+
+  const p = pendingForIntent(decision.intent);
+  if (p) pending = p;
+}
+
+
+cacheSet(cacheKey, finalText);
+
 
     return {
-      ok: true,
-      source: 'yaml',
-      reply: finalText,
-      intent: decision.intent,
-      confidence: decision.confidence,
-      cacheHit: false,
-      ctxVer: ctx.contextVersion,
-      ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
-    };
+  ok: true,
+  source: decision.source,
+  reply: finalText,
+  intent: decision.intent,
+  confidence: decision.confidence,
+  cacheHit: false,
+  ctxVer: ctx.contextVersion,
+  pending: pending ?? undefined,
+  ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
+};
+
   }
 
   /**

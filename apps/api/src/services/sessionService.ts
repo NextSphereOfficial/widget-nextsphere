@@ -7,6 +7,15 @@ export type EnsureSessionInput = {
   lang?: string;            // es: "it", "en"
 };
 
+export type ConversationState = {
+  pending?: {
+    intent: string;
+    slot: string;
+    askedAt: string; // ISO
+  };
+};
+
+
 /**
  * Assicura che esista una sessione per questa struttura (structureId).
  * Per ora usiamo structureId direttamente come roomId nel modello Session esistente.
@@ -75,4 +84,29 @@ export async function getRecentMessages(params: {
   });
 
   return rows;
+}
+
+export async function getSessionState(sessionId: string): Promise<ConversationState> {
+  const s = await prisma.session.findUnique({
+    where: { id: sessionId },
+    select: { stateJson: true },
+  });
+
+  const raw = (s as any)?.stateJson;
+  if (!raw || typeof raw !== "object") return {};
+  return raw as ConversationState;
+}
+
+export async function setSessionState(sessionId: string, state: ConversationState) {
+  return prisma.session.update({
+    where: { id: sessionId },
+    data: { stateJson: state as any },
+  });
+}
+
+export async function clearPending(sessionId: string) {
+  const state = await getSessionState(sessionId);
+  if (!state?.pending) return;
+  delete state.pending;
+  await setSessionState(sessionId, state);
 }
