@@ -1,6 +1,7 @@
 // utils/toLLMContext.ts — compatibile con YAML refined, backward-friendly
 
-export type Lang = "it" | "en";
+export type Lang = string;
+
 
 type StructureYaml = {
   meta?: {
