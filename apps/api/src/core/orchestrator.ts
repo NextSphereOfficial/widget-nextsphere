@@ -11,9 +11,10 @@ import {
 } from './runtimeGuards.js';
 import crypto from 'node:crypto';
 
+import { pickLocalizedText, noInfoText, sanitizeYamlReply, parseTimeFromText } from './logic/sanitize.js';
+
 /**
  * Style & Behavior Guide v1.0 (Lumo) — Regole GLOBALI (no info hardcoded sulla location).
- * Il contesto specifico della struttura viene aggiunto dinamicamente nel system prompt.
  */
 const LUMO_SYSTEM_RULES = `
 Sei Lumo, un concierge digitale per ospiti in appartamenti turistici.
@@ -42,7 +43,7 @@ function keyHash(x: unknown) {
   return crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex').slice(0, 16);
 }
 
-function normalize(s: string) {
+function normalizeForKey(s: string) {
   return String(s || '')
     .trim()
     .toLowerCase()
@@ -51,8 +52,14 @@ function normalize(s: string) {
 }
 
 /**
- * Lingue supportate dal tuo sistema (allineate ai language pack).
+ * Normalizza lingua a 2 lettere (allineata ai language pack).
+ *
+ * Priorità lingua:
+ * 1) reqLang (dal widget)
+ * 2) yamlProbe.lang (effectiveLang dal motore YAML)
+ * 3) ctx.locale (fallback di sicurezza)
  */
+
 function normalizeLang(raw?: string) {
   const v = String(raw || 'it').trim().toLowerCase();
   const two = v.slice(0, 2);
@@ -68,67 +75,22 @@ function normalizeLang(raw?: string) {
   }
 }
 
-/**
- * Se replyText è string OR oggetto per-lingua {it,en,de,fr,es},
- * ritorna il testo migliore per lang con fallback ragionato.
- */
-function pickLocalizedText(val: any, lang: string) {
-  if (val == null) return '';
-  if (typeof val === 'string') return val;
-
-  if (typeof val === 'object') {
-    const tryKeys = [lang, 'en', 'it', 'de', 'fr', 'es'];
-    for (const k of tryKeys) {
-      const v = (val as any)?.[k];
-      if (typeof v === 'string' && v.trim()) return v;
-    }
-  }
-
-  // ultimo fallback: stringifica in modo sicuro
-  try {
-    return typeof val === 'string' ? val : JSON.stringify(val);
-  } catch {
-    try {
-      return String(val);
-    } catch {
-      return '';
-    }
-  }
-}
-
-function noInfoText(lang: string) {
-  switch (lang) {
-    case 'en':
-      return "I don’t have that information yet. Please contact the host if you need it right now.";
-    case 'de':
-      return "Diese Information habe ich noch nicht. Bitte kontaktiere den Gastgeber, wenn du sie sofort brauchst.";
-    case 'fr':
-      return "Je n’ai pas encore cette information. Contactez l’hôte si vous en avez besoin tout de suite.";
-    case 'es':
-      return "Aún no tengo esa información. Contacta con el anfitrión si la necesitas ahora mismo.";
-    default:
-      return "Non ho ancora questa informazione. Se ti serve subito, contatta l’host.";
-  }
-}
-
 function fallbackText(lang: string) {
   switch (lang) {
     case 'en':
-      return "I can help with Wi-Fi, hours, rules, and emergencies. What do you need exactly?";
+      return 'I can help with Wi-Fi, hours, rules, and emergencies. What do you need exactly?';
     case 'de':
-      return "Ich kann bei WLAN, Zeiten, Regeln und Notfällen helfen. Was brauchst du genau?";
+      return 'Ich kann bei WLAN, Zeiten, Regeln und Notfällen helfen. Was brauchst du genau?';
     case 'fr':
       return "Je peux aider avec le Wi-Fi, les horaires, les règles et les urgences. De quoi as-tu besoin exactement ?";
     case 'es':
-      return "Puedo ayudar con Wi-Fi, horarios, reglas y emergencias. ¿Qué necesitas exactamente?";
+      return 'Puedo ayudar con Wi-Fi, horarios, reglas y emergencias. ¿Qué necesitas exactamente?';
     default:
-      return "Posso aiutarti con Wi-Fi, orari, regole o emergenze. Cosa ti serve esattamente?";
+      return 'Posso aiutarti con Wi-Fi, orari, regole o emergenze. Cosa ti serve esattamente?';
   }
 }
 
 function followUpText(lang: string, intent?: string) {
-  // Domande brevi, una sola, deterministiche (no invenzioni).
-  // Se vuoi in futuro: mappa per intent specifici.
   switch (lang) {
     case 'en':
       if (intent === 'late_checkout') return 'What time would you need it?';
@@ -148,96 +110,25 @@ function followUpText(lang: string, intent?: string) {
   }
 }
 
-function shouldAddYamlFollowUp(args: {
-  matched: boolean;
-  confidence: number;
-  isSingleWord: boolean;
-  intent?: string;
-  userMessage: string;
-}) {
-  const { matched, confidence, isSingleWord, intent, userMessage } = args;
-
-  if (!matched) return false;
-
-  // intent “forti”/sensibili: NON aggiungiamo follow-up per non essere invadenti
-  // (wifi ed emergency devono restare secchi e immediati)
-  if (intent === 'wifi' || intent === 'emergency') return false;
-
-  // se l’utente sta salutando, non aggiungere follow-up (lascia che la risposta sia pulita)
-  if (isGreeting(userMessage)) return false;
-
-  // Regola principale: conf media o input troppo corto → UNA domanda
-  if (isSingleWord) return true;
-  if (confidence >= 0.45 && confidence < 0.75) return true;
-
-  return false;
-}
-
 function pendingForIntent(intent?: string) {
-  // Per ora: solo late_checkout → slot time
   if (intent === 'late_checkout') {
     return { intent: 'late_checkout', slot: 'time' as const };
   }
   return null;
 }
 
-
-function isGreeting(message: string) {
-  const s = normalize(message);
-  // saluti comuni (non perfetto, ma sufficiente per guardrail)
-  return /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour)\b/.test(s);
-}
-
-function splitIntoSentences(text: string) {
-  // Split semplice: . ! ? + newline; mantiene ordine, evita vuoti.
-  const parts = String(text || '')
-    .replace(/\r/g, '\n')
-    .split(/(?<=[.!?])\s+|\n+/g)
-    .map((x) => x.trim())
-    .filter(Boolean);
-  return parts;
-}
-
-/**
- * Applica la Style & Behavior Guide v1.0 in modo deterministico (demo-safe).
- */
-function sanitizeReply(text: string, lang: string, userMessage: string) {
-  let t = String(text || '').trim();
-  if (!t) return noInfoText(lang);
-
-  // Rimuovi boilerplate tipici
-  t = t.replace(/^\s*(Certo!|Sure!|Claro!|Natürlich!|Bien sûr!)\s*/i, '').trim();
-
-  // Se l'utente NON saluta, evita benvenuti/presentazioni in apertura
-  const userGreet = isGreeting(userMessage);
-  if (!userGreet) {
-    const sentences = splitIntoSentences(t);
-    if (sentences.length) {
-      const first = normalize(sentences[0]);
-      const looksLikeWelcome =
-        /\b(benvenut|welcome|bienvenid|willkomm|bienvenue)\b/.test(first) ||
-        /\b(sono qui per aiut|i am here to help|estoy aquí para|ich bin hier um|je suis là pour)\b/.test(first);
-      if (looksLikeWelcome && sentences.length > 1) {
-        sentences.shift();
-        t = sentences.join(' ');
-      }
-    }
-  }
-
-  // Limita a 1–3 frasi di default (evita wall of text)
-  const sents = splitIntoSentences(t);
-  if (sents.length > 3) t = sents.slice(0, 3).join(' ');
-
-  // Ultimo guardrail
-  t = t.trim();
-  if (!t) return noInfoText(lang);
-  return t;
-}
-
 /**
  * Orchestratore: unifica YAML + LLM.
- * Nota: yamlProbe può contenere mini-history e lang già risolta dalla route.
+ *
+ * NOTE HARDENING (single source of truth):
+ * - Guardrail welcome: intentResolver (qui non si decide se salutare).
+ * - Sanitize / localizzazione: delegate a sanitize.ts (qui solo orchestrazione).
+ * - Soglie YAML vs follow-up vs LLM: decision.ts.
+ *
+ * Questo file NON contiene regole conversazionali hardcoded,
+ * ma solo composizione e routing delle risposte.
  */
+
 export async function orchestrateChat(
   structureId: string,
   userMessage: string,
@@ -245,55 +136,119 @@ export async function orchestrateChat(
     matched: boolean;
     intent?: string;
     confidence?: number;
-    replyText?: string;
+    replyText?: any;
     buttons?: any[];
     history?: { role: 'user' | 'assistant'; content: string }[];
     lang?: string;
     isSingleWord?: boolean;
-
+  },
+  sessionState?: {
+    pending?: { intent?: string; slot?: string };
   },
   reqLang?: string,
+  providedCtx?: Awaited<ReturnType<typeof buildContext>>,
 ) {
-  const ctx = await buildContext(structureId);
-
-  // 🔒 Single source of truth per la lingua
-  const replyLang = normalizeLang(yamlProbe?.lang || reqLang || ctx.locale || 'it');
+  const ctx = providedCtx ?? (await buildContext(structureId));
 
 
-function isGreeting(msg: string) {
-  const s = String(msg || '').trim().toLowerCase();
-  return /^(ciao|salve|buongiorno|buonasera|hello|hi|hey|hola|hallo|bonjour|salut|bonsoir)\b/.test(s);
-}
-
-// Guardrail: welcome solo se l’utente sta salutando
-if (yamlProbe?.intent === 'welcome' && !isGreeting(userMessage)) {
-  yamlProbe.matched = false;
-  yamlProbe.confidence = 0;
-  yamlProbe.replyText = undefined;
-  yamlProbe.buttons = undefined;
-}
+  // 🔒 Lingua single source of truth (2 lettere).
+  // Priorità: reqLang (widget) → yamlProbe.lang (effectiveLang) → ctx.locale (fallback sicurezza).
+  const replyLang = normalizeLang(reqLang || yamlProbe?.lang || ctx.locale || 'it');
 
 
+// -------------------------------------------------
+// Pending handler (attivo SOLO con orchestrator ON)
+// Single source of truth per follow-up conversazionali
+// -------------------------------------------------
 
-  // decisione (se non hai confidenza dal matcher, passa matched=false)
-const decision = decideResponse({
-  matched: !!yamlProbe?.matched,
-  intent: yamlProbe?.intent,
-  confidence: yamlProbe?.confidence,
-  isSingleWord: !!yamlProbe?.isSingleWord,
-});
+  const pendingIntent = sessionState?.pending?.intent ? String(sessionState.pending.intent) : '';
+  const pendingSlot = sessionState?.pending?.slot ? String(sessionState.pending.slot) : '';
+
+  if (pendingIntent && pendingSlot) {
+// Escape hatch: se l’intent corrente è wifi/emergency,
+// NON forziamo il pending (priorità a intent forti).
+// L’intent è già risolto a monte in chat.ts → niente regex duplicate qui.
+
+    const currentIntent = String(yamlProbe?.intent || '');
+    if (currentIntent === 'wifi' || currentIntent === 'emergency') {
+      // Ignora pending: il caller pulirà pending se non lo re-inviamo
+    } else if (pendingSlot === 'time') {
+      const time = parseTimeFromText(userMessage);
+
+      const replyLang2 = replyLang; // chiarezza
+
+      if (time) {
+        const text =
+          replyLang2 === 'en'
+            ? `Got it — around ${time}. For late checkout, please message the host to confirm availability.`
+            : replyLang2 === 'de'
+            ? `Alles klar — gegen ${time}. Für Late Checkout bitte den Gastgeber kontaktieren, um die Verfügbarkeit zu bestätigen.`
+            : replyLang2 === 'fr'
+            ? `D’accord — vers ${time}. Pour un late checkout, contacte l’hôte pour confirmer la disponibilité.`
+            : replyLang2 === 'es'
+            ? `Perfecto — sobre las ${time}. Para late checkout, contacta con el anfitrión para confirmar disponibilidad.`
+            : `Perfetto — verso le ${time}. Per il late checkout, contatta l’host per confermare la disponibilità.`;
+
+        const clean = sanitizeYamlReply(text, userMessage, pendingIntent) || noInfoText(replyLang2);
+
+        return {
+          ok: true,
+          source: 'yaml_followup',
+          reply: clean,
+          intent: pendingIntent,
+          confidence: 1.0,
+          cacheHit: false,
+          ctxVer: ctx.contextVersion,
+          snapshot: getRuntimeSnapshot(),
+        };
+      }
+
+      const ask =
+        replyLang2 === 'en'
+          ? 'What time exactly? (e.g., 13:00)'
+          : replyLang2 === 'de'
+          ? 'Welche Uhrzeit genau? (z.B. 13:00)'
+          : replyLang2 === 'fr'
+          ? 'À quelle heure exactement ? (ex. 13:00)'
+          : replyLang2 === 'es'
+          ? '¿A qué hora exactamente? (p. ej., 13:00)'
+          : 'A che ora esattamente? (es. 13:00)';
+
+      const cleanAsk = sanitizeYamlReply(ask, userMessage, pendingIntent) || noInfoText(replyLang2);
+
+      return {
+        ok: true,
+        source: 'yaml_followup',
+        reply: cleanAsk,
+        intent: pendingIntent,
+        confidence: 1.0,
+        cacheHit: false,
+        ctxVer: ctx.contextVersion,
+        pending: { intent: pendingIntent, slot: pendingSlot },
+        snapshot: getRuntimeSnapshot(),
+      };
+    }
+  }
 
 
-  // History sintetica (opzionale) per cache key e contesto LLM
+
+
+  const decision = decideResponse({
+    matched: !!yamlProbe?.matched,
+    intent: yamlProbe?.intent,
+    confidence: yamlProbe?.confidence,
+    isSingleWord: !!yamlProbe?.isSingleWord,
+  });
+
+  // History sintetica per cache key
   const historySummary =
     yamlProbe?.history && Array.isArray(yamlProbe.history)
       ? yamlProbe.history
-          .map((m) => `${m.role === 'assistant' ? 'A' : 'U'}:${normalize(m.content)}`)
+          .map((m) => `${m.role === 'assistant' ? 'A' : 'U'}:${normalizeForKey(m.content)}`)
           .join('|')
           .slice(0, 500)
       : '';
 
-  // Cache key: lingua-safe + sorgente + intent + contesto versione
   const cacheKey = keyHash({
     structureId,
     ctxVer: ctx.contextVersion,
@@ -302,7 +257,7 @@ const decision = decideResponse({
     intent: decision.intent,
     confidence: decision.confidence,
     historySummary,
-    userMessageNorm: normalize(userMessage),
+    userMessageNorm: normalizeForKey(userMessage),
   });
 
   const cached = cacheGet(cacheKey);
@@ -321,50 +276,41 @@ const decision = decideResponse({
     }
   }
 
-  /**
-   * ✅ YAML branch: alta confidenza → rispondi subito
-   * Guardrail: MAI vuoto / MAI object.
-   */
+  // ✅ YAML branch
   if ((decision.source === 'yaml' || decision.source === 'yaml_followup') && yamlProbe?.replyText != null) {
+    const replyText = String(pickLocalizedText(yamlProbe.replyText, replyLang) || '').trim();
 
-    const replyText = pickLocalizedText(yamlProbe.replyText, replyLang).trim();
+    let finalText = replyText || noInfoText(replyLang);
 
-let finalText = replyText || noInfoText(replyLang);
+    let pending: { intent: string; slot: string } | null = null;
 
-const addFollowUp = decision.source === 'yaml_followup';
+    if (decision.source === 'yaml_followup') {
+      const q = followUpText(replyLang, decision.intent);
+      if (q) finalText = `${finalText} ${q}`.trim();
 
+      const p = pendingForIntent(decision.intent);
+      if (p) pending = p;
+    }
 
-let pending: { intent: string; slot: string } | null = null;
+    // Sanitize deterministico (max 3 frasi + no welcome fuori contesto, ecc.)
+    finalText = sanitizeYamlReply(finalText, userMessage, decision.intent) || noInfoText(replyLang);
 
-if (addFollowUp) {
-  const q = followUpText(replyLang, decision.intent);
-  if (q) finalText = `${finalText} ${q}`.trim();
-
-  const p = pendingForIntent(decision.intent);
-  if (p) pending = p;
-}
-
-
-cacheSet(cacheKey, finalText);
-
+    cacheSet(cacheKey, finalText);
 
     return {
-  ok: true,
-  source: decision.source,
-  reply: finalText,
-  intent: decision.intent,
-  confidence: decision.confidence,
-  cacheHit: false,
-  ctxVer: ctx.contextVersion,
-  pending: pending ?? undefined,
-  ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
-};
-
+      ok: true,
+      source: decision.source,
+      reply: finalText,
+      intent: decision.intent,
+      confidence: decision.confidence,
+      cacheHit: false,
+      ctxVer: ctx.contextVersion,
+      pending: pending ?? undefined,
+      ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
+    };
   }
 
-  /**
-   * ✅ LLM branch: borderline / no match
-   */
+  // ✅ LLM branch
   const perm = canCallLlm();
   if (!perm.ok) {
     const text = fallbackText(replyLang);
@@ -380,7 +326,6 @@ cacheSet(cacheKey, finalText);
     };
   }
 
-  // System prompt: regole Lumo + lingua + contesto struttura (dinamico, non inventare)
   const LANGUAGE_RULE = `LINGUA (OBBLIGATORIA): Rispondi SOLO in lang="${replyLang}". Non cambiare lingua.`;
 
   const structureContextLines: string[] = [];
@@ -400,7 +345,7 @@ cacheSet(cacheKey, finalText);
     .filter(Boolean)
     .join('\n');
 
-  // Contesto recente conversazione (leggero, come da guida)
+  // Contesto recente conversazione (leggero)
   let lastUserMessage = '';
   let lastAssistantMessage = '';
 
@@ -409,7 +354,7 @@ cacheSet(cacheKey, finalText);
     lastAssistantMessage = [...yamlProbe.history].reverse().find((m) => m.role === 'assistant')?.content || '';
   }
 
-  if (!lastAssistantMessage && yamlProbe?.replyText) {
+  if (!lastAssistantMessage && yamlProbe?.replyText != null) {
     lastAssistantMessage = pickLocalizedText(yamlProbe.replyText, replyLang);
   }
   if (!lastUserMessage) lastUserMessage = userMessage;
@@ -437,7 +382,10 @@ Rispondi in modo coerente con il contesto recente solo se rilevante. Se è ambig
 
   if (res && !res.error && res.text) {
     registerLlmSuccess();
-    const clean = sanitizeReply(res.text, replyLang, userMessage);
+
+    const clean =
+      sanitizeYamlReply(String(res.text), userMessage, decision.intent) || noInfoText(replyLang);
+
     cacheSet(cacheKey, clean);
 
     return {

@@ -1,6 +1,6 @@
 import { ENV } from './env.js';
 import crypto from 'node:crypto';
-import { loadStructure } from './yamlLoader.js';
+import { loadStructure } from '../content/loader.js';
 
 export interface StructureContext {
   id: string;
@@ -17,13 +17,10 @@ export interface StructureContext {
 }
 
 /**
- * Costruisce il contesto unificando:
- * - vecchi YAML (wifi/rules/emergencies al root)
- * - nuovi YAML "refined" (meta + content.*).
+ * Builder “puro”: costruisce il contesto da YAML già caricato.
+ * Questa è la versione usata dal routing chat.ts per evitare doppio load.
  */
-export async function buildContext(structureId: string): Promise<StructureContext> {
-  const y: any = await loadStructure(structureId);
-
+export function buildContextFromYaml(structureId: string, y: any): StructureContext {
   // --- Locale ---
   let locale: string | undefined = y?.locale;
 
@@ -132,8 +129,17 @@ export async function buildContext(structureId: string): Promise<StructureContex
   };
 }
 
+/**
+ * Wrapper compatibile: carica YAML e poi delega al builder puro.
+ */
+export async function buildContext(structureId: string): Promise<StructureContext> {
+  const y: any = await loadStructure(structureId);
+  return buildContextFromYaml(structureId, y);
+}
+
 function hashObject(obj: unknown): string {
   const s = JSON.stringify(obj);
   return crypto.createHash('sha256').update(s).digest('hex').slice(0, 12);
 }
+
 
