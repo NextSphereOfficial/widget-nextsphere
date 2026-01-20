@@ -1,3 +1,5 @@
+throw new Error("CHAT.TS LOADED");
+
 // apps/api/src/routes/chat.ts
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 
