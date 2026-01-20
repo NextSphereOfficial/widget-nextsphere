@@ -395,21 +395,8 @@ if (pending && typeof pending === "object") {
       } as any,
     });
   }
-  // 2) Legacy formato (intent + slot)
-  else if (pending.intent && pending.slot) {
-    await setSessionState(session.id, {
-      ...(state || {}),
-      pending: {
-        kind: "collect",
-        intent: String(pending.intent),
-        questionId: "legacy_slot",
-        slot: String(pending.slot),
-        format: String(pending.slot) === "time" ? "time" : undefined,
-        askedAt: nowIso,
-      } as any,
-    });
-  }
-  // 3) Non valido → clear
+  
+  // 2) Non valido → clear
   else {
     await clearPending(session.id);
   }

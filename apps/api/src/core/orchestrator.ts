@@ -133,6 +133,45 @@ function pendingForIntent(intent?: string) {
   return null;
 }
 
+
+function isStrongEscapeIntent(intent?: string) {
+  return intent === "wifi" || intent === "emergency";
+}
+
+function shouldEscapePending(opts: {
+  pendingIntent: string;
+  currentIntent?: string;
+  currentConfidence?: number;
+}) {
+  const { pendingIntent, currentIntent, currentConfidence = 0 } = opts;
+
+  if (!currentIntent) return false;
+  if (isStrongEscapeIntent(currentIntent)) return true;
+
+  // Cambio tema con intent diverso e confidenza buona → escape
+  if (currentIntent !== pendingIntent && currentConfidence >= 0.7) return true;
+
+  return false;
+}
+
+function getFlow(structureYaml: any, intent?: string) {
+  if (!intent) return null;
+  const def = structureYaml?.intents?.[String(intent)];
+  return def?.flow ?? null;
+}
+
+function extractAction(flowNode: any) {
+  // supporta `action: contact_host` o `{ type: 'contact_host', ... }`
+  const a = flowNode?.action;
+  if (!a) return undefined;
+  if (typeof a === "string") return { type: a };
+  if (typeof a === "object" && a.type) return a;
+  return undefined;
+}
+
+
+
+
 /**
  * Orchestratore: unifica YAML + LLM.
  *
@@ -197,6 +236,22 @@ const pendingIntent = pending?.intent ? String(pending.intent) : "";
 const pendingFormat = pending?.format ? String(pending.format) : "";
 const pendingData = pending?.data && typeof pending.data === "object" ? pending.data : undefined;
 const hadPendingAtStart = !!pending;
+
+// 🧠 Escape universale dal pending su cambio argomento
+if (hadPendingAtStart && pendingIntent) {
+  const newIntent = String(yamlProbe?.intent || "");
+  const newConfidence = Number(yamlProbe?.confidence ?? 0);
+
+  const isStrong = newIntent === "wifi" || newIntent === "emergency";
+  const isDifferent = newIntent && newIntent !== pendingIntent;
+  const confident = newConfidence >= 0.7;
+
+  if (isStrong || (isDifferent && confident)) {
+    // 👉 abbandoniamo il pending e lasciamo proseguire il routing normale
+    (sessionState as any).pending = undefined;
+  }
+}
+
 
 // Escape hatch: se l’intent corrente è wifi/emergency, non forziamo pending
 const currentIntent = String(yamlProbe?.intent || "");
@@ -325,6 +380,43 @@ if (time && flow?.confirm?.reply_key) {
 
 }
 
+// -------------------------------------------------
+// ✅ Flow entry (solo quando NON c'è pending)
+// Se l'intent ha flow.kind === "collect" apriamo pending semantico
+// -------------------------------------------------
+if (!hadPendingAtStart && yamlProbe?.matched && yamlProbe?.intent) {
+  const flow = getFlow(structureYaml as any, yamlProbe.intent);
+
+  if (flow?.kind === "collect") {
+    const baseReply = String(pickLocalizedText(yamlProbe.replyText, replyLang) || "").trim() || noInfoText(replyLang);
+
+    const askKey = flow?.collect?.reply_key;
+    const ask = askKey
+      ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
+      : followUpText(replyLang, yamlProbe.intent);
+
+    let finalText = `${baseReply} ${String(ask || "").trim()}`.trim();
+    finalText = sanitizeYamlReply(finalText, userMessage, yamlProbe.intent) || noInfoText(replyLang);
+
+    return {
+      ok: true,
+      source: "yaml",
+      reply: finalText,
+      intent: String(yamlProbe.intent),
+      confidence: Number(yamlProbe.confidence ?? 1),
+      cacheHit: false,
+      ctxVer: ctx.contextVersion,
+      pending: {
+        kind: "collect",
+        intent: String(yamlProbe.intent),
+        questionId: flow?.collect?.question_id ? String(flow.collect.question_id) : "collect",
+        slot: flow?.collect?.slot ? String(flow.collect.slot) : undefined,
+        format: flow?.collect?.format ? String(flow.collect.format) : "time",
+      },
+      snapshot: getRuntimeSnapshot(),
+    };
+  }
+}
 
 
 
@@ -378,53 +470,12 @@ if (time && flow?.confirm?.reply_key) {
 
     let finalText = replyText || noInfoText(replyLang);
 
-let pendingOut: any = null;
-
-if (decision.source === "yaml_followup" && !hadPendingAtStart) {
-
-  const intentKey = String(decision.intent || "");
-  const intentDef = (structureYaml as any)?.intents?.[intentKey];
-  const flow = intentDef?.flow;
-
-  if (flow?.kind === "followup" && flow?.followup?.reply_key && flow?.followup?.question_id) {
-    const q = await renderReplyKey(
-      structureYaml,
-      String(flow.followup.reply_key),
-      replyLang,
-      {}
-    );
-    if (q) finalText = `${finalText} ${q}`.trim();
-
-    pendingOut = {
-      kind: "followup",
-      intent: intentKey,
-      questionId: String(flow.followup.question_id),
-    };
-  } else if (flow?.kind === "collect" && flow?.collect?.reply_key && flow?.collect?.question_id) {
-    const q = await renderReplyKey(
-      structureYaml,
-      String(flow.collect.reply_key),
-      replyLang,
-      {}
-    );
-    if (q) finalText = `${finalText} ${q}`.trim();
-
-    pendingOut = {
-      kind: "collect",
-      intent: intentKey,
-      questionId: String(flow.collect.question_id),
-      slot: flow.collect.slot ? String(flow.collect.slot) : undefined,
-      format: flow.collect.format ? String(flow.collect.format) : undefined,
-    };
-  } else {
-    // fallback legacy (temporaneo)
-    const q = followUpText(replyLang, decision.intent);
-    if (q) finalText = `${finalText} ${q}`.trim();
-
-    const p = pendingForIntent(decision.intent);
-    if (p) pendingOut = { kind: "collect", intent: p.intent, questionId: "legacy_slot", slot: p.slot, format: p.slot === "time" ? "time" : undefined };
-  }
+// yaml_followup: solo domanda soft, MAI pending
+if (decision.source === "yaml_followup") {
+  const q = followUpText(replyLang, decision.intent);
+  if (q) finalText = `${finalText} ${q}`.trim();
 }
+
 
 
     // Sanitize deterministico (max 3 frasi + no welcome fuori contesto, ecc.)
@@ -440,7 +491,7 @@ if (decision.source === "yaml_followup" && !hadPendingAtStart) {
       confidence: decision.confidence,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
-      pending: (!hadPendingAtStart ? (pendingOut ?? undefined) : undefined),
+      pending: undefined,
       ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
     };
   }
