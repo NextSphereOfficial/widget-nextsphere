@@ -208,36 +208,40 @@ if (currentIntent === "wifi" || currentIntent === "emergency") {
   const flow = intentDef?.flow;
 
   // Se parse ok → passa a confirm
-  if (time && flow?.confirm?.reply_key && flow?.confirm?.question_id) {
-    const confirmText = await renderReplyKey(
-      structureYaml,
-      String(flow.confirm.reply_key),
-      replyLang,
-      { time }
-    );
+if (time && flow?.confirm?.reply_key) {
+  const confirmText = await renderReplyKey(
+    structureYaml,
+    String(flow.confirm.reply_key),
+    replyLang,
+    { time }
+  );
 
-    const clean = sanitizeYamlReply(confirmText, userMessage, pendingIntent) || noInfoText(replyLang);
+  const clean =
+    sanitizeYamlReply(confirmText, userMessage, pendingIntent) || noInfoText(replyLang);
 
-    return {
-      ok: true,
-      source: "yaml_followup",
-      reply: clean,
+  return {
+    ok: true,
+    source: "yaml_followup",
+    reply: clean,
+    intent: pendingIntent,
+    confidence: 1.0,
+    cacheHit: false,
+    ctxVer: ctx.contextVersion,
+    pending: {
+      kind: "confirm",
       intent: pendingIntent,
-      confidence: 1.0,
-      cacheHit: false,
-      ctxVer: ctx.contextVersion,
-      pending: {
-        kind: "confirm",
-        intent: pendingIntent,
-        questionId: String(flow.confirm.question_id),
-        data: { time },
-      },
-      snapshot: getRuntimeSnapshot(),
-    };
-  }
+      // ✅ non blocchiamo mai la transizione se manca question_id
+      questionId: flow?.confirm?.question_id
+        ? String(flow.confirm.question_id)
+        : "contact_host_confirm",
+      data: { time },
+    },
+    snapshot: getRuntimeSnapshot(),
+  };
+}
+
 
   // Se non capiamo → reprompt (se esiste), altrimenti fallback breve
-  const repromptKey = flow?.collect?.reprompt_reply_key || flow?.collect?.reprompt_reply_key;
   const askKey = flow?.collect?.reprompt_reply_key || flow?.collect?.reply_key;
 
   const askText = askKey
