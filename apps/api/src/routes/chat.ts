@@ -201,6 +201,7 @@ async function handleChatRequest(
 
   // Feature flag calcolata UNA volta
   const legacyMode = !isOrchestratorAlwaysOn();
+  console.log("[CHAT] legacyMode =", legacyMode);
 
   // 💾 2) Salviamo il messaggio dell’utente
   await saveMessage({
