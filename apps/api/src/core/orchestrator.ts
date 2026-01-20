@@ -196,6 +196,7 @@ const pendingKind = pending?.kind ? String(pending.kind) : "";
 const pendingIntent = pending?.intent ? String(pending.intent) : "";
 const pendingFormat = pending?.format ? String(pending.format) : "";
 const pendingData = pending?.data && typeof pending.data === "object" ? pending.data : undefined;
+const hadPendingAtStart = !!pending;
 
 // Escape hatch: se l’intent corrente è wifi/emergency, non forziamo pending
 const currentIntent = String(yamlProbe?.intent || "");
@@ -379,7 +380,8 @@ if (time && flow?.confirm?.reply_key) {
 
 let pendingOut: any = null;
 
-if (decision.source === "yaml_followup") {
+if (decision.source === "yaml_followup" && !hadPendingAtStart) {
+
   const intentKey = String(decision.intent || "");
   const intentDef = (structureYaml as any)?.intents?.[intentKey];
   const flow = intentDef?.flow;
@@ -438,7 +440,7 @@ if (decision.source === "yaml_followup") {
       confidence: decision.confidence,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
-      pending: pendingOut ?? undefined,
+      pending: (!hadPendingAtStart ? (pendingOut ?? undefined) : undefined),
       ui: yamlProbe.buttons ? { buttons: yamlProbe.buttons } : undefined,
     };
   }
