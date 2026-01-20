@@ -1,69 +1,25 @@
-version: 2
-
+# nextsphere.yaml (v2 - schema pulito + scalabile)
 meta:
-  structure:
-    id: nextsphere
-    name: "NextSphere Base Template (v2)"
-  default_locale: it
-
-############################################################
-# TEMPLATE BASE (SCALABILE)
-# - content = dati per struttura (non “testi” per lingua)
-# - intents = wiring verso reply_key (language pack) + vars
-# - content.copy_overrides = override opzionali (max 8–12) per cliente
-############################################################
+  schema_version: 2
+  brand: nextsphere
+  description: "Generic NextSphere template: flows + reply keys. Clients override content + copy_overrides."
 
 content:
-  ##########################################################
-  # Override opzionali (cliente)
-  # NB: stringhe in una sola lingua -> vanno usate solo per
-  # personalizzare tono/brand, non per contenuti multilingua.
-  ##########################################################
-  copy_overrides: {}
-
-  ##########################################################
-  # Dati struttura (neutri)
-  ##########################################################
   hotel:
-    name: ""
-    address: ""
-    city: ""
-    maps_url: ""
-    phone: ""
+    name: "NextSphere"
 
-  ##########################################################
-  # Slot: 1) Welcome (testo standard nel language pack)
-  ##########################################################
-  welcome:
-    intro: "" # legacy/compat (non usare se reply_key è presente)
-
-  ##########################################################
-  # Slot: 2) Wi-Fi
-  ##########################################################
   wifi:
     ssid: ""
     password: ""
-    unavailable_reason: ""
 
-  ##########################################################
-  # Slot: 3) Check-in
-  ##########################################################
   checkin:
-    from: "15:00"
-    instructions_extra: "" # note opzionali (neutre/short)
+    from: ""            # es: "15:00"
+    instructions: ""    # testo breve/placeholder
 
-  ##########################################################
-  # Slot: 4) Check-out
-  ##########################################################
   checkout:
-    by: "10:00"
-    instructions_extra: "" # note opzionali
+    by: ""              # es: "10:00"
+    notes: ""           # placeholder
 
-  ##########################################################
-  # Slot: 5) House rules
-  # (per ora come campi testo “dati”; se vuoi massima scalabilità,
-  # in futuro li convertiamo a flag/valori strutturati)
-  ##########################################################
   house_rules:
     general: ""
     smoking: ""
@@ -73,288 +29,170 @@ content:
     waste: ""
     damage: ""
 
-  ##########################################################
-  # Slot: 6) Emergencies
-  ##########################################################
-  emergencies:
-    general: "112"
-    medical: "118"
-    fire: "115"
-    safety: "" # note opzionali (es. “avvisaci”)
+  contacts:
+    host_phone: ""
+    whatsapp: ""
+    emergency_number: "112"
+    medical_number: ""
+    fire_number: ""
+    safety_note: ""
 
-  ##########################################################
-  # Slot: 7) Parking info
-  ##########################################################
   parking:
-    text: ""
+    note: ""
+    address: ""
     maps_url: ""
 
-  ##########################################################
-  # Slot: 8) Breakfast info
-  ##########################################################
   breakfast:
-    text: ""
+    note: ""
 
-  ##########################################################
-  # Slot: 9-11) Transportation
-  ##########################################################
   transport:
     general: ""
     to_venice: ""
     airport: ""
 
-  ##########################################################
-  # Slot: 12) Restaurants
-  ##########################################################
   restaurants:
-    text: ""
+    list: ""
 
-  ##########################################################
-  # Altri contenuti (non inclusi nei 12 slot, legacy)
-  ##########################################################
-  local_area:
-    supermarket: ""
-    pharmacy: ""
-    activities: ""
-
-  appliances:
-    heating: ""
-    air_conditioning: ""
-    water: ""
-    electricity: ""
-
-  contact:
-    host: "" # se vuoi un testo deterministico, migralo a language pack
-
-  reception:
-    info: ""
-
-  support:
-    generic: ""
-
-  faq:
-    generic: ""
+  locale:
+    area_hint: ""
 
   fallback:
-    text: "Mi dispiace, non ho capito bene. Puoi ripetere la domanda?"
-
-############################################################
-# INTENTS (WIRING)
-############################################################
+    text: "I’m sorry—I didn’t catch that. Could you rephrase?"
 
 intents:
-
-  ##########################################################
-  # 1) WELCOME
-  ##########################################################
   welcome:
     reply_key: welcome_intro
-    vars:
-      hotel_name: "{{content.hotel.name}}"
-    output:
-      short: "{{content.welcome.intro}}" # legacy fallback
+    vars_from:
+      - content.hotel
 
-  ##########################################################
-  # FALLBACK (legacy)
-  ##########################################################
+  wifi:
+    reply_key: wifi_credentials
+    vars_from:
+      - content.wifi
+    flow:
+      kind: terminal
+
+  checkin:
+    reply_key: checkin_instructions
+    vars_from:
+      - content.checkin
+    flow:
+      kind: terminal
+
+  # Alias storico
+  checkout:
+    reply_key: checkout_instructions
+    vars_from:
+      - content.checkout
+    flow:
+      kind: terminal
+
+  checkout_time:
+    reply_key: checkout_instructions
+    vars_from:
+      - content.checkout
+    flow:
+      kind: terminal
+
+  late_checkout:
+    reply_key: late_checkout_policy
+    vars_from:
+      - content.checkout
+    flow:
+      kind: collect
+      collect:
+        question_id: desired_time
+        slot: late_checkout_time
+        format: time
+        reply_key: late_checkout_collect_desired_time
+        reprompt_reply_key: late_checkout_collect_desired_time_reprompt
+      confirm:
+        question_id: contact_host_confirm
+        reply_key: late_checkout_confirm_contact_host
+        on_yes:
+          reply_key: late_checkout_confirm_yes
+          action: contact_host
+        on_no:
+          reply_key: late_checkout_confirm_no
+          action: close
+
+  house_rules:
+    reply_key: house_rules
+    vars_from:
+      - content.house_rules
+    flow:
+      kind: terminal
+
+  # Alias storico
+  emergency:
+    reply_key: emergencies
+    vars_from:
+      - content.contacts
+    flow:
+      kind: terminal
+
+  emergency_contacts:
+    reply_key: emergencies
+    vars_from:
+      - content.contacts
+    flow:
+      kind: terminal
+
+  parking:
+    reply_key: parking_info
+    vars_from:
+      - content.parking
+    flow:
+      kind: followup
+      followup:
+        question_id: need_location
+        reply_key: parking_followup_need_location
+
+  breakfast:
+    reply_key: breakfast_info
+    vars_from:
+      - content.breakfast
+    flow:
+      kind: terminal
+
+  transport:
+    reply_key: transportation_info
+    vars_from:
+      - content.transport
+    flow:
+      kind: terminal
+
+  transport_to_venice:
+    reply_key: transportation_to_venice
+    vars_from:
+      - content.transport
+    flow:
+      kind: terminal
+
+  transport_airport:
+    reply_key: transportation_airport
+    vars_from:
+      - content.transport
+    flow:
+      kind: terminal
+
+  restaurants:
+    reply_key: restaurants
+    vars_from:
+      - content.restaurants
+    flow:
+      kind: explore
+      explore:
+        prompt_reply_key: restaurants_explore_prompt
+        followup_reply_key: restaurants_explore_followup
+
   fallback:
     output:
       short: "{{content.fallback.text}}"
 
-  ##########################################################
-  # 2) WIFI
-  ##########################################################
-  wifi:
-    reply_key: wifi_credentials
-    vars:
-      ssid: "{{content.wifi.ssid}}"
-      password: "{{content.wifi.password}}"
-    output:
-      short: ""
-
-  ##########################################################
-  # 3) CHECK-IN
-  ##########################################################
-  checkin:
-    reply_key: checkin_instructions
-    vars:
-      checkin_from: "{{content.checkin.from}}"
-      checkin_extra: "{{content.checkin.instructions_extra}}"
-    output:
-      short: ""  # legacy non necessario
-
-  early_checkin:
-    output:
-      short: "{{content.checkin.instructions_extra}}"
-
-  ##########################################################
-  # 4) CHECK-OUT
-  ##########################################################
-  checkout:
-    reply_key: checkout_instructions
-    vars:
-      checkout_by: "{{content.checkout.by}}"
-      checkout_extra: "{{content.checkout.instructions_extra}}"
-    output:
-      short: ""  # legacy non necessario
-
-  late_checkout:
-    output:
-      short: "{{content.checkout.instructions_extra}}"
-
-  checkout_keys:
-    output:
-      short: "{{content.checkout.instructions_extra}}"
-
-  ##########################################################
-  # 5) HOUSE RULES (slot unico)
-  ##########################################################
-  house_rules:
-    reply_key: house_rules
-    vars:
-      rules_general: "{{content.house_rules.general}}"
-      rules_smoking: "{{content.house_rules.smoking}}"
-      rules_pets: "{{content.house_rules.pets}}"
-      rules_visitors: "{{content.house_rules.visitors}}"
-      rules_quiet_hours: "{{content.house_rules.quiet_hours}}"
-      rules_waste: "{{content.house_rules.waste}}"
-      rules_damage: "{{content.house_rules.damage}}"
-    output:
-      short: "{{content.house_rules.general}}" # legacy fallback
-
-  ##########################################################
-  # 6) EMERGENCIES (slot unico)
-  ##########################################################
-  emergency:
-    reply_key: emergencies
-    vars:
-      emergency_general: "{{content.emergencies.general}}"
-      emergency_medical: "{{content.emergencies.medical}}"
-      emergency_fire: "{{content.emergencies.fire}}"
-      emergency_safety: "{{content.emergencies.safety}}"
-    output:
-      short: "{{content.emergencies.general}}" # legacy fallback
-
-  emergency_medical:
-    output:
-      short: "{{content.emergencies.medical}}"
-
-  fire_emergency:
-    output:
-      short: "{{content.emergencies.fire}}"
-
-  safety_advice:
-    output:
-      short: "{{content.emergencies.safety}}"
-
-  ##########################################################
-  # 7) PARKING INFO
-  ##########################################################
-  parking:
-    reply_key: parking_info
-    vars:
-      parking_info: "{{content.parking.text}}"
-      parking_maps_url: "{{content.parking.maps_url}}"
-    output:
-      short: "{{content.parking.text}}" # legacy fallback
-
-  ##########################################################
-  # 8) BREAKFAST INFO
-  ##########################################################
-  breakfast:
-    reply_key: breakfast_info
-    vars:
-      breakfast_info: "{{content.breakfast.text}}"
-    output:
-      short: "{{content.breakfast.text}}" # legacy fallback
-
-  ##########################################################
-  # 9) TRANSPORTATION INFO
-  ##########################################################
-  transport:
-    reply_key: transportation_info
-    vars:
-      transportation_info: "{{content.transport.general}}"
-    output:
-      short: "{{content.transport.general}}" # legacy fallback
-
-  ##########################################################
-  # 10) TRANSPORTATION TO VENICE
-  ##########################################################
-  transport_to_venice:
-    reply_key: transportation_to_venice
-    vars:
-      transportation_to_venice: "{{content.transport.to_venice}}"
-    output:
-      short: "{{content.transport.to_venice}}" # legacy fallback
-
-  ##########################################################
-  # 11) TRANSPORTATION AIRPORT
-  ##########################################################
-  transport_airport:
-    reply_key: transportation_airport
-    vars:
-      transportation_airport: "{{content.transport.airport}}"
-    output:
-      short: "{{content.transport.airport}}" # legacy fallback
-
-  ##########################################################
-  # 12) RESTAURANTS
-  ##########################################################
-  restaurants:
-    reply_key: restaurants
-    vars:
-      restaurants: "{{content.restaurants.text}}"
-    output:
-      short: "{{content.restaurants.text}}" # legacy fallback
-
-  ##########################################################
-  # ALTRI INTENT (legacy / non-12)
-  ##########################################################
-  supermarket:
-    output:
-      short: "{{content.local_area.supermarket}}"
-
-  pharmacy:
-    output:
-      short: "{{content.local_area.pharmacy}}"
-
-  what_to_do:
-    output:
-      short: "{{content.local_area.activities}}"
-
-  heating:
-    output:
-      short: "{{content.appliances.heating}}"
-
-  air_conditioning:
-    output:
-      short: "{{content.appliances.air_conditioning}}"
-
-  water:
-    output:
-      short: "{{content.appliances.water}}"
-
-  electricity:
-    output:
-      short: "{{content.appliances.electricity}}"
-
-  contact:
-    output:
-      short: "{{content.contact.host}}"
-
-  reception:
-    output:
-      short: "{{content.reception.info}}"
-
-  support:
-    output:
-      short: "{{content.support.generic}}"
-
-  help_issue:
-    output:
-      short: "{{content.support.generic}}"
-
-  faq:
-    output:
-      short: "{{content.faq.generic}}"
+copy_overrides:
+  it: {}
+  en: {}
+  de: {}
+  fr: {}
+  es: {}

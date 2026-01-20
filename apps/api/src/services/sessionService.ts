@@ -7,13 +7,21 @@ export type EnsureSessionInput = {
   lang?: string;            // es: "it", "en"
 };
 
-export type ConversationState = {
-  pending?: {
-    intent: string;
-    slot: string;
-    askedAt: string; // ISO
-  };
+export type PendingState = {
+  kind: "followup" | "collect" | "confirm";
+  intent: string;
+  questionId: string;
+  askedAt: string; // ISO
+  slot?: string;
+  format?: "time" | "date" | "number" | "text";
+  data?: Record<string, any>;
 };
+
+
+export type ConversationState = {
+  pending?: PendingState;
+};
+
 
 
 /**

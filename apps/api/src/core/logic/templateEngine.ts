@@ -133,6 +133,9 @@ function renderVars(template: string, vars: Record<string, any>): string {
   });
 }
 
+
+
+
 export async function renderTemplate(
   structureYaml: any,
   intentKey: string,
@@ -219,4 +222,41 @@ export function resolveEffectiveLang(inputLang: string | undefined, structureYam
     "it";
 
   return String(metaLang || "it").slice(0, 2).toLowerCase();
+}
+
+
+// -----------------------------------------------------
+// Helper: renderizza direttamente un reply_key
+// (usato dall'orchestrator per follow-up / collect / confirm)
+// -----------------------------------------------------
+export async function renderReplyKey(
+  structureYaml: any,
+  replyKey: string,
+  lang: string,
+  vars: Record<string, any> = {}
+): Promise<string> {
+  const key = String(replyKey || "").trim();
+  if (!key) return "";
+
+  // 1) copy_overrides top-level (schema v2)
+  const overridesRoot = (structureYaml as any)?.copy_overrides;
+  const overrideTpl =
+    overridesRoot && typeof overridesRoot === "object"
+      ? overridesRoot?.[lang]?.[key] ?? overridesRoot?.it?.[key]
+      : undefined;
+
+  // 2) language pack
+  const pack = await loadLangPack(lang);
+  const itPack = key in (pack || {}) ? null : await loadLangPack("it");
+
+  const template =
+    (typeof overrideTpl === "string" && overrideTpl.trim())
+      ? overrideTpl
+      : (pack?.[key] ?? itPack?.[key]);
+
+  if (typeof template !== "string" || !template.trim()) return "";
+
+  // 3) render variabili + post-processing
+  const text = applyTemplateToText(renderVars(template, vars), structureYaml);
+  return text;
 }

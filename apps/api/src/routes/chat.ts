@@ -213,7 +213,20 @@ async function handleChatRequest(
   });
 
   // ✅ Pending slot handler (solo legacy mode, prima dell’engine)
-  if (legacyMode && state?.pending?.intent && state?.pending?.slot) {
+// Supporta sia pending legacy (intent+slot) sia pending semantico (kind/format)
+const pendingAny = (state as any)?.pending;
+
+if (
+  legacyMode &&
+  pendingAny &&
+  (
+    // legacy
+    (pendingAny.intent && pendingAny.slot) ||
+    // semantico
+    (pendingAny.kind === "collect" && pendingAny.format === "time")
+  )
+) {
+
     // 🧯 Escape hatch: se l’utente chiede chiaramente altro (wifi/emergency), non forzare pending
     const t = norm(message);
     const looksWifi = /\bwi\s*fi\b/.test(t) || t.includes("wifi") || t.includes("ssid");
@@ -227,9 +240,16 @@ async function handleChatRequest(
 
     if (looksWifi || looksEmergency) {
       await clearPending(session.id);
-    } else {
+        } else {
+      const pending = pendingAny;
+      const pendingIntent = String(pending.intent || "");
+
       // Per ora supportiamo solo slot "time"
-      if (state.pending.slot === "time") {
+      const isTimeSlot =
+        pending.slot === "time" || (pending.kind === "collect" && pending.format === "time");
+
+      if (isTimeSlot) {
+
         const time = parseTimeFromText(message);
 
         if (time) {
@@ -251,7 +271,8 @@ async function handleChatRequest(
             sessionId: session.id,
             role: "assistant",
             content: text,
-            intent: state.pending.intent,
+            intent: pendingIntent,
+
             source: "yaml_followup",
             isFallback: false,
           });
@@ -259,7 +280,8 @@ async function handleChatRequest(
           return reply.code(200).send({
             ok: true,
             source: "yaml",
-            intent: state.pending.intent,
+            intent: pendingIntent,
+
             confidence: 1.0,
             lang: replyLang,
             text,
@@ -286,7 +308,8 @@ async function handleChatRequest(
         sessionId: session.id,
         role: "assistant",
         content: ask,
-        intent: state.pending.intent,
+        intent: pendingIntent,
+
         source: "yaml_followup",
         isFallback: false,
       });
@@ -294,7 +317,8 @@ async function handleChatRequest(
       return reply.code(200).send({
         ok: true,
         source: "yaml",
-        intent: state.pending.intent,
+        intent: pendingIntent,
+
         confidence: 1.0,
         lang: replyLang,
         text: ask,
@@ -350,20 +374,49 @@ async function handleChatRequest(
       ctx
     );
 
-    // 🧠 Pending strutturato dall’orchestrator
-    const pending = (orch as any)?.pending;
-    if (pending && typeof pending === "object" && pending.intent && pending.slot) {
-      await setSessionState(session.id, {
-        ...(state || {}),
-        pending: {
-          intent: String(pending.intent),
-          slot: String(pending.slot),
-          askedAt: new Date().toISOString(),
-        },
-      });
-    } else {
-      await clearPending(session.id);
-    }
+// 🧠 Pending strutturato dall’orchestrator (compat: legacy + semantico)
+const pending = (orch as any)?.pending;
+
+if (pending && typeof pending === "object") {
+  const nowIso = new Date().toISOString();
+
+  // 1) Nuovo formato (semantico)
+  if (pending.kind && pending.intent && pending.questionId) {
+    await setSessionState(session.id, {
+      ...(state || {}),
+      pending: {
+        kind: String(pending.kind),
+        intent: String(pending.intent),
+        questionId: String(pending.questionId),
+        slot: pending.slot ? String(pending.slot) : undefined,
+        format: pending.format ? String(pending.format) : undefined,
+        data: pending.data && typeof pending.data === "object" ? pending.data : undefined,
+        askedAt: nowIso,
+      } as any,
+    });
+  }
+  // 2) Legacy formato (intent + slot)
+  else if (pending.intent && pending.slot) {
+    await setSessionState(session.id, {
+      ...(state || {}),
+      pending: {
+        kind: "collect",
+        intent: String(pending.intent),
+        questionId: "legacy_slot",
+        slot: String(pending.slot),
+        format: String(pending.slot) === "time" ? "time" : undefined,
+        askedAt: nowIso,
+      } as any,
+    });
+  }
+  // 3) Non valido → clear
+  else {
+    await clearPending(session.id);
+  }
+} else {
+  await clearPending(session.id);
+}
+
 
     // 💾 Salviamo SEMPRE la risposta assistant dall’orchestrator
     const assistantText = (orch as any)?.reply ?? (orch as any)?.text ?? "";

@@ -1,24 +1,19 @@
-version: 2
-
 meta:
+  schema_version: 2
+  brand: sv
   structure:
     id: SV001
     name: "S&V Apartments – Mestre"
   default_locale: it
 
 content:
-  # Override opzionali (teniamoli vuoti per non bloccare il multilingua)
-  copy_overrides: {}
-
   hotel:
     name: "S&V Apartments"
 
-  # 2) WiFi (dato puro)
   wifi:
     ssid: "S&V"
     password: "sv2026!"
 
-  # 3) Check-in (dato puro + extra opzionale per-lingua se vuoi)
   checkin:
     from: "15:00"
     extra:
@@ -28,9 +23,9 @@ content:
       fr: ""
       es: ""
 
-  # 4) Check-out (dato puro + extra opzionale per-lingua se vuoi)
   checkout:
     by: "10:00"
+    notes: ""
     extra:
       it: ""
       en: ""
@@ -38,7 +33,6 @@ content:
       fr: ""
       es: ""
 
-  # 5) House rules (semi-dati: frasi brevi; ok per ora)
   house_rules:
     general: "Rispetta i vicini e mantieni pulito l’appartamento."
     smoking: "Non è permesso fumare all’interno."
@@ -48,19 +42,19 @@ content:
     waste: "Raccolta differenziata obbligatoria."
     damage: "Segnala eventuali danni."
 
-  # 6) Emergencies (dati puri + safety breve)
-  emergencies:
-    general: "112"
-    medical: "118"
-    fire: "115"
-    safety:
+  contacts:
+    host_phone: ""        # se vuoi, metti qui il numero host
+    whatsapp: ""          # opzionale
+    emergency_number: "112"
+    medical_number: "118"
+    fire_number: "115"
+    safety_note:
       it: "Avvisaci appena possibile."
       en: "Please let us know as soon as possible."
       de: "Bitte informiere uns so bald wie möglich."
       fr: "Merci de nous prévenir dès que possible."
       es: "Avísanos lo antes posible."
 
-  # 7) Parking (per-lingua)
   parking:
     note:
       it: "C'è un posto auto di fronte al garage dietro il palazzo."
@@ -70,7 +64,6 @@ content:
       es: "Hay una plaza de aparcamiento delante del garaje detrás del edificio."
     maps_url: "https://maps.google.com/..."
 
-  # 8) Breakfast (per-lingua)
   breakfast:
     note:
       it: "Non è disponibile in struttura. Posso consigliarti bar e locali nelle vicinanze."
@@ -79,7 +72,6 @@ content:
       fr: "Le petit-déjeuner n’est pas disponible sur place. Je peux vous conseiller des cafés à proximité."
       es: "No hay desayuno en el alojamiento. Puedo recomendarte cafeterías cercanas."
 
-  # 9-11) Transport (per-lingua)
   transport:
     general:
       it: "Il tram T1 per Venezia si prende a pochi minuti a piedi e passa ogni 7–10 minuti."
@@ -100,7 +92,6 @@ content:
       fr: "Pour l’aéroport (Marco Polo/Treviso), vous pouvez prendre des bus dédiés ou un taxi. Dites-moi lequel et je vous conseille la meilleure option."
       es: "Para el aeropuerto (Marco Polo/Treviso), puedes usar autobuses directos o taxi. Dime cuál y te indico la mejor opción."
 
-  # 12) Restaurants (per-lingua, come elenco/consiglio)
   restaurants:
     list:
       it: "Barroca (panini/aperitivo), Fermenti (ristorante/pizzeria), Ca’ di Mat (drink)."
@@ -109,86 +100,148 @@ content:
       fr: "Barroca (sandwich/apéritif), Fermenti (restaurant/pizzeria), Ca’ di Mat (verre)."
       es: "Barroca (bocadillos/aperitivo), Fermenti (restaurante/pizzería), Ca’ di Mat (copas)."
 
+  locale:
+    area_hint: "Mestre (Venezia), zona appartamento"
+
   fallback:
     text: "Mi dispiace, non ho capito bene. Puoi ripetere la domanda?"
-
-############################################################
-# INTENTS (solo quelli “core” dei 12, puliti)
-############################################################
 
 intents:
   welcome:
     reply_key: welcome_intro
-    vars:
-      hotel_name: "{{content.hotel.name}}"
+    vars_from:
+      - content.hotel
 
   wifi:
     reply_key: wifi_credentials
-    vars:
-      ssid: "{{content.wifi.ssid}}"
-      password: "{{content.wifi.password}}"
+    vars_from:
+      - content.wifi
+    flow:
+      kind: terminal
 
   checkin:
     reply_key: checkin_instructions
-    vars:
-      checkin_from: "{{content.checkin.from}}"
-      checkin_extra: "{{content.checkin.extra}}"
+    vars_from:
+      - content.checkin
+    flow:
+      kind: terminal
 
+  # Alias: manteniamo "checkout" (storico)
   checkout:
     reply_key: checkout_instructions
-    vars:
-      checkout_by: "{{content.checkout.by}}"
-      checkout_extra: "{{content.checkout.extra}}"
+    vars_from:
+      - content.checkout
+    flow:
+      kind: terminal
+
+  # Alias: nuovo nome più esplicito
+  checkout_time:
+    reply_key: checkout_instructions
+    vars_from:
+      - content.checkout
+    flow:
+      kind: terminal
+
+  # Intent target del ciclo conversazionale
+  late_checkout:
+    reply_key: late_checkout_policy
+    vars_from:
+      - content.checkout
+    flow:
+      kind: collect
+      collect:
+        question_id: desired_time
+        slot: late_checkout_time
+        format: time
+        reply_key: late_checkout_collect_desired_time
+        reprompt_reply_key: late_checkout_collect_desired_time_reprompt
+      confirm:
+        question_id: contact_host_confirm
+        reply_key: late_checkout_confirm_contact_host
+        on_yes:
+          reply_key: late_checkout_confirm_yes
+          action: contact_host
+        on_no:
+          reply_key: late_checkout_confirm_no
+          action: close
 
   house_rules:
     reply_key: house_rules
-    vars:
-      rules_general: "{{content.house_rules.general}}"
-      rules_smoking: "{{content.house_rules.smoking}}"
-      rules_pets: "{{content.house_rules.pets}}"
-      rules_visitors: "{{content.house_rules.visitors}}"
-      rules_quiet_hours: "{{content.house_rules.quiet_hours}}"
-      rules_waste: "{{content.house_rules.waste}}"
-      rules_damage: "{{content.house_rules.damage}}"
+    vars_from:
+      - content.house_rules
+    flow:
+      kind: terminal
 
+  # Alias: manteniamo "emergency" (storico)
   emergency:
     reply_key: emergencies
-    vars:
-      emergency_general: "{{content.emergencies.general}}"
-      emergency_medical: "{{content.emergencies.medical}}"
-      emergency_fire: "{{content.emergencies.fire}}"
-      emergency_safety: "{{content.emergencies.safety}}"
+    vars_from:
+      - content.contacts
+    flow:
+      kind: terminal
+
+  emergency_contacts:
+    reply_key: emergencies
+    vars_from:
+      - content.contacts
+    flow:
+      kind: terminal
 
   parking:
     reply_key: parking_info
-    vars:
-      parking_note: "{{content.parking.note}}"
+    vars_from:
+      - content.parking
+    flow:
+      kind: followup
+      followup:
+        question_id: need_location
+        reply_key: parking_followup_need_location
 
   breakfast:
     reply_key: breakfast_info
-    vars:
-      breakfast_info: "{{content.breakfast.note}}"
+    vars_from:
+      - content.breakfast
+    flow:
+      kind: terminal
 
   transport:
     reply_key: transportation_info
-    vars:
-      transportation_info: "{{content.transport.general}}"
+    vars_from:
+      - content.transport
+    flow:
+      kind: terminal
 
   transport_to_venice:
     reply_key: transportation_to_venice
-    vars:
-      transportation_to_venice: "{{content.transport.to_venice}}"
+    vars_from:
+      - content.transport
+    flow:
+      kind: terminal
 
   transport_airport:
     reply_key: transportation_airport
-    vars:
-      transportation_airport: "{{content.transport.airport}}"
+    vars_from:
+      - content.transport
+    flow:
+      kind: terminal
 
   restaurants:
     reply_key: restaurants
-    vars:
-      restaurants: "{{content.restaurants.list}}"
+    vars_from:
+      - content.restaurants
+    flow:
+      kind: explore
+      explore:
+        prompt_reply_key: restaurants_explore_prompt
+        followup_reply_key: restaurants_explore_followup
 
   fallback:
     output:
       short: "{{content.fallback.text}}"
+
+copy_overrides:
+  it: {}
+  en: {}
+  de: {}
+  fr: {}
+  es: {}

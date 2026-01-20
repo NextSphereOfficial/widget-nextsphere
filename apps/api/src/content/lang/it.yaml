@@ -1,5 +1,7 @@
 welcome_intro: "Ciao! Benvenuto in {{hotel_name}} 😊 Se hai bisogno di qualcosa, sono qui per aiutarti."
+
 wifi_credentials: "Wi-Fi: {{ssid}} · Password: {{password}}"
+
 checkin_instructions: "Check-in dalle {{checkin_from}}. {{checkin_extra}}"
 checkout_instructions: "Check-out entro le {{checkout_by}}. {{checkout_extra}}"
 
@@ -21,8 +23,21 @@ emergencies: |
   • Sicurezza: {{emergency_safety}}
 
 parking_info: "Parcheggio: {{parking_note}}"
-breakfast_info: "Colazione: {{breakfast_info}}"
-transportation_info: "Trasporti: {{transportation_info}}"
+parking_followup_need_location: "Vuoi anche la posizione esatta su Google Maps?"
+
+breakfast_info: "Colazione: {{breakfast_note}}"
+
+transportation_info: "Trasporti: {{transport_general}}"
 transportation_to_venice: "Per andare a Venezia: {{transportation_to_venice}}"
 transportation_airport: "Per l’aeroporto: {{transportation_airport}}"
-restaurants: "Ristoranti consigliati: {{restaurants}}"
+
+restaurants: "Ristoranti consigliati: {{restaurants_list}}"
+restaurants_explore_prompt: "Consiglia 3–5 posti vicini e pratici in base alle preferenze dell’ospite. Usa un tono breve e utile, senza inventare informazioni specifiche dell’alloggio."
+restaurants_explore_followup: "Preferisci qualcosa di tipico o veloce?"
+
+late_checkout_policy: "Late check-out: dipende dalla disponibilità. A che ora vorresti lasciare l’alloggio?"
+late_checkout_collect_desired_time: "A che ora vorresti fare il check-out? (es. 12:00 o 14:30)"
+late_checkout_collect_desired_time_reprompt: "Mi basta un orario indicativo (es. 12:00 / 13:00 / 14:00). Quale preferisci?"
+late_checkout_confirm_contact_host: "Perfetto. Vuoi che chieda all’host la conferma per le {{time}}?"
+late_checkout_confirm_yes: "Ok! Lo segnalo subito all’host e ti aggiorno appena ho conferma."
+late_checkout_confirm_no: "Va bene, nessun problema. Se cambi idea dimmelo pure."
