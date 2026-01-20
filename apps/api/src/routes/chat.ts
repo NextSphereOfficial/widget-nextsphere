@@ -1,5 +1,3 @@
-throw new Error("CHAT.TS LOADED");
-
 // apps/api/src/routes/chat.ts
 import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 
@@ -204,6 +202,8 @@ async function handleChatRequest(
   // Feature flag calcolata UNA volta
   const legacyMode = !isOrchestratorAlwaysOn();
   console.log("[CHAT] legacyMode =", legacyMode);
+console.log("[CHAT] ORCH_ALWAYS_ON =", process.env.ORCH_ALWAYS_ON);
+
 
   // 💾 2) Salviamo il messaggio dell’utente
   await saveMessage({
