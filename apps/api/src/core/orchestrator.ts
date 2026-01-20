@@ -315,8 +315,9 @@ if (currentIntent === "wifi" || currentIntent === "emergency") {
     cacheHit: false,
     ctxVer: ctx.contextVersion,
     snapshot: getRuntimeSnapshot(),
-    // niente pending → chat.ts farà clear
+    pending: undefined, // ✅ forza clear lato chat.ts
   };
+
 }
 
 
