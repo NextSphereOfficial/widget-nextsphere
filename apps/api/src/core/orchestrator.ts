@@ -527,6 +527,37 @@ if (decision.source === "yaml_followup") {
     };
   }
 
+  // Guardrail: yes/no/ack senza pending → NON far riattaccare il contesto vecchio
+const pendingNow = (sessionState as any)?.pending ?? null;
+const t = String(userMessage || "").trim().toLowerCase();
+
+const isShortAck = /^(si|sì|no|ok|okay|va bene|perfetto|grazie|thanks|y|yes|nope)\b/.test(t) && t.length <= 12;
+
+if (!pendingNow && isShortAck) {
+  const text =
+    replyLang === "en"
+      ? "Sure — yes to what exactly? (e.g., sushi nearby or delivery?)"
+      : replyLang === "de"
+      ? "Alles klar — worauf genau bezieht sich dein „Ja“? (z.B. Sushi in der Nähe oder Lieferung?)"
+      : replyLang === "fr"
+      ? "D’accord — “oui” par rapport à quoi exactement ? (sushi à proximité ou livraison ?)"
+      : replyLang === "es"
+      ? "Perfecto — ¿sí a qué exactamente? (¿sushi cerca o a domicilio?)"
+      : "Ok — sì a cosa esattamente? (sushi nelle vicinanze o consegna a domicilio?)";
+
+  return {
+    ok: true,
+    source: "llm",
+    reply: text,
+    intent: decision.intent,
+    confidence: decision.confidence,
+    cacheHit: false,
+    ctxVer: ctx.contextVersion,
+    snapshot: getRuntimeSnapshot(),
+  };
+}
+
+
   const LANGUAGE_RULE = `LINGUA (OBBLIGATORIA): Rispondi SOLO in lang="${replyLang}". Non cambiare lingua.`;
 
   const structureContextLines: string[] = [];
