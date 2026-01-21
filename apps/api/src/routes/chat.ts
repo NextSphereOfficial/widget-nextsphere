@@ -403,6 +403,23 @@ if (pending && typeof pending === "object") {
   else {
     await clearPending(session.id);
   }
+
+// DEBUG LOG — DO NOT COMMIT
+if (process.env.LUMO_DEBUG === "1") {
+  const newState = await getSessionState(session.id);
+  console.log(
+    JSON.stringify({
+      t: new Date().toISOString(),
+      phase: "PENDING_PERSISTED",
+      userMessage: message,
+      persisted_pending: (newState as any)?.pending ?? null,
+    })
+  );
+}
+
+
+
+
 } else {
   await clearPending(session.id);
 }
@@ -420,6 +437,27 @@ if (pending && typeof pending === "object") {
         isFallback: orch.source === "llm",
       });
     }
+
+// DEBUG LOG — DO NOT COMMIT
+if (process.env.LUMO_DEBUG === "1") {
+  console.log(
+    JSON.stringify({
+      t: new Date().toISOString(),
+      phase: "ORCH_RETURN",
+      userMessage: message,
+      out_intent: out.intent ?? null,
+      out_conf: out.meta?.intentConfidence ?? null,
+      out_singleWord: out.meta?.isSingleWord ?? null,
+      state_pending_in: (state as any)?.pending ?? null,
+      orch_source: (orch as any)?.source ?? null,
+      orch_pending_out: (orch as any)?.pending ?? null,
+      orch_text: (orch as any)?.reply ?? (orch as any)?.text ?? null,
+    })
+  );
+}
+
+
+
 
     return reply.code(200).send({
       ...(orch ?? {}),
