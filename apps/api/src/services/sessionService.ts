@@ -113,8 +113,17 @@ export async function setSessionState(sessionId: string, state: ConversationStat
 }
 
 export async function clearPending(sessionId: string) {
-  const state = await getSessionState(sessionId);
-  if (!state?.pending) return;
-  delete state.pending;
-  await setSessionState(sessionId, state);
+  // Atomic: non leggere lo state, non fare merge
+  await prisma.session.update({
+    where: { id: sessionId },
+    data: { stateJson: { pending: null } as any },
+  });
 }
+
+export async function setPending(sessionId: string, pending: PendingState) {
+  await prisma.session.update({
+    where: { id: sessionId },
+    data: { stateJson: { pending } as any },
+  });
+}
+

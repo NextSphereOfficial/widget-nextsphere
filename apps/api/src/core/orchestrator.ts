@@ -10,9 +10,9 @@ import {
   cacheSet,
 } from './runtimeGuards.js';
 import crypto from 'node:crypto';
-import { loadStructure } from "../content/loader.js";
+import { loadIntentsCore, loadStructure } from "../content/loader.js";
 import { renderReplyKey } from "./logic/templateEngine.js";
-
+import { resolveIntent } from "./logic/intentResolver.js";
 import { pickLocalizedText, noInfoText, sanitizeYamlReply, parseTimeFromText } from './logic/sanitize.js';
 
 /**
@@ -126,50 +126,12 @@ function followUpText(lang: string, intent?: string) {
   }
 }
 
-function pendingForIntent(intent?: string) {
-  if (intent === 'late_checkout') {
-    return { intent: 'late_checkout', slot: 'time' as const };
-  }
-  return null;
-}
-
-
-function isStrongEscapeIntent(intent?: string) {
-  return intent === "wifi" || intent === "emergency";
-}
-
-function shouldEscapePending(opts: {
-  pendingIntent: string;
-  currentIntent?: string;
-  currentConfidence?: number;
-}) {
-  const { pendingIntent, currentIntent, currentConfidence = 0 } = opts;
-
-  if (!currentIntent) return false;
-  if (isStrongEscapeIntent(currentIntent)) return true;
-
-  // Cambio tema con intent diverso e confidenza buona → escape
-  if (currentIntent !== pendingIntent && currentConfidence >= 0.7) return true;
-
-  return false;
-}
 
 function getFlow(structureYaml: any, intent?: string) {
   if (!intent) return null;
   const def = structureYaml?.intents?.[String(intent)];
   return def?.flow ?? null;
 }
-
-function extractAction(flowNode: any) {
-  // supporta `action: contact_host` o `{ type: 'contact_host', ... }`
-  const a = flowNode?.action;
-  if (!a) return undefined;
-  if (typeof a === "string") return { type: a };
-  if (typeof a === "object" && a.type) return a;
-  return undefined;
-}
-
-
 
 
 /**
@@ -226,136 +188,148 @@ sessionState?: {
 
 
 // -------------------------------------------------
-// Pending handler (attivo SOLO con orchestrator ON)
-// Usa pending semantico + flow YAML v2 (solo late_checkout in questo step)
+// Pending handler (DETERMINISTICO, single owner)
+// - non dipende da yamlProbe per escape (chat.ts può non risolvere intent in pending)
+// - massimo 1 reprompt in collect + 1 reprompt in confirm, poi chiude
 // -------------------------------------------------
 
-const pending = (sessionState as any)?.pending;
-const pendingKind = pending?.kind ? String(pending.kind) : "";
-const pendingIntent = pending?.intent ? String(pending.intent) : "";
-const pendingFormat = pending?.format ? String(pending.format) : "";
-const pendingData = pending?.data && typeof pending.data === "object" ? pending.data : undefined;
+const pending = (sessionState as any)?.pending ?? null;
 const hadPendingAtStart = !!pending;
 
-// 🧠 Escape universale dal pending su cambio argomento
-if (hadPendingAtStart && pendingIntent) {
-  const newIntent = String(yamlProbe?.intent || "");
-  const newConfidence = Number(yamlProbe?.confidence ?? 0);
+if (hadPendingAtStart && pending?.intent) {
+  // Calcolo intent *solo* per decidere escape (non per rispondere)
+  const intentsCore = await loadIntentsCore();
+  const ir = resolveIntent(userMessage, intentsCore);
 
-  const isStrong = newIntent === "wifi" || newIntent === "emergency";
-  const isDifferent = newIntent && newIntent !== pendingIntent;
-  const confident = newConfidence >= 0.45;
+  const currentIntent = ir?.key && ir.key !== "fallback" ? String(ir.key) : "";
+  const currentConf = Number(ir?.confidence ?? 0);
 
+  const pendingIntent = String(pending.intent);
+
+  const isStrong = currentIntent === "wifi" || currentIntent === "emergency";
+  const isDifferent = !!currentIntent && currentIntent !== pendingIntent;
+  const confident = currentConf >= 0.65;
+
+  // ESCAPE HARD: cambio tema con confidenza buona oppure wifi/emergency
   if (isStrong || (isDifferent && confident)) {
-    // 👉 abbandoniamo il pending e lasciamo proseguire il routing normale
-    (sessionState as any).pending = undefined;
+    (sessionState as any).pending = null;
   }
 }
 
+const p = (sessionState as any)?.pending ?? null;
 
-// Escape hatch: se l’intent corrente è wifi/emergency, non forziamo pending
-const currentIntent = String(yamlProbe?.intent || "");
-if (currentIntent === "wifi" || currentIntent === "emergency") {
-  // ignora pending
-} else if (pendingKind === "collect" && pendingIntent && pendingFormat === "time") {
+// -------- collect(time)
+if (p && p.kind === "collect" && p.intent && p.format === "time") {
+  const pendingIntent = String(p.intent);
+
   const time = parseTimeFromText(userMessage);
+  const attempts = Number(p?.data?.attempts ?? 0);
 
-  // 🔓 Escape più aggressivo: se NON è un orario e il messaggio sembra “testo/cambio tema”
-  // (evita che “sì” o “sushi” riattivino confirm/collect a distanza)
-  if (!time) {
-    const t = String(userMessage || "").trim().toLowerCase();
+  const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
+  const flow = intentDef?.flow;
 
-    const looksLikeTime = /\b(\d{1,2})([:.]\d{2})?\b/.test(t); // 13 / 13:30
-    const hasLetters = /[a-zàèéìòù]/i.test(t);
-    const longEnough = t.length >= 6;
+  // parse ok → passiamo a confirm
+  if (time && flow?.confirm?.reply_key) {
+    const confirmText = await renderReplyKey(
+      structureYaml,
+      String(flow.confirm.reply_key),
+      replyLang,
+      { time }
+    );
 
-    const newIntent = String(yamlProbe?.intent || "");
-    const newConf = Number(yamlProbe?.confidence ?? 0);
-
-    const intentChanged = newIntent && newIntent !== pendingIntent;
-    const confidentEnough = newConf >= 0.45; // più permissivo di 0.7
-
-    if ((hasLetters && longEnough && !looksLikeTime) || (intentChanged && confidentEnough)) {
-      (sessionState as any).pending = undefined;
-    }
-  }
-
-  // ✅ Se abbiamo fatto escape, NON gestire più il pending e lascia proseguire il routing normale
-  if (!(sessionState as any)?.pending) {
-    // fallthrough: non return
-  } else {
-    const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
-    const flow = intentDef?.flow;
-
-    // Se parse ok → passa a confirm
-    if (time && flow?.confirm?.reply_key) {
-      const confirmText = await renderReplyKey(
-        structureYaml,
-        String(flow.confirm.reply_key),
-        replyLang,
-        { time }
-      );
-
-      const clean =
-        sanitizeYamlReply(confirmText, userMessage, pendingIntent) || noInfoText(replyLang);
-
-      return {
-        ok: true,
-        source: "yaml_followup",
-        reply: clean,
-        intent: pendingIntent,
-        confidence: 1.0,
-        cacheHit: false,
-        ctxVer: ctx.contextVersion,
-        pending: {
-          kind: "confirm",
-          intent: pendingIntent,
-          questionId: flow?.confirm?.question_id
-            ? String(flow.confirm.question_id)
-            : "contact_host_confirm",
-          data: { time },
-        },
-        snapshot: getRuntimeSnapshot(),
-      };
-    }
-
-    // Se non capiamo → reprompt (se esiste), altrimenti fallback breve
-    const askKey = flow?.collect?.reprompt_reply_key || flow?.collect?.reply_key;
-
-    const askText = askKey
-      ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
-      : followUpText(replyLang, pendingIntent);
-
-    const cleanAsk =
-      sanitizeYamlReply(String(askText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
+    const clean =
+      sanitizeYamlReply(confirmText, userMessage, pendingIntent) || noInfoText(replyLang);
 
     return {
       ok: true,
       source: "yaml_followup",
-      reply: cleanAsk,
+      reply: clean,
       intent: pendingIntent,
       confidence: 1.0,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
       pending: {
-        kind: "collect",
+        kind: "confirm",
         intent: pendingIntent,
-        questionId: pending?.questionId ? String(pending.questionId) : "desired_time",
-        slot: pending?.slot ? String(pending.slot) : "late_checkout_time",
-        format: "time",
+        questionId: flow?.confirm?.question_id
+          ? String(flow.confirm.question_id)
+          : "contact_host_confirm",
+        data: { time, attempts: 0 },
       },
       snapshot: getRuntimeSnapshot(),
     };
   }
-} else if (pendingKind === "confirm" && pendingIntent) {
+
+  // non è un orario → reprompt UNA volta, poi chiude per evitare loop
+  if (attempts >= 1) {
+    return {
+      ok: true,
+      source: "yaml_followup",
+      reply: sanitizeYamlReply(followUpText(replyLang), userMessage, pendingIntent) || noInfoText(replyLang),
+      intent: pendingIntent,
+      confidence: 1.0,
+      cacheHit: false,
+      ctxVer: ctx.contextVersion,
+      pending: null,
+      snapshot: getRuntimeSnapshot(),
+    };
+  }
+
+  const askKey = flow?.collect?.reprompt_reply_key || flow?.collect?.reply_key;
+  const askText = askKey
+    ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
+    : followUpText(replyLang, pendingIntent);
+
+  const cleanAsk =
+    sanitizeYamlReply(String(askText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
+
+  return {
+    ok: true,
+    source: "yaml_followup",
+    reply: cleanAsk,
+    intent: pendingIntent,
+    confidence: 1.0,
+    cacheHit: false,
+    ctxVer: ctx.contextVersion,
+    pending: {
+      kind: "collect",
+      intent: pendingIntent,
+      questionId: p?.questionId ? String(p.questionId) : "desired_time",
+      slot: p?.slot ? String(p.slot) : "late_checkout_time",
+      format: "time",
+      data: { ...(p.data || {}), attempts: attempts + 1 },
+    },
+    snapshot: getRuntimeSnapshot(),
+  };
+}
+
+// -------- confirm (yes/no)
+if (p && p.kind === "confirm" && p.intent) {
+  const pendingIntent = String(p.intent);
+  const attempts = Number(p?.data?.attempts ?? 0);
 
   const yn = detectYesNo(userMessage);
+
+  // NON sì/no → ripeti UNA volta, poi chiudi (evita “sì/no” fuori contesto dopo)
   if (!yn) {
-    // Se non è sì/no → una domanda breve (riusa la stessa confirm)
+    if (attempts >= 1) {
+      return {
+        ok: true,
+        source: "yaml_followup",
+        reply: sanitizeYamlReply(followUpText(replyLang), userMessage, pendingIntent) || noInfoText(replyLang),
+        intent: pendingIntent,
+        confidence: 1.0,
+        cacheHit: false,
+        ctxVer: ctx.contextVersion,
+        pending: null,
+        snapshot: getRuntimeSnapshot(),
+      };
+    }
+
     const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
     const flow = intentDef?.flow;
+    const time = p?.data?.time;
 
-    const time = pendingData?.time;
     const confirmText = flow?.confirm?.reply_key
       ? await renderReplyKey(structureYaml, String(flow.confirm.reply_key), replyLang, { time })
       : "";
@@ -374,8 +348,8 @@ if (currentIntent === "wifi" || currentIntent === "emergency") {
       pending: {
         kind: "confirm",
         intent: pendingIntent,
-        questionId: pending?.questionId ? String(pending.questionId) : "contact_host_confirm",
-        data: pendingData,
+        questionId: p?.questionId ? String(p.questionId) : "contact_host_confirm",
+        data: { ...(p.data || {}), attempts: attempts + 1 },
       },
       snapshot: getRuntimeSnapshot(),
     };
@@ -383,7 +357,7 @@ if (currentIntent === "wifi" || currentIntent === "emergency") {
 
   const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
   const flow = intentDef?.flow;
-  const time = pendingData?.time;
+  const time = p?.data?.time;
 
   const key =
     yn === "yes" ? flow?.confirm?.on_yes?.reply_key : flow?.confirm?.on_no?.reply_key;
@@ -400,10 +374,10 @@ if (currentIntent === "wifi" || currentIntent === "emergency") {
     cacheHit: false,
     ctxVer: ctx.contextVersion,
     snapshot: getRuntimeSnapshot(),
-    pending: undefined, // ✅ forza clear lato chat.ts
+    pending: null, // chiusura netta (chat.ts farà clear atomico)
   };
-
 }
+
 
 // -------------------------------------------------
 // ✅ Flow entry (solo quando NON c'è pending)
