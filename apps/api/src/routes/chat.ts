@@ -440,21 +440,21 @@ if (process.env.LUMO_DEBUG === "1") {
 
 // DEBUG LOG — DO NOT COMMIT
 if (process.env.LUMO_DEBUG === "1") {
-  console.log(
-    JSON.stringify({
-      t: new Date().toISOString(),
-      phase: "ORCH_RETURN",
-      userMessage: message,
-      out_intent: out.intent ?? null,
-      out_conf: out.meta?.intentConfidence ?? null,
-      out_singleWord: out.meta?.isSingleWord ?? null,
-      state_pending_in: (state as any)?.pending ?? null,
-      orch_source: (orch as any)?.source ?? null,
-      orch_pending_out: (orch as any)?.pending ?? null,
-      orch_text: (orch as any)?.reply ?? (orch as any)?.text ?? null,
-    })
-  );
+  const st2 = await getSessionState(session.id);
+  console.log(JSON.stringify({
+    t: new Date().toISOString(),
+    phase: "ORCH_RETURN",
+    userMessage: message,
+    out_intent: out.intent ?? null,
+    out_conf: out.meta?.intentConfidence ?? null,
+    out_singleWord: out.meta?.isSingleWord ?? null,
+    state_pending_in: (state as any)?.pending ?? null,
+    orch_source: (orch as any)?.source ?? null,
+    orch_pending_out: (orch as any)?.pending ?? null,
+    persisted_pending_after: (st2 as any)?.pending ?? null,
+  }));
 }
+
 
 
 
