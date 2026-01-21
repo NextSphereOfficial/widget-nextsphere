@@ -244,7 +244,7 @@ if (hadPendingAtStart && pendingIntent) {
 
   const isStrong = newIntent === "wifi" || newIntent === "emergency";
   const isDifferent = newIntent && newIntent !== pendingIntent;
-  const confident = newConfidence >= 0.7;
+  const confident = newConfidence >= 0.45;
 
   if (isStrong || (isDifferent && confident)) {
     // 👉 abbandoniamo il pending e lasciamo proseguire il routing normale
@@ -260,70 +260,95 @@ if (currentIntent === "wifi" || currentIntent === "emergency") {
 } else if (pendingKind === "collect" && pendingIntent && pendingFormat === "time") {
   const time = parseTimeFromText(userMessage);
 
-  const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
-  const flow = intentDef?.flow;
+  // 🔓 Escape più aggressivo: se NON è un orario e il messaggio sembra “testo/cambio tema”
+  // (evita che “sì” o “sushi” riattivino confirm/collect a distanza)
+  if (!time) {
+    const t = String(userMessage || "").trim().toLowerCase();
 
-  // Se parse ok → passa a confirm
-if (time && flow?.confirm?.reply_key) {
-  const confirmText = await renderReplyKey(
-    structureYaml,
-    String(flow.confirm.reply_key),
-    replyLang,
-    { time }
-  );
+    const looksLikeTime = /\b(\d{1,2})([:.]\d{2})?\b/.test(t); // 13 / 13:30
+    const hasLetters = /[a-zàèéìòù]/i.test(t);
+    const longEnough = t.length >= 6;
 
-  const clean =
-    sanitizeYamlReply(confirmText, userMessage, pendingIntent) || noInfoText(replyLang);
+    const newIntent = String(yamlProbe?.intent || "");
+    const newConf = Number(yamlProbe?.confidence ?? 0);
 
-  return {
-    ok: true,
-    source: "yaml_followup",
-    reply: clean,
-    intent: pendingIntent,
-    confidence: 1.0,
-    cacheHit: false,
-    ctxVer: ctx.contextVersion,
-    pending: {
-      kind: "confirm",
+    const intentChanged = newIntent && newIntent !== pendingIntent;
+    const confidentEnough = newConf >= 0.45; // più permissivo di 0.7
+
+    if ((hasLetters && longEnough && !looksLikeTime) || (intentChanged && confidentEnough)) {
+      (sessionState as any).pending = undefined;
+    }
+  }
+
+  // ✅ Se abbiamo fatto escape, NON gestire più il pending e lascia proseguire il routing normale
+  if (!(sessionState as any)?.pending) {
+    // fallthrough: non return
+  } else {
+    const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
+    const flow = intentDef?.flow;
+
+    // Se parse ok → passa a confirm
+    if (time && flow?.confirm?.reply_key) {
+      const confirmText = await renderReplyKey(
+        structureYaml,
+        String(flow.confirm.reply_key),
+        replyLang,
+        { time }
+      );
+
+      const clean =
+        sanitizeYamlReply(confirmText, userMessage, pendingIntent) || noInfoText(replyLang);
+
+      return {
+        ok: true,
+        source: "yaml_followup",
+        reply: clean,
+        intent: pendingIntent,
+        confidence: 1.0,
+        cacheHit: false,
+        ctxVer: ctx.contextVersion,
+        pending: {
+          kind: "confirm",
+          intent: pendingIntent,
+          questionId: flow?.confirm?.question_id
+            ? String(flow.confirm.question_id)
+            : "contact_host_confirm",
+          data: { time },
+        },
+        snapshot: getRuntimeSnapshot(),
+      };
+    }
+
+    // Se non capiamo → reprompt (se esiste), altrimenti fallback breve
+    const askKey = flow?.collect?.reprompt_reply_key || flow?.collect?.reply_key;
+
+    const askText = askKey
+      ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
+      : followUpText(replyLang, pendingIntent);
+
+    const cleanAsk =
+      sanitizeYamlReply(String(askText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
+
+    return {
+      ok: true,
+      source: "yaml_followup",
+      reply: cleanAsk,
       intent: pendingIntent,
-      // ✅ non blocchiamo mai la transizione se manca question_id
-      questionId: flow?.confirm?.question_id
-        ? String(flow.confirm.question_id)
-        : "contact_host_confirm",
-      data: { time },
-    },
-    snapshot: getRuntimeSnapshot(),
-  };
-}
-
-
-  // Se non capiamo → reprompt (se esiste), altrimenti fallback breve
-  const askKey = flow?.collect?.reprompt_reply_key || flow?.collect?.reply_key;
-
-  const askText = askKey
-    ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
-    : followUpText(replyLang, pendingIntent); // fallback legacy
-
-  const cleanAsk = sanitizeYamlReply(String(askText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
-
-  return {
-    ok: true,
-    source: "yaml_followup",
-    reply: cleanAsk,
-    intent: pendingIntent,
-    confidence: 1.0,
-    cacheHit: false,
-    ctxVer: ctx.contextVersion,
-    pending: {
-      kind: "collect",
-      intent: pendingIntent,
-      questionId: pending?.questionId ? String(pending.questionId) : "desired_time",
-      slot: pending?.slot ? String(pending.slot) : "late_checkout_time",
-      format: "time",
-    },
-    snapshot: getRuntimeSnapshot(),
-  };
+      confidence: 1.0,
+      cacheHit: false,
+      ctxVer: ctx.contextVersion,
+      pending: {
+        kind: "collect",
+        intent: pendingIntent,
+        questionId: pending?.questionId ? String(pending.questionId) : "desired_time",
+        slot: pending?.slot ? String(pending.slot) : "late_checkout_time",
+        format: "time",
+      },
+      snapshot: getRuntimeSnapshot(),
+    };
+  }
 } else if (pendingKind === "confirm" && pendingIntent) {
+
   const yn = detectYesNo(userMessage);
   if (!yn) {
     // Se non è sì/no → una domanda breve (riusa la stessa confirm)
@@ -395,7 +420,17 @@ if (!hadPendingAtStart && yamlProbe?.matched && yamlProbe?.intent) {
       ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
       : followUpText(replyLang, yamlProbe.intent);
 
-    let finalText = `${baseReply} ${String(ask || "").trim()}`.trim();
+    const base = String(baseReply || "").trim();
+const askTxt = String(ask || "").trim();
+
+// Se il base contiene già una domanda, non appendere una seconda domanda
+const shouldAppendAsk =
+  !!askTxt &&
+  !base.includes("?") &&                 // già una domanda nel testo base
+  !/[?]\s*$/.test(base);                 // oppure finisce con "?"
+
+let finalText = shouldAppendAsk ? `${base} ${askTxt}`.trim() : base;
+
     finalText = sanitizeYamlReply(finalText, userMessage, yamlProbe.intent) || noInfoText(replyLang);
 
     return {
@@ -472,9 +507,15 @@ if (!hadPendingAtStart && yamlProbe?.matched && yamlProbe?.intent) {
 
 // yaml_followup: solo domanda soft, MAI pending
 if (decision.source === "yaml_followup") {
-  const q = followUpText(replyLang, decision.intent);
-  if (q) finalText = `${finalText} ${q}`.trim();
+  const t = String(userMessage || "").trim().toLowerCase();
+  const isAck = /^(ok|okay|va bene|perfetto|grazie|thanks|thx|👍|👌|si|sì|no)\b/.test(t);
+
+  if (!isAck) {
+    const q = followUpText(replyLang, decision.intent);
+    if (q) finalText = `${finalText} ${q}`.trim();
+  }
 }
+
 
 
 
