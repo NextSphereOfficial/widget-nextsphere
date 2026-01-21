@@ -105,6 +105,15 @@ function detectYesNo(raw: string) {
   return null;
 }
 
+function classifyQuestionExpects(text: string): "yesno" | "details" {
+  const t = String(text || "").trim().toLowerCase();
+  // euristica minimale e generica
+  const yesno =
+    /\b(vuoi|preferisci|posso|ti va|vuole|would you|do you want|prefer|shall i|soll ich|veux-tu|prefieres)\b/.test(t) ||
+    /\b(sì|si|yes)\b.*\bno\b/.test(t);
+  return yesno ? "yesno" : "details";
+}
+
 
 function followUpText(lang: string, intent?: string) {
   switch (lang) {
@@ -185,6 +194,52 @@ sessionState?: {
   // 🔒 Lingua single source of truth (2 lettere).
   // Priorità: reqLang (widget) → yamlProbe.lang (effectiveLang) → ctx.locale (fallback sicurezza).
   const replyLang = normalizeLang(reqLang || yamlProbe?.lang || ctx.locale || 'it');
+
+
+  
+const pendingNow = (sessionState as any)?.pending ?? null;
+const lastQ = (sessionState as any)?.lastQuestion ?? null;
+
+if (!pendingNow) {
+  const yn = detectYesNo(userMessage);
+  if (yn) {
+    // ✅ sì/no è valido SOLO se l’ultima domanda era una yes/no question
+    if (lastQ?.expects === "yesno" && lastQ?.text) {
+      const reply =
+        yn === "yes"
+          ? "Perfetto — dimmi solo un dettaglio in più così ti aiuto meglio."
+          : "Va bene — cosa preferisci allora?";
+
+      return {
+        ok: true,
+        source: "yaml_followup",
+        reply,
+        intent: "fallback",
+        confidence: 1.0,
+        cacheHit: false,
+        ctxVer: ctx.contextVersion,
+        pending: null,
+        snapshot: getRuntimeSnapshot(),
+      };
+    }
+
+    // Se non sappiamo a cosa si riferisce, NON indoviniamo.
+    return {
+      ok: true,
+      source: "yaml_followup",
+      reply: "Ok — sì/no rispetto a cosa esattamente?",
+      intent: "fallback",
+      confidence: 1.0,
+      cacheHit: false,
+      ctxVer: ctx.contextVersion,
+      pending: null,
+      snapshot: getRuntimeSnapshot(),
+    };
+  }
+}
+
+
+
 
 
 // -------------------------------------------------
@@ -527,36 +582,7 @@ if (decision.source === "yaml_followup") {
     };
   }
 
-  // Guardrail: yes/no/ack senza pending → NON far riattaccare il contesto vecchio
-const pendingNow = (sessionState as any)?.pending ?? null;
-const t = String(userMessage || "").trim().toLowerCase();
-
-const isShortAck = /^(si|sì|no|ok|okay|va bene|perfetto|grazie|thanks|y|yes|nope)\b/.test(t) && t.length <= 12;
-
-if (!pendingNow && isShortAck) {
-  const text =
-    replyLang === "en"
-      ? "Sure — yes to what exactly? (e.g., sushi nearby or delivery?)"
-      : replyLang === "de"
-      ? "Alles klar — worauf genau bezieht sich dein „Ja“? (z.B. Sushi in der Nähe oder Lieferung?)"
-      : replyLang === "fr"
-      ? "D’accord — “oui” par rapport à quoi exactement ? (sushi à proximité ou livraison ?)"
-      : replyLang === "es"
-      ? "Perfecto — ¿sí a qué exactamente? (¿sushi cerca o a domicilio?)"
-      : "Ok — sì a cosa esattamente? (sushi nelle vicinanze o consegna a domicilio?)";
-
-  return {
-    ok: true,
-    source: "llm",
-    reply: text,
-    intent: decision.intent,
-    confidence: decision.confidence,
-    cacheHit: false,
-    ctxVer: ctx.contextVersion,
-    snapshot: getRuntimeSnapshot(),
-  };
-}
-
+  
 
   const LANGUAGE_RULE = `LINGUA (OBBLIGATORIA): Rispondi SOLO in lang="${replyLang}". Non cambiare lingua.`;
 

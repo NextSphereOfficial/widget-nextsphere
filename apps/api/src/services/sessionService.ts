@@ -18,9 +18,19 @@ export type PendingState = {
 };
 
 
+
+
+export type LastQuestionState = {
+  text: string;
+  expects: "yesno" | "details";
+  askedAt: string; // ISO
+};
+
 export type ConversationState = {
   pending?: PendingState;
+  lastQuestion?: LastQuestionState;
 };
+
 
 
 
@@ -127,3 +137,15 @@ export async function setPending(sessionId: string, pending: PendingState) {
   });
 }
 
+export async function setLastQuestion(sessionId: string, q: LastQuestionState) {
+  const state = await getSessionState(sessionId);
+  state.lastQuestion = q;
+  await setSessionState(sessionId, state);
+}
+
+export async function clearLastQuestion(sessionId: string) {
+  const state = await getSessionState(sessionId);
+  if (!state?.lastQuestion) return;
+  delete state.lastQuestion;
+  await setSessionState(sessionId, state);
+}

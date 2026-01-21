@@ -15,7 +15,10 @@ import {
   getSessionState,
   saveMessage,
   setPending,
+  setLastQuestion,
+  clearLastQuestion,
 } from "../services/sessionService.js";
+
 
 
 
@@ -159,6 +162,23 @@ async function runEngineFromLoaded({
 
 // Helpers (shared)
 
+function detectYesNo(raw: string) {
+  const t = String(raw || "").trim().toLowerCase();
+  const yes = /^(si|sì|ok|okay|va bene|certo|yes|yep|yeah|ja|oui)\b/.test(t);
+  const no = /^(no|nope|nein|non)\b/.test(t);
+  if (yes) return "yes" as const;
+  if (no) return "no" as const;
+  return null;
+}
+
+function classifyQuestionExpects(text: string): "yesno" | "details" {
+  const t = String(text || "").trim().toLowerCase();
+  // euristica generica (non per-caso)
+  const yesno =
+    /\b(vuoi|preferisci|posso|ti va|would you|do you want|prefer|shall i|soll ich|veux-tu|prefieres)\b/.test(t) ||
+    /\b(sì|si|yes)\b.*\bno\b/.test(t);
+  return yesno ? "yesno" : "details";
+}
 
 
 
@@ -295,6 +315,22 @@ if (pending && typeof pending === "object" && pending.kind && pending.intent && 
 } else {
   await clearPending(session.id);
 }
+
+// 🧠 lastQuestion (solo se NON c’è pending: pending è lo “stato forte”)
+const pendingNow = (orch as any)?.pending ?? null;
+const assistantTextForState = String((orch as any)?.reply ?? (orch as any)?.text ?? "").trim();
+
+if (!pendingNow && assistantTextForState.endsWith("?")) {
+  await setLastQuestion(session.id, {
+    text: assistantTextForState,
+    expects: classifyQuestionExpects(assistantTextForState),
+    askedAt: new Date().toISOString(),
+  });
+} else {
+  // Se non è una domanda (o se c’è pending), chiudiamo lastQuestion per evitare ambiguità future
+  await clearLastQuestion(session.id);
+}
+
 
 
 
