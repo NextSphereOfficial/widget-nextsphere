@@ -3,108 +3,77 @@ meta:
   brand: sv
   structure:
     id: SV001
-    name: "S&V Apartments – Mestre"
+    name: S&V Apartments – Mestre
   default_locale: it
 
 content:
   hotel:
-    name: "S&V Apartments"
+    name: S&V Apartments
 
   wifi:
-    ssid: "S&V"
-    password: "sv2026!"
+    ssid: S&V
+    password: sv2026!
 
   checkin:
-    from: "15:00"
+    from: '15:00'
     extra:
-      it: ""
-      en: ""
-      de: ""
-      fr: ""
-      es: ""
+      it: ''
+      en: ''
+      de: ''
+      fr: ''
+      es: ''
 
   checkout:
-    by: "10:00"
-    notes: ""
+    by: '10:00'
+    notes: ''
     extra:
-      it: ""
-      en: ""
-      de: ""
-      fr: ""
-      es: ""
+      it: ''
+      en: ''
+      de: ''
+      fr: ''
+      es: ''
 
   house_rules:
-    general: "Rispetta i vicini e mantieni pulito l’appartamento."
-    smoking: "Non è permesso fumare all’interno."
-    pets: "Ammessi solo animali di piccola taglia."
-    visitors: "Non sono ammessi ospiti non registrati."
-    quiet_hours: "Silenzio dopo le 22:00."
-    waste: "Raccolta differenziata obbligatoria."
-    damage: "Segnala eventuali danni."
+    general: Rispetta i vicini e mantieni pulito l’appartamento.
+    smoking: Vietato fumare in casa.
+    pets: Animali solo se concordati in anticipo.
+    visitors: Ospiti esterni solo se concordati.
+    quiet_hours: Silenzio dalle 22:00 alle 8:00.
+    waste: Differenzia i rifiuti secondo le istruzioni.
+    damage: Segnala subito eventuali danni o problemi.
 
   contacts:
-    host_phone: ""        # se vuoi, metti qui il numero host
-    whatsapp: ""          # opzionale
-    emergency_number: "112"
-    medical_number: "118"
-    fire_number: "115"
-    safety_note:
-      it: "Avvisaci appena possibile."
-      en: "Please let us know as soon as possible."
-      de: "Bitte informiere uns so bald wie möglich."
-      fr: "Merci de nous prévenir dès que possible."
-      es: "Avísanos lo antes posible."
+    host_phone: ''
+    whatsapp: ''
+    emergency:
+      general: 112
+      medical: 118
+      fire: 115
+      safety: 113
 
   parking:
-    note:
-      it: "C'è un posto auto di fronte al garage dietro il palazzo."
-      en: "There is a parking spot in front of the garage behind the building."
-      de: "Es gibt einen Parkplatz vor der Garage hinter dem Gebäude."
-      fr: "Il y a une place de parking devant le garage derrière l’immeuble."
-      es: "Hay una plaza de aparcamiento delante del garaje detrás del edificio."
-    maps_url: "https://maps.google.com/..."
+    note: 'Parcheggio disponibile nelle vicinanze. Verifica segnaletica e zone a pagamento.'
+    maps_url: 'https://maps.google.com/?q=Mestre+Parking'
 
   breakfast:
-    note:
-      it: "Non è disponibile in struttura. Posso consigliarti bar e locali nelle vicinanze."
-      en: "Breakfast is not available on-site. I can suggest nearby cafés."
-      de: "Frühstück wird vor Ort nicht angeboten. Ich kann dir Cafés in der Nähe empfehlen."
-      fr: "Le petit-déjeuner n’est pas disponible sur place. Je peux vous conseiller des cafés à proximité."
-      es: "No hay desayuno en el alojamiento. Puedo recomendarte cafeterías cercanas."
+    note: 'Non inclusa. Bar e colazioni consigliate nelle vicinanze.'
 
   transport:
-    general:
-      it: "Il tram T1 per Venezia si prende a pochi minuti a piedi e passa ogni 7–10 minuti."
-      en: "Tram T1 to Venice is a short walk away and runs every 7–10 minutes."
-      de: "Die Straßenbahn T1 nach Venedig ist nur wenige Minuten zu Fuß entfernt und fährt alle 7–10 Minuten."
-      fr: "Le tram T1 pour Venise est à quelques minutes à pied et passe toutes les 7–10 minutes."
-      es: "El tranvía T1 a Venecia está a pocos minutos a pie y pasa cada 7–10 minutos."
-    to_venice:
-      it: "Prendi il tram T1 o l’autobus 4L. I biglietti si acquistano nei tabaccai, alle macchinette ACTV o tramite app."
-      en: "Take tram T1 or bus 4L. Tickets can be bought at tobacco shops, ACTV machines, or via the app."
-      de: "Nimm die Straßenbahn T1 oder den Bus 4L. Tickets gibt es in Tabakläden, an ACTV-Automaten oder per App."
-      fr: "Prenez le tram T1 ou le bus 4L. Les billets s’achètent dans les bureaux de tabac, aux distributeurs ACTV ou via l’application."
-      es: "Toma el tranvía T1 o el autobús 4L. Los billetes se compran en estancos, en máquinas ACTV o mediante la app."
-    airport:
-      it: "Per l’aeroporto (Marco Polo/Treviso) puoi usare autobus dedicati o taxi. Dimmi quale aeroporto e ti indico l’opzione migliore."
-      en: "For the airport (Marco Polo/Treviso), you can take dedicated buses or a taxi. Tell me which airport and I’ll suggest the best option."
-      de: "Zum Flughafen (Marco Polo/Treviso) kannst du Shuttlebusse oder ein Taxi nehmen. Sag mir, welcher Flughafen, dann empfehle ich die beste Option."
-      fr: "Pour l’aéroport (Marco Polo/Treviso), vous pouvez prendre des bus dédiés ou un taxi. Dites-moi lequel et je vous conseille la meilleure option."
-      es: "Para el aeropuerto (Marco Polo/Treviso), puedes usar autobuses directos o taxi. Dime cuál y te indico la mejor opción."
+    general: 'Da Mestre puoi raggiungere Venezia con bus o treno.'
+    to_venice: 'Bus per Venezia: linee ACTV da Mestre verso Piazzale Roma.'
+    airport: 'Aeroporto: collegamenti bus dedicati (ATVO/ACTV) e taxi.'
 
   restaurants:
     list:
-      it: "Barroca (panini/aperitivo), Fermenti (ristorante/pizzeria), Ca’ di Mat (drink)."
-      en: "Barroca (sandwiches/aperitivo), Fermenti (restaurant/pizzeria), Ca’ di Mat (drinks)."
-      de: "Barroca (Sandwich/Aperitivo), Fermenti (Restaurant/Pizzeria), Ca’ di Mat (Drinks)."
-      fr: "Barroca (sandwich/apéritif), Fermenti (restaurant/pizzeria), Ca’ di Mat (verre)."
-      es: "Barroca (bocadillos/aperitivo), Fermenti (restaurante/pizzería), Ca’ di Mat (copas)."
-
-  locale:
-    area_hint: "Mestre (Venezia), zona appartamento"
+      - name: Osteria da Gino
+        address: Via Esempio 1, Mestre
+        notes: Cucina tipica veneta.
+      - name: Trattoria Al Ponte
+        address: Via Esempio 2, Mestre
+        notes: Ottima pasta e pesce.
 
   fallback:
-    text: "Mi dispiace, non ho capito bene. Puoi ripetere la domanda?"
+    text: 'Non ho informazioni certe su questo. Se vuoi, puoi chiedere all’host tramite la chat della piattaforma.'
 
 intents:
   welcome:
@@ -126,7 +95,6 @@ intents:
     flow:
       kind: terminal
 
-  # Alias: manteniamo "checkout" (storico)
   checkout:
     reply_key: checkout_instructions
     vars_from:
@@ -134,27 +102,12 @@ intents:
     flow:
       kind: terminal
 
-  # Alias: nuovo nome più esplicito
   checkout_time:
     reply_key: checkout_instructions
     vars_from:
       - content.checkout
     flow:
       kind: terminal
-
-late_checkout:
-  reply_key: late_checkout_collect_desired_time
-  vars_from:
-    - content.checkout
-  flow:
-    kind: collect
-    collect:
-      question_id: desired_time
-      slot: late_checkout_time
-      format: time
-      reply_key: late_checkout_collect_desired_time
-      reprompt_reply_key: late_checkout_collect_desired_time_reprompt
-
 
   house_rules:
     reply_key: house_rules
@@ -163,7 +116,6 @@ late_checkout:
     flow:
       kind: terminal
 
-  # Alias: manteniamo "emergency" (storico)
   emergency:
     reply_key: emergencies
     vars_from:
@@ -183,10 +135,7 @@ late_checkout:
     vars_from:
       - content.parking
     flow:
-      kind: followup
-      followup:
-        question_id: need_location
-        reply_key: parking_followup_need_location
+      kind: terminal
 
   breakfast:
     reply_key: breakfast_info
@@ -221,14 +170,24 @@ late_checkout:
     vars_from:
       - content.restaurants
     flow:
-      kind: explore
-      explore:
-        prompt_reply_key: restaurants_explore_prompt
-        followup_reply_key: restaurants_explore_followup
+      kind: terminal
 
   fallback:
     output:
-      short: "{{content.fallback.text}}"
+      short: '{{content.fallback.text}}'
+
+  late_checkout:
+    reply_key: late_checkout_collect_desired_time
+    vars_from:
+      - content.checkout
+    flow:
+      kind: collect
+      collect:
+        question_id: desired_time
+        slot: late_checkout_time
+        format: time
+        reply_key: late_checkout_collect_desired_time
+        reprompt_reply_key: late_checkout_collect_desired_time_reprompt
 
 copy_overrides:
   it: {}
