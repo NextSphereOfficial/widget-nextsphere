@@ -2,6 +2,7 @@ welcome_intro: Ciao! Benvenuto in {{hotel_name}} 😊 Se hai bisogno di qualcosa
 wifi_credentials: 'Wi-Fi: {{ssid}} · Password: {{password}}'
 checkin_instructions: Check-in dalle {{checkin_from}}. {{checkin_extra}}
 checkout_instructions: Check-out entro le {{checkout_by}}. {{checkout_extra}}
+late_checkout_collect_close: "Ok, nessun problema. Se vuoi riprovare, dimmi un orario tipo 12:30."
 
 house_rules: 'Regole principali:
 

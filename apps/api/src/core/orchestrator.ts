@@ -16,7 +16,7 @@ import { resolveIntent } from "./logic/intentResolver.js";
 import { pickLocalizedText, noInfoText, sanitizeYamlReply, parseTimeFromText } from './logic/sanitize.js';
 
 /**
- * Style & Behavior Guide v1.0 (Lumo) — Regole GLOBALI (no info hardcoded sulla location).
+ * Style & Behavior Guide v1.1 (Lumo) — Regole GLOBALI (no info hardcoded sulla location).
  */
 const LUMO_SYSTEM_RULES = `
 Sei Lumo, un concierge digitale per ospiti in appartamenti turistici.
@@ -34,10 +34,22 @@ DIVIETI:
 - Non affermare di “vedere” l’appartamento, la posizione dell’utente o lo stato reale della casa.
 
 COMPORTAMENTO:
-- Se la richiesta è generica o ambigua (es. una sola parola tipo “sushi”), NON salutare: fai UNA domanda di chiarimento o proponi UNA azione utile.
-- Se l’utente chiede eccezioni alle policy: per late checkout chiedi SOLO l’orario; per tutto il resto invita a contattare l’host.
+- Massimo UNA domanda di chiarimento per turno.
+- Se fai una domanda di chiarimento e l’utente risponde, NON fare una seconda domanda sullo stesso tema: procedi con la soluzione migliore possibile.
+
+- Se la richiesta è generica o ambigua (es. una sola parola tipo “sushi”), NON salutare:
+  fai UNA domanda di chiarimento (una sola) scegliendo l’opzione più utile:
+  1) preferenza (es. all you can eat vs à la carte), oppure
+  2) area/zona (se NON è disponibile nel contesto), oppure
+  3) azione utile senza inventare dati (es. “Cerca ‘sushi’ su Google Maps e ordina per distanza”).
+
+- Se l’utente chiede eccezioni alle policy:
+  - late checkout: chiedi SOLO l’orario desiderato (formato HH:MM).
+  - qualunque altra eccezione/policy: invita a contattare l’host.
+
 - In emergenza/pericolo: rispondi subito “Chiama il 112” (o numero equivalente nel contesto).
 - Privacy: non chiedere dati sensibili (documenti, carte, ecc.).
+
 - Se l’utente scrive una sola parola, fai UNA domanda di chiarimento (niente saluti).
 `.trim();
 
@@ -200,49 +212,43 @@ if (p && p.kind === "collect" && p.intent && p.format === "time") {
   const time = parseTimeFromText(userMessage);
 
   // ✅ parse ok → risposta finale + chiusura netta
-  if (time) {
-    const doneText = await renderReplyKey(
-      structureYaml,
-      "late_checkout_confirm_yes",
-      replyLang,
-      { time }
-    );
+if (time) {
+  const doneText = await renderReplyKey(
+    structureYaml,
+    "late_checkout_confirm_contact_host",
+    replyLang,
+    { time }
+  );
 
-    const clean = sanitizeYamlReply(doneText, userMessage, pendingIntent) || noInfoText(replyLang);
+  const clean = sanitizeYamlReply(String(doneText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
 
-    return {
-      ok: true,
-      source: "yaml",
-      reply: clean,
-      intent: pendingIntent,
-      confidence: 1.0,
-      cacheHit: false,
-      ctxVer: ctx.contextVersion,
-      pending: undefined,
-      snapshot: getRuntimeSnapshot(),
-    };
-  }
+  return {
+    ok: true,
+    source: "yaml",
+    reply: clean,
+    intent: pendingIntent,
+    confidence: 1.0,
+    cacheHit: false,
+    ctxVer: ctx.contextVersion,
+    pending: undefined,
+    snapshot: getRuntimeSnapshot(),
+  };
+}
 
-  // ❌ non è un orario → 1 reprompt massimo, poi chiude
-  const repromptKey =
-    attempts === 0 ? "late_checkout_collect_desired_time_reprompt" : "late_checkout_collect_desired_time_reprompt";
 
-  const askText = await renderReplyKey(structureYaml, repromptKey, replyLang, {});
-  const cleanAsk = sanitizeYamlReply(askText, userMessage, pendingIntent) || noInfoText(replyLang);
+// ❌ non è un orario → 1 reprompt massimo, poi chiude (ULTRA-PRUDENTE)
 
-  if (attempts >= 1) {
-    return {
-      ok: true,
-      source: "yaml",
-      reply: cleanAsk,
-      intent: pendingIntent,
-      confidence: 1.0,
-      cacheHit: false,
-      ctxVer: ctx.contextVersion,
-      pending: undefined, // chiude per evitare loop
-      snapshot: getRuntimeSnapshot(),
-    };
-  }
+// 1° errore: reprompt e mantieni pending
+if (attempts === 0) {
+  const askText = await renderReplyKey(
+    structureYaml,
+    "late_checkout_collect_desired_time_reprompt",
+    replyLang,
+    {}
+  );
+
+  const cleanAsk =
+    sanitizeYamlReply(String(askText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
 
   return {
     ok: true,
@@ -258,10 +264,34 @@ if (p && p.kind === "collect" && p.intent && p.format === "time") {
       questionId: p?.questionId ? String(p.questionId) : "desired_time",
       slot: p?.slot ? String(p.slot) : "late_checkout_time",
       format: "time",
-      data: { ...(p.data || {}), attempts: attempts + 1 },
+      data: { ...(p.data || {}), attempts: 1 },
     },
     snapshot: getRuntimeSnapshot(),
   };
+}
+
+// 2° errore: chiudi per evitare loop
+const closeText = await renderReplyKey(
+  structureYaml,
+  "late_checkout_collect_close", // aggiungi questa key in it.yaml
+  replyLang,
+  {}
+);
+
+const cleanClose =
+  sanitizeYamlReply(String(closeText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
+
+return {
+  ok: true,
+  source: "yaml",
+  reply: cleanClose,
+  intent: pendingIntent,
+  confidence: 1.0,
+  cacheHit: false,
+  ctxVer: ctx.contextVersion,
+  pending: undefined,
+  snapshot: getRuntimeSnapshot(),
+};
 }
 
 // -------------------------------------------------

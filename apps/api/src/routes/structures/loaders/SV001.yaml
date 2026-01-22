@@ -6,180 +6,215 @@ meta:
     name: S&V Apartments – Mestre
   default_locale: it
 
-content:
-  hotel:
-    name: S&V Apartments
+# =========================
+# DATA (TOP-LEVEL, runtime-compatible)
+# =========================
 
-  wifi:
-    ssid: S&V
-    password: sv2026!
+hotel:
+  # Mantengo entrambe le chiavi per compatibilità con template e possibili legacy
+  hotel_name: "S&V Apartments"
+  name: "S&V Apartments"
 
-  checkin:
-    from: '15:00'
-    extra:
-      it: ''
-      en: ''
-      de: ''
-      fr: ''
-      es: ''
+wifi:
+  ssid: "S&V"
+  password: "sv2026!"
 
-  checkout:
-    by: '10:00'
-    notes: ''
-    extra:
-      it: ''
-      en: ''
-      de: ''
-      fr: ''
-      es: ''
+checkin:
+  # chiavi pronte per it.yaml
+  checkin_from: "15:00"
+  checkin_extra: ""
+  # mantengo anche eventuali campi legacy
+  from: "15:00"
+  extra: ""
 
-  house_rules:
-    general: Rispetta i vicini e mantieni pulito l’appartamento.
-    smoking: Vietato fumare in casa.
-    pets: Animali solo se concordati in anticipo.
-    visitors: Ospiti esterni solo se concordati.
-    quiet_hours: Silenzio dalle 22:00 alle 8:00.
-    waste: Differenzia i rifiuti secondo le istruzioni.
-    damage: Segnala subito eventuali danni o problemi.
+checkout:
+  checkout_by: "10:00"
+  checkout_extra: ""
+  by: "10:00"
+  notes: ""
+  extra: ""
 
-  contacts:
-    host_phone: ''
-    whatsapp: ''
-    emergency:
-      general: 112
-      medical: 118
-      fire: 115
-      safety: 113
+house_rules:
+  # chiavi pronte per it.yaml
+  rules_general: "Rispetta i vicini e mantieni pulito l’appartamento."
+  rules_smoking: "Vietato fumare in casa."
+  rules_pets: "Animali solo se concordati in anticipo."
+  rules_visitors: "Ospiti esterni solo se concordati."
+  rules_quiet_hours: "Silenzio dalle 22:00 alle 8:00."
+  rules_waste: "Differenzia i rifiuti secondo le istruzioni."
+  rules_damage: "Segnala subito eventuali danni o problemi."
 
-  parking:
-    note: 'Parcheggio disponibile nelle vicinanze. Verifica segnaletica e zone a pagamento.'
-    maps_url: 'https://maps.google.com/?q=Mestre+Parking'
+  # mantengo anche struttura “semantica” (utile in futuro)
+  general: "Rispetta i vicini e mantieni pulito l’appartamento."
+  smoking: "Vietato fumare in casa."
+  pets: "Animali solo se concordati in anticipo."
+  visitors: "Ospiti esterni solo se concordati."
+  quiet_hours: "Silenzio dalle 22:00 alle 8:00."
+  waste: "Differenzia i rifiuti secondo le istruzioni."
+  damage: "Segnala subito eventuali danni o problemi."
 
-  breakfast:
-    note: 'Non inclusa. Bar e colazioni consigliate nelle vicinanze.'
+contacts:
+  host_phone: ""
+  whatsapp: ""
 
-  transport:
-    general: 'Da Mestre puoi raggiungere Venezia con bus o treno.'
-    to_venice: 'Bus per Venezia: linee ACTV da Mestre verso Piazzale Roma.'
-    airport: 'Aeroporto: collegamenti bus dedicati (ATVO/ACTV) e taxi.'
+  # chiavi pronte per it.yaml
+  emergency_general: "112"
+  emergency_medical: "118"
+  emergency_fire: "115"
+  emergency_safety: "113"
 
-  restaurants:
-    list:
-      - name: Osteria da Gino
-        address: Via Esempio 1, Mestre
-        notes: Cucina tipica veneta.
-      - name: Trattoria Al Ponte
-        address: Via Esempio 2, Mestre
-        notes: Ottima pasta e pesce.
+  # mantengo anche oggetto strutturato
+  emergency:
+    general: "112"
+    medical: "118"
+    fire: "115"
+    safety: "113"
 
-  fallback:
-    text: 'Non ho informazioni certe su questo. Se vuoi, puoi chiedere all’host tramite la chat della piattaforma.'
+parking:
+  # chiavi pronte per it.yaml
+  parking_note: "Parcheggio disponibile nelle vicinanze. Verifica segnaletica e zone a pagamento."
+  parking_maps_url: "https://maps.google.com/?q=Mestre+Parking"
+
+  # mantengo legacy
+  note: "Parcheggio disponibile nelle vicinanze. Verifica segnaletica e zone a pagamento."
+  maps_url: "https://maps.google.com/?q=Mestre+Parking"
+
+breakfast:
+  breakfast_note: "Non inclusa. Bar e colazioni consigliate nelle vicinanze."
+  note: "Non inclusa. Bar e colazioni consigliate nelle vicinanze."
+
+transport:
+  # chiavi pronte per it.yaml
+  transport_general: "Da Mestre puoi raggiungere Venezia con bus o treno."
+  transportation_to_venice: "Bus per Venezia: linee ACTV da Mestre verso Piazzale Roma."
+  transportation_airport: "Aeroporto: collegamenti bus dedicati (ATVO/ACTV) e taxi."
+
+  # mantengo legacy
+  general: "Da Mestre puoi raggiungere Venezia con bus o treno."
+  to_venice: "Bus per Venezia: linee ACTV da Mestre verso Piazzale Roma."
+  airport: "Aeroporto: collegamenti bus dedicati (ATVO/ACTV) e taxi."
+
+restaurants:
+  # Versione pronta per template (stringa)
+  restaurants_list: "• Osteria da Gino — Via Esempio 1, Mestre (cucina tipica veneta)\n• Trattoria Al Ponte — Via Esempio 2, Mestre (pasta e pesce)"
+
+  # Mantengo anche lista strutturata (utile in futuro)
+  list:
+    - name: "Osteria da Gino"
+      address: "Via Esempio 1, Mestre"
+      notes: "Cucina tipica veneta."
+    - name: "Trattoria Al Ponte"
+      address: "Via Esempio 2, Mestre"
+      notes: "Ottima pasta e pesce."
+
+fallback:
+  text: "Non ho informazioni certe su questo. Se vuoi, puoi chiedere all’host tramite la chat della piattaforma."
+
+# =========================
+# INTENTS (YAML-first)
+# =========================
 
 intents:
   welcome:
     reply_key: welcome_intro
     vars_from:
-      - content.hotel
+      - hotel
 
   wifi:
     reply_key: wifi_credentials
     vars_from:
-      - content.wifi
+      - wifi
     flow:
       kind: terminal
 
   checkin:
     reply_key: checkin_instructions
     vars_from:
-      - content.checkin
+      - checkin
     flow:
       kind: terminal
 
   checkout:
     reply_key: checkout_instructions
     vars_from:
-      - content.checkout
+      - checkout
     flow:
       kind: terminal
 
   checkout_time:
     reply_key: checkout_instructions
     vars_from:
-      - content.checkout
+      - checkout
     flow:
       kind: terminal
 
   house_rules:
     reply_key: house_rules
     vars_from:
-      - content.house_rules
+      - house_rules
     flow:
       kind: terminal
 
   emergency:
     reply_key: emergencies
     vars_from:
-      - content.contacts
+      - contacts
     flow:
       kind: terminal
 
   emergency_contacts:
     reply_key: emergencies
     vars_from:
-      - content.contacts
+      - contacts
     flow:
       kind: terminal
 
   parking:
     reply_key: parking_info
     vars_from:
-      - content.parking
+      - parking
     flow:
       kind: terminal
 
   breakfast:
     reply_key: breakfast_info
     vars_from:
-      - content.breakfast
+      - breakfast
     flow:
       kind: terminal
 
   transport:
     reply_key: transportation_info
     vars_from:
-      - content.transport
+      - transport
     flow:
       kind: terminal
 
   transport_to_venice:
     reply_key: transportation_to_venice
     vars_from:
-      - content.transport
+      - transport
     flow:
       kind: terminal
 
   transport_airport:
     reply_key: transportation_airport
     vars_from:
-      - content.transport
+      - transport
     flow:
       kind: terminal
 
   restaurants:
     reply_key: restaurants
     vars_from:
-      - content.restaurants
+      - restaurants
     flow:
       kind: terminal
-
-  fallback:
-    output:
-      short: '{{content.fallback.text}}'
 
   late_checkout:
     reply_key: late_checkout_collect_desired_time
     vars_from:
-      - content.checkout
+      - checkout
     flow:
       kind: collect
       collect:
@@ -188,6 +223,10 @@ intents:
         format: time
         reply_key: late_checkout_collect_desired_time
         reprompt_reply_key: late_checkout_collect_desired_time_reprompt
+
+  fallback:
+    output:
+      short: "{{fallback.text}}"
 
 copy_overrides:
   it: {}
