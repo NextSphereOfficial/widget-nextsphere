@@ -35,7 +35,7 @@ DIVIETI:
 
 COMPORTAMENTO:
 - Se la richiesta è generica o ambigua (es. una sola parola tipo “sushi”), NON salutare: fai UNA domanda di chiarimento o proponi UNA azione utile.
-- Se l’utente chiede eccezioni alle policy (late checkout, ospiti extra, animali extra, modifiche), invita a contattare l’host.
+- Se l’utente chiede eccezioni alle policy: per late checkout chiedi SOLO l’orario; per tutto il resto invita a contattare l’host.
 - In emergenza/pericolo: rispondi subito “Chiama il 112” (o numero equivalente nel contesto).
 - Privacy: non chiedere dati sensibili (documenti, carte, ecc.).
 - Se l’utente scrive una sola parola, fai UNA domanda di chiarimento (niente saluti).
@@ -92,55 +92,6 @@ function fallbackText(lang: string) {
   }
 }
 
-function detectYesNo(raw: string) {
-  const s = String(raw || "").trim().toLowerCase();
-
-  const yes =
-    /^(si|sì|ok|va bene|certo|yes|yep|yeah|ja|oui|vale|va bene)\b/.test(s);
-  const no =
-    /^(no|nope|non voglio|non serve|nein|nicht|non|nah)\b/.test(s);
-
-  if (yes) return "yes" as const;
-  if (no) return "no" as const;
-  return null;
-}
-
-function classifyQuestionExpects(text: string): "yesno" | "details" {
-  const t = String(text || "").trim().toLowerCase();
-  // euristica minimale e generica
-  const yesno =
-    /\b(vuoi|preferisci|posso|ti va|vuole|would you|do you want|prefer|shall i|soll ich|veux-tu|prefieres)\b/.test(t) ||
-    /\b(sì|si|yes)\b.*\bno\b/.test(t);
-  return yesno ? "yesno" : "details";
-}
-
-
-function followUpText(lang: string, intent?: string) {
-  switch (lang) {
-    case 'en':
-      if (intent === 'late_checkout') return 'What time would you need it?';
-      return 'What exactly do you need (details, time, price, or how to get there)?';
-    case 'de':
-      if (intent === 'late_checkout') return 'Zu welcher Uhrzeit brauchst du es?';
-      return 'Was genau brauchst du (Details, Uhrzeit, Preis oder Wegbeschreibung)?';
-    case 'fr':
-      if (intent === 'late_checkout') return 'Pour quelle heure en aurais-tu besoin ?';
-      return 'De quoi as-tu besoin exactement (détails, horaire, prix ou itinéraire) ?';
-    case 'es':
-      if (intent === 'late_checkout') return '¿Para qué hora lo necesitas?';
-      return '¿Qué necesitas exactamente (detalles, hora, precio o cómo llegar)?';
-    default:
-      if (intent === 'late_checkout') return 'Per che orario ti servirebbe?';
-      return 'Cosa ti serve esattamente (dettagli, orario, prezzo o come arrivare)?';
-  }
-}
-
-
-function getFlow(structureYaml: any, intent?: string) {
-  if (!intent) return null;
-  const def = structureYaml?.intents?.[String(intent)];
-  return def?.flow ?? null;
-}
 
 
 /**
@@ -170,19 +121,15 @@ export async function orchestrateChat(
   },
 sessionState?: {
   pending?: {
-    // nuovo formato (semantico)
-    kind?: "followup" | "collect" | "confirm";
+    kind?: "collect";
     intent?: string;
+    format?: "time";
     questionId?: string;
     slot?: string;
-    format?: "time" | "date" | "number" | "text";
     data?: Record<string, any>;
-    askedAt?: string;
-
-    // retrocompat (se trovi state vecchi)
-    // intent + slot
   };
 },
+
 
   reqLang?: string,
   providedCtx?: Awaited<ReturnType<typeof buildContext>>,
@@ -196,63 +143,21 @@ sessionState?: {
   const replyLang = normalizeLang(reqLang || yamlProbe?.lang || ctx.locale || 'it');
 
 
-  
-const pendingNow = (sessionState as any)?.pending ?? null;
-const lastQ = (sessionState as any)?.lastQuestion ?? null;
-
-if (!pendingNow) {
-  const yn = detectYesNo(userMessage);
-  if (yn) {
-    // ✅ sì/no è valido SOLO se l’ultima domanda era una yes/no question
-    if (lastQ?.expects === "yesno" && lastQ?.text) {
-      const reply =
-        yn === "yes"
-          ? "Perfetto — dimmi solo un dettaglio in più così ti aiuto meglio."
-          : "Va bene — cosa preferisci allora?";
-
-      return {
-        ok: true,
-        source: "yaml_followup",
-        reply,
-        intent: "fallback",
-        confidence: 1.0,
-        cacheHit: false,
-        ctxVer: ctx.contextVersion,
-        pending: null,
-        snapshot: getRuntimeSnapshot(),
-      };
-    }
-
-    // Se non sappiamo a cosa si riferisce, NON indoviniamo.
-    return {
-      ok: true,
-      source: "yaml_followup",
-      reply: "Ok — sì/no rispetto a cosa esattamente?",
-      intent: "fallback",
-      confidence: 1.0,
-      cacheHit: false,
-      ctxVer: ctx.contextVersion,
-      pending: null,
-      snapshot: getRuntimeSnapshot(),
-    };
-  }
-}
-
-
-
-
-
 // -------------------------------------------------
-// Pending handler (DETERMINISTICO, single owner)
-// - non dipende da yamlProbe per escape (chat.ts può non risolvere intent in pending)
-// - massimo 1 reprompt in collect + 1 reprompt in confirm, poi chiude
+// Pending handler (ULTRA-PRUDENTE)
+// - Solo intent operativi rigidissimi (es. late_checkout)
+// - Un solo slot (time)
+// - Niente confirm, niente sì/no
+// - 1 reprompt massimo, poi chiude
 // -------------------------------------------------
+
+const OPERATIONAL_INTENTS = new Set(["late_checkout"]);
 
 const pending = (sessionState as any)?.pending ?? null;
 const hadPendingAtStart = !!pending;
 
+// Escape immediato se cambio tema “forte” (wifi/emergency) o intent diverso con confidenza buona
 if (hadPendingAtStart && pending?.intent) {
-  // Calcolo intent *solo* per decidere escape (non per rispondere)
   const intentsCore = await loadIntentsCore();
   const ir = resolveIntent(userMessage, intentsCore);
 
@@ -265,82 +170,83 @@ if (hadPendingAtStart && pending?.intent) {
   const isDifferent = !!currentIntent && currentIntent !== pendingIntent;
   const confident = currentConf >= 0.65;
 
-  // ESCAPE HARD: cambio tema con confidenza buona oppure wifi/emergency
   if (isStrong || (isDifferent && confident)) {
-    (sessionState as any).pending = null;
+    (sessionState as any).pending = undefined;
   }
 }
 
 const p = (sessionState as any)?.pending ?? null;
 
-// -------- collect(time)
+// -------- collect(time) SOLO per intent operativi
 if (p && p.kind === "collect" && p.intent && p.format === "time") {
   const pendingIntent = String(p.intent);
-
-  const time = parseTimeFromText(userMessage);
   const attempts = Number(p?.data?.attempts ?? 0);
 
-  const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
-  const flow = intentDef?.flow;
+  // Se non è un intent operativo → chiudi (non deve succedere)
+  if (!OPERATIONAL_INTENTS.has(pendingIntent)) {
+    return {
+      ok: true,
+      source: "yaml",
+      reply: noInfoText(replyLang),
+      intent: pendingIntent,
+      confidence: 1.0,
+      cacheHit: false,
+      ctxVer: ctx.contextVersion,
+      pending: undefined,
+      snapshot: getRuntimeSnapshot(),
+    };
+  }
 
-  // parse ok → passiamo a confirm
-  if (time && flow?.confirm?.reply_key) {
-    const confirmText = await renderReplyKey(
+  const time = parseTimeFromText(userMessage);
+
+  // ✅ parse ok → risposta finale + chiusura netta
+  if (time) {
+    const doneText = await renderReplyKey(
       structureYaml,
-      String(flow.confirm.reply_key),
+      "late_checkout_confirm_yes",
       replyLang,
       { time }
     );
 
-    const clean =
-      sanitizeYamlReply(confirmText, userMessage, pendingIntent) || noInfoText(replyLang);
+    const clean = sanitizeYamlReply(doneText, userMessage, pendingIntent) || noInfoText(replyLang);
 
     return {
       ok: true,
-      source: "yaml_followup",
+      source: "yaml",
       reply: clean,
       intent: pendingIntent,
       confidence: 1.0,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
-      pending: {
-        kind: "confirm",
-        intent: pendingIntent,
-        questionId: flow?.confirm?.question_id
-          ? String(flow.confirm.question_id)
-          : "contact_host_confirm",
-        data: { time, attempts: 0 },
-      },
+      pending: undefined,
       snapshot: getRuntimeSnapshot(),
     };
   }
 
-  // non è un orario → reprompt UNA volta, poi chiude per evitare loop
+  // ❌ non è un orario → 1 reprompt massimo, poi chiude
+  const repromptKey =
+    attempts === 0 ? "late_checkout_collect_desired_time_reprompt" : "late_checkout_collect_desired_time_reprompt";
+
+  const askText = await renderReplyKey(structureYaml, repromptKey, replyLang, {});
+  const cleanAsk = sanitizeYamlReply(askText, userMessage, pendingIntent) || noInfoText(replyLang);
+
   if (attempts >= 1) {
     return {
       ok: true,
-      source: "yaml_followup",
-      reply: sanitizeYamlReply(followUpText(replyLang), userMessage, pendingIntent) || noInfoText(replyLang),
+      source: "yaml",
+      reply: cleanAsk,
       intent: pendingIntent,
       confidence: 1.0,
       cacheHit: false,
       ctxVer: ctx.contextVersion,
-      pending: null,
+      pending: undefined, // chiude per evitare loop
       snapshot: getRuntimeSnapshot(),
     };
   }
 
-  const askKey = flow?.collect?.reprompt_reply_key || flow?.collect?.reply_key;
-  const askText = askKey
-    ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
-    : followUpText(replyLang, pendingIntent);
-
-  const cleanAsk =
-    sanitizeYamlReply(String(askText || ""), userMessage, pendingIntent) || noInfoText(replyLang);
-
   return {
     ok: true,
-    source: "yaml_followup",
+    source: "yaml",
     reply: cleanAsk,
     intent: pendingIntent,
     confidence: 1.0,
@@ -358,124 +264,39 @@ if (p && p.kind === "collect" && p.intent && p.format === "time") {
   };
 }
 
-// -------- confirm (yes/no)
-if (p && p.kind === "confirm" && p.intent) {
-  const pendingIntent = String(p.intent);
-  const attempts = Number(p?.data?.attempts ?? 0);
-
-  const yn = detectYesNo(userMessage);
-
-  // NON sì/no → ripeti UNA volta, poi chiudi (evita “sì/no” fuori contesto dopo)
-  if (!yn) {
-    if (attempts >= 1) {
-      return {
-        ok: true,
-        source: "yaml_followup",
-        reply: sanitizeYamlReply(followUpText(replyLang), userMessage, pendingIntent) || noInfoText(replyLang),
-        intent: pendingIntent,
-        confidence: 1.0,
-        cacheHit: false,
-        ctxVer: ctx.contextVersion,
-        pending: null,
-        snapshot: getRuntimeSnapshot(),
-      };
-    }
-
-    const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
-    const flow = intentDef?.flow;
-    const time = p?.data?.time;
-
-    const confirmText = flow?.confirm?.reply_key
-      ? await renderReplyKey(structureYaml, String(flow.confirm.reply_key), replyLang, { time })
-      : "";
-
-    const cleanAsk =
-      sanitizeYamlReply(confirmText || "", userMessage, pendingIntent) || noInfoText(replyLang);
-
-    return {
-      ok: true,
-      source: "yaml_followup",
-      reply: cleanAsk,
-      intent: pendingIntent,
-      confidence: 1.0,
-      cacheHit: false,
-      ctxVer: ctx.contextVersion,
-      pending: {
-        kind: "confirm",
-        intent: pendingIntent,
-        questionId: p?.questionId ? String(p.questionId) : "contact_host_confirm",
-        data: { ...(p.data || {}), attempts: attempts + 1 },
-      },
-      snapshot: getRuntimeSnapshot(),
-    };
-  }
-
-  const intentDef = (structureYaml as any)?.intents?.[pendingIntent];
-  const flow = intentDef?.flow;
-  const time = p?.data?.time;
-
-  const key =
-    yn === "yes" ? flow?.confirm?.on_yes?.reply_key : flow?.confirm?.on_no?.reply_key;
-
-  const outText = key ? await renderReplyKey(structureYaml, String(key), replyLang, { time }) : "";
-  const clean = sanitizeYamlReply(outText, userMessage, pendingIntent) || noInfoText(replyLang);
-
-  return {
-    ok: true,
-    source: "yaml_followup",
-    reply: clean,
-    intent: pendingIntent,
-    confidence: 1.0,
-    cacheHit: false,
-    ctxVer: ctx.contextVersion,
-    snapshot: getRuntimeSnapshot(),
-    pending: null, // chiusura netta (chat.ts farà clear atomico)
-  };
-}
-
-
 // -------------------------------------------------
-// ✅ Flow entry (solo quando NON c'è pending)
-// Se l'intent ha flow.kind === "collect" apriamo pending semantico
+// ✅ Flow entry (ULTRA-PRUDENTE, solo quando NON c'è pending)
+// - Se intent è operativo (late_checkout) → chiedi SOLO orario e apri pending collect(time)
+// - Ignora flow YAML “kind/collect/confirm” (non lo usiamo più)
 // -------------------------------------------------
 if (!hadPendingAtStart && yamlProbe?.matched && yamlProbe?.intent) {
-  const flow = getFlow(structureYaml as any, yamlProbe.intent);
+  const intent = String(yamlProbe.intent);
 
-  if (flow?.kind === "collect") {
-    const baseReply = String(pickLocalizedText(yamlProbe.replyText, replyLang) || "").trim() || noInfoText(replyLang);
+  if (OPERATIONAL_INTENTS.has(intent)) {
+    const askText = await renderReplyKey(
+      structureYaml,
+      "late_checkout_collect_desired_time",
+      replyLang,
+      {}
+    );
 
-    const askKey = flow?.collect?.reply_key;
-    const ask = askKey
-      ? await renderReplyKey(structureYaml, String(askKey), replyLang, {})
-      : followUpText(replyLang, yamlProbe.intent);
-
-    const base = String(baseReply || "").trim();
-const askTxt = String(ask || "").trim();
-
-// Se il base contiene già una domanda, non appendere una seconda domanda
-const shouldAppendAsk =
-  !!askTxt &&
-  !base.includes("?") &&                 // già una domanda nel testo base
-  !/[?]\s*$/.test(base);                 // oppure finisce con "?"
-
-let finalText = shouldAppendAsk ? `${base} ${askTxt}`.trim() : base;
-
-    finalText = sanitizeYamlReply(finalText, userMessage, yamlProbe.intent) || noInfoText(replyLang);
+    const cleanAsk = sanitizeYamlReply(String(askText || ""), userMessage, intent) || noInfoText(replyLang);
 
     return {
       ok: true,
       source: "yaml",
-      reply: finalText,
-      intent: String(yamlProbe.intent),
+      reply: cleanAsk,
+      intent,
       confidence: Number(yamlProbe.confidence ?? 1),
       cacheHit: false,
       ctxVer: ctx.contextVersion,
       pending: {
         kind: "collect",
-        intent: String(yamlProbe.intent),
-        questionId: flow?.collect?.question_id ? String(flow.collect.question_id) : "collect",
-        slot: flow?.collect?.slot ? String(flow.collect.slot) : undefined,
-        format: flow?.collect?.format ? String(flow.collect.format) : "time",
+        intent,
+        questionId: "desired_time",
+        slot: "late_checkout_time",
+        format: "time",
+        data: { attempts: 0 },
       },
       snapshot: getRuntimeSnapshot(),
     };
@@ -483,14 +304,12 @@ let finalText = shouldAppendAsk ? `${base} ${askTxt}`.trim() : base;
 }
 
 
+const decision = decideResponse({
+  matched: !!yamlProbe?.matched,
+  intent: yamlProbe?.intent,
+  confidence: yamlProbe?.confidence,
+});
 
-
-  const decision = decideResponse({
-    matched: !!yamlProbe?.matched,
-    intent: yamlProbe?.intent,
-    confidence: yamlProbe?.confidence,
-    isSingleWord: !!yamlProbe?.isSingleWord,
-  });
 
   // History sintetica per cache key
   const historySummary =
@@ -529,24 +348,11 @@ let finalText = shouldAppendAsk ? `${base} ${askTxt}`.trim() : base;
   }
 
   // ✅ YAML branch
-  if ((decision.source === 'yaml' || decision.source === 'yaml_followup') && yamlProbe?.replyText != null) {
+ if (decision.source === 'yaml' && yamlProbe?.replyText != null) {
+
     const replyText = String(pickLocalizedText(yamlProbe.replyText, replyLang) || '').trim();
 
     let finalText = replyText || noInfoText(replyLang);
-
-// yaml_followup: solo domanda soft, MAI pending
-if (decision.source === "yaml_followup") {
-  const t = String(userMessage || "").trim().toLowerCase();
-  const isAck = /^(ok|okay|va bene|perfetto|grazie|thanks|thx|👍|👌|si|sì|no)\b/.test(t);
-
-  if (!isAck) {
-    const q = followUpText(replyLang, decision.intent);
-    if (q) finalText = `${finalText} ${q}`.trim();
-  }
-}
-
-
-
 
     // Sanitize deterministico (max 3 frasi + no welcome fuori contesto, ecc.)
     finalText = sanitizeYamlReply(finalText, userMessage, decision.intent) || noInfoText(replyLang);

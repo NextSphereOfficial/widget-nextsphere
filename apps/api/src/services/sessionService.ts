@@ -8,28 +8,22 @@ export type EnsureSessionInput = {
 };
 
 export type PendingState = {
-  kind: "followup" | "collect" | "confirm";
+  kind: "collect";                 // ultra-prudente: solo collect
   intent: string;
-  questionId: string;
-  askedAt: string; // ISO
+  format: "time";                  // per ora solo time
+  questionId?: string;
+  askedAt?: string;                // opzionale (compatibilità)
   slot?: string;
-  format?: "time" | "date" | "number" | "text";
   data?: Record<string, any>;
 };
 
 
 
-
-export type LastQuestionState = {
-  text: string;
-  expects: "yesno" | "details";
-  askedAt: string; // ISO
-};
-
 export type ConversationState = {
   pending?: PendingState;
-  lastQuestion?: LastQuestionState;
 };
+
+
 
 
 
@@ -115,37 +109,19 @@ export async function getSessionState(sessionId: string): Promise<ConversationSt
   return raw as ConversationState;
 }
 
-export async function setSessionState(sessionId: string, state: ConversationState) {
-  return prisma.session.update({
+
+export async function clearPending(sessionId: string) {
+  // Atomic: rimuove pending dallo stateJson
+  await prisma.session.update({
     where: { id: sessionId },
-    data: { stateJson: state as any },
+    data: { stateJson: {} as any },
   });
 }
 
-export async function clearPending(sessionId: string) {
-  // Atomic: non leggere lo state, non fare merge
-  await prisma.session.update({
-    where: { id: sessionId },
-    data: { stateJson: { pending: null } as any },
-  });
-}
 
 export async function setPending(sessionId: string, pending: PendingState) {
   await prisma.session.update({
     where: { id: sessionId },
     data: { stateJson: { pending } as any },
   });
-}
-
-export async function setLastQuestion(sessionId: string, q: LastQuestionState) {
-  const state = await getSessionState(sessionId);
-  state.lastQuestion = q;
-  await setSessionState(sessionId, state);
-}
-
-export async function clearLastQuestion(sessionId: string) {
-  const state = await getSessionState(sessionId);
-  if (!state?.lastQuestion) return;
-  delete state.lastQuestion;
-  await setSessionState(sessionId, state);
 }

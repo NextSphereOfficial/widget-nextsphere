@@ -142,28 +142,19 @@ intents:
     flow:
       kind: terminal
 
-  # Intent target del ciclo conversazionale
-  late_checkout:
-    reply_key: late_checkout_policy
-    vars_from:
-      - content.checkout
-    flow:
-      kind: collect
-      collect:
-        question_id: desired_time
-        slot: late_checkout_time
-        format: time
-        reply_key: late_checkout_collect_desired_time
-        reprompt_reply_key: late_checkout_collect_desired_time_reprompt
-      confirm:
-        question_id: contact_host_confirm
-        reply_key: late_checkout_confirm_contact_host
-        on_yes:
-          reply_key: late_checkout_confirm_yes
-          action: contact_host
-        on_no:
-          reply_key: late_checkout_confirm_no
-          action: close
+late_checkout:
+  reply_key: late_checkout_collect_desired_time
+  vars_from:
+    - content.checkout
+  flow:
+    kind: collect
+    collect:
+      question_id: desired_time
+      slot: late_checkout_time
+      format: time
+      reply_key: late_checkout_collect_desired_time
+      reprompt_reply_key: late_checkout_collect_desired_time_reprompt
+
 
   house_rules:
     reply_key: house_rules

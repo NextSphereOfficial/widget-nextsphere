@@ -4,7 +4,7 @@ import type { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { loadIntentsCore, loadStructure } from "../content/loader.js";
 import { buildContextFromYaml } from "../core/buildContext.js";
 import { orchestrateChat } from "../core/orchestrator.js";
-import { norm, resolveIntent } from "../core/logic/intentResolver.js";
+import { resolveIntent } from "../core/logic/intentResolver.js";
 import { fallbackText, renderTemplate, resolveEffectiveLang } from "../core/logic/templateEngine.js";
 
 
@@ -15,9 +15,8 @@ import {
   getSessionState,
   saveMessage,
   setPending,
-  setLastQuestion,
-  clearLastQuestion,
 } from "../services/sessionService.js";
+
 
 
 
@@ -27,22 +26,6 @@ import {
 // -----------------------------------------------------
 // Types
 
-type IntentResolution = {
-  key: string;
-  matched: boolean;
-  score: number;
-  secondScore: number;
-  margin: number;
-  confidence: number; // 0..1
-  isSingleWord: boolean;
-};
-
-
-type IntentMatch = {
-  key: string;
-  score: number;
-  matched: boolean;
-};
 
 type EngineOutput = {
   intent: string | null;
@@ -162,23 +145,6 @@ async function runEngineFromLoaded({
 
 // Helpers (shared)
 
-function detectYesNo(raw: string) {
-  const t = String(raw || "").trim().toLowerCase();
-  const yes = /^(si|sì|ok|okay|va bene|certo|yes|yep|yeah|ja|oui)\b/.test(t);
-  const no = /^(no|nope|nein|non)\b/.test(t);
-  if (yes) return "yes" as const;
-  if (no) return "no" as const;
-  return null;
-}
-
-function classifyQuestionExpects(text: string): "yesno" | "details" {
-  const t = String(text || "").trim().toLowerCase();
-  // euristica generica (non per-caso)
-  const yesno =
-    /\b(vuoi|preferisci|posso|ti va|would you|do you want|prefer|shall i|soll ich|veux-tu|prefieres)\b/.test(t) ||
-    /\b(sì|si|yes)\b.*\bno\b/.test(t);
-  return yesno ? "yesno" : "details";
-}
 
 
 
@@ -211,12 +177,12 @@ async function handleChatRequest(
 
   // 🧠 Stato conversazionale (pending slot)
   const state = await getSessionState(session.id);
-  const pendingAtStart = (state as any)?.pending ?? null;
-  const hasPending = !!(
-  pendingAtStart &&
+const pendingAtStart = (state as any)?.pending;
+const hasPending =
+  !!pendingAtStart &&
   typeof pendingAtStart === "object" &&
-  (pendingAtStart as any).kind
-);
+  !!(pendingAtStart as any).kind;
+
 
 
 
@@ -254,9 +220,10 @@ if (!hasPending) {
     intent: null,
     lang: effectiveLang,
     text: "",
-    meta: { mode: "short", uiButtons: [], isFallback: true },
+    meta: { mode: "short", uiButtons: [], isFallback: false },
   };
 }
+
 
 
   // 🔁 History breve (serve per orchestrator / contesto)
@@ -278,7 +245,7 @@ if (!hasPending) {
       resolvedStructureId,
       message,
       {
-        matched: !hasPending && out.meta?.isFallback === false,
+        matched: !hasPending && !!out.intent && out.meta?.isFallback === false,
         intent: out.intent ?? undefined,
         confidence:
           typeof out.meta?.intentConfidence === "number"
@@ -292,7 +259,7 @@ if (!hasPending) {
         lang: out.lang,
         isSingleWord: !!out.meta?.isSingleWord,
       },
-      state,
+      { pending: state.pending },
       lang,
       ctx
     );
@@ -300,36 +267,19 @@ if (!hasPending) {
 // 🧠 Pending strutturato dall’orchestrator (single owner)
 const pending = (orch as any)?.pending;
 
-if (pending && typeof pending === "object" && pending.kind && pending.intent && pending.questionId) {
-  const nowIso = new Date().toISOString();
-
+if (pending && typeof pending === "object" && pending.kind && pending.intent) {
   await setPending(session.id, {
-    kind: String(pending.kind),
+    kind: "collect",
     intent: String(pending.intent),
-    questionId: String(pending.questionId),
+    format: "time",
+    questionId: pending.questionId ? String(pending.questionId) : undefined,
     slot: pending.slot ? String(pending.slot) : undefined,
-    format: pending.format ? String(pending.format) : undefined,
     data: pending.data && typeof pending.data === "object" ? pending.data : undefined,
-    askedAt: nowIso,
   } as any);
 } else {
   await clearPending(session.id);
 }
 
-// 🧠 lastQuestion (solo se NON c’è pending: pending è lo “stato forte”)
-const pendingNow = (orch as any)?.pending ?? null;
-const assistantTextForState = String((orch as any)?.reply ?? (orch as any)?.text ?? "").trim();
-
-if (!pendingNow && assistantTextForState.endsWith("?")) {
-  await setLastQuestion(session.id, {
-    text: assistantTextForState,
-    expects: classifyQuestionExpects(assistantTextForState),
-    askedAt: new Date().toISOString(),
-  });
-} else {
-  // Se non è una domanda (o se c’è pending), chiudiamo lastQuestion per evitare ambiguità future
-  await clearLastQuestion(session.id);
-}
 
 
 
