@@ -2,9 +2,12 @@
 
 import { loadLangPack } from "../../content/loader.js";
 
+/**
+ * Safe getter for dotted paths.
+ */
 function safeField(obj: any, pathStr: string, defaultValue: any = undefined) {
   try {
-    const parts = pathStr.split(".");
+    const parts = String(pathStr || "").split(".");
     let current = obj;
     for (const p of parts) {
       if (!current || typeof current !== "object") return defaultValue;
@@ -16,7 +19,10 @@ function safeField(obj: any, pathStr: string, defaultValue: any = undefined) {
   }
 }
 
-// {{path.to.value}} → structureYaml[path.to.value]
+/**
+ * Resolve dotted path inside an object.
+ * Example: resolvePath(structureYaml, "wifi.ssid")
+ */
 function resolvePath(obj: any, pathStr: string): any {
   if (!obj || typeof pathStr !== "string") return undefined;
 
@@ -26,6 +32,10 @@ function resolvePath(obj: any, pathStr: string): any {
   }, obj);
 }
 
+/**
+ * Replace {{path.to.value}} with structureYaml[path.to.value].
+ * This is a "late" pass used for backward-compat or simple path expansions.
+ */
 function applyTemplateToText(text: string, structureYaml: any): string {
   if (typeof text !== "string" || text.indexOf("{{") === -1) return text;
 
@@ -40,10 +50,61 @@ function applyTemplateToText(text: string, structureYaml: any): string {
   });
 }
 
-export function fallbackText(structureYaml: any, intentKey: string, lang: string): string {
+/**
+ * Flattens a structure object into a single-level context for templates
+ * that expect plain keys like {{ssid}}, {{checkout_by}}, {{parking_note}}.
+ *
+ * Priority (later wins):
+ * 1) structureYaml root keys
+ * 2) common sections spread (hotel, wifi, checkin, checkout, parking, ...)
+ * 3) explicit vars passed at call time (e.g., { time })
+ */
+function buildFlatTemplateCtx(structureYaml: any, vars: Record<string, any> = {}): Record<string, any> {
+  const s = structureYaml && typeof structureYaml === "object" ? structureYaml : {};
+
+  const flat: Record<string, any> = {
+    ...(s || {}),
+  };
+
+  // Common sections we want to "spread" for legacy/pack templates.
+  const sections = [
+    "hotel",
+    "wifi",
+    "checkin",
+    "checkout",
+    "house_rules",
+    "contacts",
+    "parking",
+    "breakfast",
+    "transport",
+    "restaurants",
+    "fallback",
+  ];
+
+  for (const k of sections) {
+    const v = (s as any)[k];
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      Object.assign(flat, v);
+    }
+  }
+
+  // Also expose a few "nice" aliases if present (safe no-ops if missing)
+  if ((s as any).meta?.structure?.name && flat.hotel_name == null) {
+    flat.hotel_name = (s as any).meta.structure.name;
+  }
+
+  // Finally, explicit runtime vars win (e.g., time, user name, etc.)
+  if (vars && typeof vars === "object") {
+    Object.assign(flat, vars);
+  }
+
+  return flat;
+}
+
+export function fallbackText(structureYaml: any, intentKey: string, _lang: string): string {
   if (!structureYaml || typeof structureYaml !== "object") return "";
 
-  // 1) fallback specifico dell'intent
+  // 1) intent-specific fallback
   const intentFallback =
     safeField(structureYaml, `intents.${intentKey}.output.fallback`) ??
     safeField(structureYaml, `intents.${intentKey}.output.short`);
@@ -52,8 +113,9 @@ export function fallbackText(structureYaml: any, intentKey: string, lang: string
     return applyTemplateToText(intentFallback, structureYaml);
   }
 
-  // 2) fallback globale struttura
+  // 2) global fallback (schema v2: top-level fallback.text; keep compat with older keys too)
   const globalFallback =
+    safeField(structureYaml, "fallback.text") ??
     safeField(structureYaml, "content.fallback.default") ??
     safeField(structureYaml, "content.fallback.generic");
 
@@ -61,10 +123,17 @@ export function fallbackText(structureYaml: any, intentKey: string, lang: string
     return applyTemplateToText(globalFallback, structureYaml);
   }
 
-  // 3) ultima rete di sicurezza
+  // 3) last resort
   return "";
 }
 
+/**
+ * Resolve intent vars (optional helper for intentDef.vars)
+ * Supports:
+ * - plain values
+ * - localized objects {it/en/...}
+ * - strings containing {{path}} placeholders (resolved later)
+ */
 function resolveIntentVars(intentDef: any, structureYaml: any, lang: string): Record<string, any> {
   const out: Record<string, any> = {};
   const vars = intentDef?.vars && typeof intentDef.vars === "object" ? intentDef.vars : {};
@@ -73,7 +142,7 @@ function resolveIntentVars(intentDef: any, structureYaml: any, lang: string): Re
     structureYaml?.meta?.default_locale || structureYaml?.default_locale || "it";
 
   const pickLang = (val: any) => {
-    if (val && typeof val === "object") {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
       if (typeof val[lang] === "string") return val[lang];
       if (typeof val[defaultLocale] === "string") return val[defaultLocale];
       if (typeof val.it === "string") return val.it;
@@ -82,25 +151,9 @@ function resolveIntentVars(intentDef: any, structureYaml: any, lang: string): Re
     return val === undefined || val === null ? "" : String(val);
   };
 
-  const getContentPath = (path: string) => {
-    const parts = path.split(".");
-    let cur: any = structureYaml?.content;
-    for (const p of parts) {
-      if (!cur || typeof cur !== "object") return undefined;
-      cur = cur[p];
-    }
-    return cur;
-  };
-
   for (const [k, v] of Object.entries(vars)) {
     if (typeof v === "string") {
-      const m = v.match(/^\{\{\s*content\.([a-zA-Z0-9_.-]+)\s*\}\}$/);
-      if (m) {
-        const raw = getContentPath(m[1]);
-        out[k] = pickLang(raw);
-        continue;
-      }
-
+      // allow embedded {{path}} placeholders resolved against structureYaml
       const resolved = applyTemplateToText(v, structureYaml);
       out[k] = pickLang(resolved);
       continue;
@@ -117,24 +170,26 @@ function resolveIntentVars(intentDef: any, structureYaml: any, lang: string): Re
   return out;
 }
 
-function renderVars(template: string, vars: Record<string, any>): string {
+/**
+ * Simple template renderer for {{key}} using a flat ctx.
+ * - If key not found, leaves {{key}} intact (so it may be resolved by applyTemplateToText later).
+ */
+function renderVars(template: string, ctx: Record<string, any>): string {
   if (typeof template !== "string" || template.indexOf("{{") === -1) return template;
 
   return template.replace(/\{\{\s*([^}]+)\s*\}\}/g, (_m, expr) => {
     const key = String(expr || "").trim();
     if (!key) return "";
 
-    if (Object.prototype.hasOwnProperty.call(vars, key)) {
-      const v = vars[key];
+    if (Object.prototype.hasOwnProperty.call(ctx, key)) {
+      const v = (ctx as any)[key];
       return v === undefined || v === null ? "" : String(v);
     }
 
+    // keep placeholder for optional later pass
     return `{{${key}}}`;
   });
 }
-
-
-
 
 export async function renderTemplate(
   structureYaml: any,
@@ -153,39 +208,31 @@ export async function renderTemplate(
   const replyKey = intentDef.reply_key;
   if (typeof replyKey === "string" && replyKey.trim()) {
     const overrideKey =
-      (typeof (intentDef as any).override_key === "string" &&
-      (intentDef as any).override_key.trim())
+      typeof (intentDef as any).override_key === "string" && (intentDef as any).override_key.trim()
         ? (intentDef as any).override_key.trim()
         : replyKey.trim();
 
+    // schema v2: copy_overrides at top-level by lang
+    const overridesRoot = (structureYaml as any)?.copy_overrides;
     const overrideTpl =
-      structureYaml &&
-      (structureYaml as any).content &&
-      (structureYaml as any).content.copy_overrides &&
-      typeof (structureYaml as any).content.copy_overrides === "object"
-        ? (structureYaml as any).content.copy_overrides[overrideKey]
+      overridesRoot && typeof overridesRoot === "object"
+        ? overridesRoot?.[lang]?.[overrideKey] ?? overridesRoot?.it?.[overrideKey]
         : undefined;
 
-    if (typeof overrideTpl === "string" && overrideTpl.trim()) {
-      const vars = resolveIntentVars(intentDef, structureYaml, lang);
-      const text = renderVars(overrideTpl, vars);
-      const buttons =
-        Array.isArray(intentDef?.output?.ui?.buttons) ? intentDef.output.ui.buttons : [];
-      return { text, buttons };
-    }
-
     const pack = await loadLangPack(lang);
-    let template = pack?.[replyKey];
+    const itPack = overrideKey in (pack || {}) ? null : await loadLangPack("it");
 
-    if (template === undefined) {
-      const itPack = await loadLangPack("it");
-      template = itPack?.[replyKey];
-    }
+    const template =
+      (typeof overrideTpl === "string" && overrideTpl.trim())
+        ? overrideTpl
+        : (pack?.[replyKey] ?? itPack?.[replyKey]);
 
     if (typeof template === "string" && template.trim()) {
-      const vars = resolveIntentVars(intentDef, structureYaml, lang);
+      // Intent vars (optional) + structure flat ctx
+      const intentVars = resolveIntentVars(intentDef, structureYaml, lang);
+      const ctx = buildFlatTemplateCtx(structureYaml, intentVars);
 
-      let text = renderVars(template, vars);
+      let text = renderVars(template, ctx);
       text = applyTemplateToText(text, structureYaml);
 
       const buttons =
@@ -195,7 +242,7 @@ export async function renderTemplate(
     }
   }
 
-  // 2) BACKWARD COMPAT: vecchio schema output
+  // 2) BACKWARD COMPAT: old output schema
   const output = intentDef.output || {};
   let text = "";
 
@@ -224,10 +271,9 @@ export function resolveEffectiveLang(inputLang: string | undefined, structureYam
   return String(metaLang || "it").slice(0, 2).toLowerCase();
 }
 
-
 // -----------------------------------------------------
-// Helper: renderizza direttamente un reply_key
-// (usato dall'orchestrator per follow-up / collect / confirm)
+// Helper: render directly a reply_key
+// Used by orchestrator for follow-up / collect / closing messages
 // -----------------------------------------------------
 export async function renderReplyKey(
   structureYaml: any,
@@ -245,7 +291,7 @@ export async function renderReplyKey(
       ? overridesRoot?.[lang]?.[key] ?? overridesRoot?.it?.[key]
       : undefined;
 
-  // 2) language pack
+  // 2) language pack (lang -> fallback it)
   const pack = await loadLangPack(lang);
   const itPack = key in (pack || {}) ? null : await loadLangPack("it");
 
@@ -256,7 +302,11 @@ export async function renderReplyKey(
 
   if (typeof template !== "string" || !template.trim()) return "";
 
-  // 3) render variabili + post-processing
-  const text = applyTemplateToText(renderVars(template, vars), structureYaml);
+  // 3) render with flat ctx (structure + common sections + runtime vars)
+  const ctx = buildFlatTemplateCtx(structureYaml, vars);
+
+  let text = renderVars(template, ctx);
+  text = applyTemplateToText(text, structureYaml);
+
   return text;
 }
