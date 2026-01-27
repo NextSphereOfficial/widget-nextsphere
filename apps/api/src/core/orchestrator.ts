@@ -299,37 +299,53 @@ return {
 // - Se intent è operativo (late_checkout) → chiedi SOLO orario e apri pending collect(time)
 // - Ignora flow YAML “kind/collect/confirm” (non lo usiamo più)
 // -------------------------------------------------
+// -------------------------------------------------
+// ✅ Flow entry (ULTRA-PRUDENTE, solo quando NON c'è pending)
+// - Intent operativi (B) si aprono SOLO su trigger operativo esplicito
+//   (qui: keyword "late checkout"/"late check-out" oppure un orario inline).
+// -------------------------------------------------
 if (!hadPendingAtStart && yamlProbe?.matched && yamlProbe?.intent) {
   const intent = String(yamlProbe.intent);
 
   if (OPERATIONAL_INTENTS.has(intent)) {
-    const askText = await renderReplyKey(
-      structureYaml,
-      "late_checkout_collect_desired_time",
-      replyLang,
-      {}
-    );
+    // Guardrail ultra-minimo: evita riaperture su ACK tipo "perfetto/ok/grazie".
+    const timeInline = parseTimeFromText(userMessage);
+    const looksLikeLateCheckoutRequest =
+      /\blate\s*check\s*out\b|\blate\s*checkout\b|\blate\s*check-out\b/i.test(userMessage);
 
-    const cleanAsk = sanitizeYamlReply(String(askText || ""), userMessage, intent) || noInfoText(replyLang);
+    // Se non c'è trigger operativo, NON aprire pending (si prosegue col flow normale).
+    if (!timeInline && !looksLikeLateCheckoutRequest) {
+      // no-op: lascia che il routing prosegua verso decision/LLM guardrail
+    } else {
+      const askText = await renderReplyKey(
+        structureYaml,
+        "late_checkout_collect_desired_time",
+        replyLang,
+        {}
+      );
 
-    return {
-      ok: true,
-      source: "yaml",
-      reply: cleanAsk,
-      intent,
-      confidence: Number(yamlProbe.confidence ?? 1),
-      cacheHit: false,
-      ctxVer: ctx.contextVersion,
-      pending: {
-        kind: "collect",
+      const cleanAsk =
+        sanitizeYamlReply(String(askText || ""), userMessage, intent) || noInfoText(replyLang);
+
+      return {
+        ok: true,
+        source: "yaml",
+        reply: cleanAsk,
         intent,
-        questionId: "desired_time",
-        slot: "late_checkout_time",
-        format: "time",
-        data: { attempts: 0 },
-      },
-      snapshot: getRuntimeSnapshot(),
-    };
+        confidence: Number(yamlProbe.confidence ?? 1),
+        cacheHit: false,
+        ctxVer: ctx.contextVersion,
+        pending: {
+          kind: "collect",
+          intent,
+          questionId: "desired_time",
+          slot: "late_checkout_time",
+          format: "time",
+          data: { attempts: 0 },
+        },
+        snapshot: getRuntimeSnapshot(),
+      };
+    }
   }
 }
 
