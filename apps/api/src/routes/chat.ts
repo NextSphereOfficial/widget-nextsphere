@@ -204,25 +204,14 @@ const hasPending =
   });
 
 
-// 🧠 3) Motore YAML (solo se NON siamo in pending)
-let out: EngineOutput;
+// 🧠 3) Motore YAML (sempre: l’orchestrator decide se ignorarlo)
+const out: EngineOutput = await runEngineFromLoaded({
+  structureId: resolvedStructureId,
+  structureYaml,
+  message,
+  lang,
+});
 
-if (!hasPending) {
-  out = await runEngineFromLoaded({
-    structureId: resolvedStructureId,
-    structureYaml,
-    message,
-    lang,
-  });
-} else {
-  const effectiveLang = resolveEffectiveLang(lang, structureYaml);
-  out = {
-    intent: null,
-    lang: effectiveLang,
-    text: "",
-    meta: { mode: "short", uiButtons: [], isFallback: false },
-  };
-}
 
 
 
