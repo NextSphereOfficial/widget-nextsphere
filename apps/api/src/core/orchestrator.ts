@@ -402,6 +402,62 @@ const decision = decideResponse({
     };
   }
 
+  // -------------------------------------------------
+// Guardrail: evita chiamate LLM su messaggi di ACK/chiusura.
+// Regola generale: se non c’è una richiesta (nessuna domanda, nessun contenuto utile),
+// rispondi con una chiusura neutra e NON chiamare LLM.
+// -------------------------------------------------
+function isLikelyNonRequest(msg: string) {
+  const s = String(msg || "").trim();
+  if (!s) return true;
+
+  // Se è una domanda o contiene un punto interrogativo, è una richiesta.
+  if (s.includes("?")) return false;
+
+  // Se contiene numeri/ora (es. "13:00", "10"), potrebbe essere input utile.
+  if (/\d/.test(s)) return false;
+
+  // Se è lungo, probabilmente non è un semplice ack.
+  const words = s.split(/\s+/).filter(Boolean);
+  if (words.length >= 5) return false;
+
+  // Se contiene segni tipici di richiesta (minimo, non esaustivo)
+  // Nota: non è una lista di "grazie", ma di verbi/forme di richiesta.
+  const reqLike = /(mi\s+dici|puoi|potresti|come|dove|quando|quanto|info|informazioni|orario|wifi|parcheggio|checkout|check\-out|regole|emergenza)/i;
+  if (reqLike.test(s)) return false;
+
+  return true;
+}
+
+if (decision.source === "llm") {
+  // Se l’utente scrive una sola parola (es. "sushi"), lasciamo che l’LLM faccia 1 chiarimento (come da regole).
+  const isSingleWord = !!yamlProbe?.isSingleWord;
+
+  if (!isSingleWord && isLikelyNonRequest(userMessage)) {
+    // Chiusura neutra, senza domanda (Ultra-Prudente).
+    const closing =
+      replyLang === "en" ? "You're welcome." :
+      replyLang === "de" ? "Gern geschehen." :
+      replyLang === "fr" ? "Avec plaisir." :
+      replyLang === "es" ? "De nada." :
+      "Di nulla.";
+
+    return {
+      ok: true,
+      source: "llm", // tecnicamente non chiamiamo LLM, ma restiamo nel ramo fallback
+      reply: closing,
+      intent: decision.intent,
+      confidence: decision.confidence,
+      cacheHit: false,
+      ctxVer: ctx.contextVersion,
+      pending: undefined,
+      snapshot: getRuntimeSnapshot(),
+    };
+  }
+}
+
+
+
   // ✅ LLM branch
   const perm = canCallLlm();
   if (!perm.ok) {
@@ -466,7 +522,9 @@ Nuova domanda dell’utente:
 "${String(userMessage || '').trim()}"
 
 ISTRUZIONE:
-Rispondi in modo coerente con il contesto recente solo se rilevante. Se è ambiguo, fai UNA sola domanda di chiarimento.
+Rispondi in modo coerente con il contesto recente solo se rilevante.
+Non fare domande di follow-up a meno che l’utente abbia chiesto esplicitamente qualcosa.
+
 `.trim();
 
   const res = await callLlm(finalUserMessage, {
